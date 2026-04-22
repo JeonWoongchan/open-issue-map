@@ -39,7 +39,7 @@ export const DIFFICULTY_SCORE = {
 
 // 이슈 난이도 판별 기준 (라벨 기반)
 export const DIFFICULTY_LABELS = {
-  beginner: ['good first issue', 'good-first-issue', 'beginner', 'starter'],
+  beginner: ['good first issues', 'good-first-issues', 'beginner', 'starter'],
   junior:   ['help wanted', 'help-wanted', 'easy'],
   mid:      ['medium', 'moderate', 'intermediate'],
   senior:   ['hard', 'complex', 'advanced', 'needs-investigation'],
