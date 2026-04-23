@@ -93,10 +93,6 @@ shadcn/ui (Nova 프리셋)
 - [ ] `src/components/onboarding/ProgressBar.tsx`
 - [ ] `src/app/onboarding/page.tsx` — 설문 5단계 UI
 
----
-
-## 앞으로 할 작업
-
 ### Phase 3 나머지 — 온보딩 UI
 온보딩 설문 5단계:
 1. 경력 선택 (beginner / junior / mid / senior)
@@ -125,6 +121,10 @@ shadcn/ui (Nova 프리셋)
 - `src/components/issue/IssueList.tsx`
 - `src/app/(main)/dashboard/page.tsx`
 
+---
+
+## 앞으로 할 작업
+
 ### Phase 7 — 북마크 + PR 추적
 - `src/app/api/bookmarks/route.ts`
 - `src/components/bookmark/BookmarkCard.tsx`
@@ -135,46 +135,5 @@ shadcn/ui (Nova 프리셋)
 - 랜딩 페이지
 - 에러 처리
 - Vercel 배포
-
----
-
-## 현재 파일 구조
-
-```
-openissuemap/
-├── src/
-│   ├── app/
-│   │   ├── (auth)/
-│   │   │   └── login/
-│   │   │       └── page.tsx          ✅
-│   │   ├── (main)/
-│   │   │   ├── layout.tsx            ✅
-│   │   │   └── dashboard/
-│   │   │       └── page.tsx          (임시)
-│   │   ├── onboarding/
-│   │   │   └── page.tsx              (임시)
-│   │   └── api/
-│   │       ├── auth/
-│   │       │   └── [...nextauth]/
-│   │       │       └── route.ts      ✅
-│   │       ├── github/
-│   │       │   └── profile/
-│   │       │       └── route.ts      ✅
-│   │       └── onboarding/
-│   │           └── route.ts          ✅
-│   ├── constants/
-│   │   └── contribution-levels.ts    ✅
-│   ├── lib/
-│   │   ├── auth.ts                   ✅
-│   │   └── db/
-│   │       ├── index.ts              ✅
-│   │       └── migrations/
-│   │           └── 001_initial.sql   ✅
-│   └── types/
-│       ├── github.ts                 ✅
-│       ├── next-auth.d.ts            ✅
-│       └── user.ts                   ✅
-└── docs/                             ✅ (기획 문서 전체)
-```
 
 ---
