@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth'
 import { err, ErrorCode, ok } from '@/lib/api-response'
-import { createBookmark, deleteBookmark } from '@/lib/bookmarks'
+import { createBookmark, deleteBookmark, listUserBookmarks } from '@/lib/bookmarks'
 import type { ContributionType } from '@/types/user'
 
 type BookmarkMutationBody = {
@@ -23,6 +23,14 @@ function isBookmarkMutationBody(value: unknown): value is BookmarkMutationBody {
     Number.isInteger(body.issueNumber) &&
     typeof body.repoFullName === 'string'
   )
+}
+
+export async function GET() {
+  const session = await auth()
+  if (!session) return err('Unauthorized', 401, ErrorCode.UNAUTHORIZED)
+
+  const bookmarks = await listUserBookmarks(session.user.id)
+  return ok({ bookmarks })
 }
 
 export async function POST(req: Request) {
