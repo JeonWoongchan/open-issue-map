@@ -30,8 +30,8 @@ export function IssueCardHeader({
             aria-label={issue.isBookmarked ? '북마크 제거' : '북마크 추가'}
             aria-pressed={issue.isBookmarked ?? false}
             className={cn(
-              'text-muted-foreground hover:bg-interactive-hover hover:text-interactive-action-hover',
-              issue.isBookmarked ? 'text-interactive-action-hover' : null
+              'text-muted-foreground hover:bg-interactive-hover hover:text-bookmark-action-hover',
+              issue.isBookmarked ? 'text-bookmark-action' : null
             )}
             onClick={() => void onToggleBookmark(issue)}
           >

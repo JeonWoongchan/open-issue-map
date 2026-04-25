@@ -42,6 +42,9 @@
   --color-interactive-action: var(--interactive-action);
   --color-interactive-action-foreground: var(--interactive-action-foreground);
   --color-interactive-action-hover: var(--interactive-action-hover);
+  --color-bookmark-action: var(--bookmark-action);
+  --color-bookmark-action-foreground: var(--bookmark-action-foreground);
+  --color-bookmark-action-hover: var(--bookmark-action-hover);
   --color-interactive-border: var(--interactive-border);
   --color-interactive-hover: var(--interactive-hover);
   --color-interactive-hover-border: var(--interactive-hover-border);
@@ -99,6 +102,9 @@
   --interactive-action: oklch(0.585 0.233 277.117);
   --interactive-action-foreground: oklch(0.985 0 0);
   --interactive-action-hover: oklch(0.511 0.218 276.966);
+  --bookmark-action: #F59E0B;
+  --bookmark-action-foreground: oklch(0.2 0.02 85);
+  --bookmark-action-hover: oklch(0.8 0.16 84);
   --interactive-border: oklch(0.928 0.006 264.531);
   --interactive-hover: oklch(0.985 0.002 247.839);
   --interactive-hover-border: oklch(0.872 0.01 258.338);
@@ -156,6 +162,9 @@
   --interactive-action: oklch(0.585 0.233 277.117);
   --interactive-action-foreground: oklch(0.985 0 0);
   --interactive-action-hover: oklch(0.511 0.218 276.966);
+  --bookmark-action: #F59E0B;
+  --bookmark-action-foreground: oklch(0.2 0.02 85);
+  --bookmark-action-hover: oklch(0.9 0.14 96);
   --interactive-border: oklch(1 0 0 / 10%);
   --interactive-hover: oklch(0.269 0 0);
   --interactive-hover-border: oklch(1 0 0 / 18%);
