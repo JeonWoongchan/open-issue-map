@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
 
     const result = await fetchViewerPullRequests({
       accessToken: auth.accessToken,
+      viewerLogin: auth.githubLogin,
       first: 20,
       after,
       states,

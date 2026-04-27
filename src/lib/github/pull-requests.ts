@@ -73,6 +73,7 @@ async function fetchPullRequestConnection({
 
 export type FetchPullRequestsParams = {
   accessToken: string
+  viewerLogin?: string
   first?: number
   after?: string | null
   states?: PullRequestState[] | null
@@ -87,6 +88,7 @@ export type FetchPullRequestsResult = {
 // 3단계: GraphQL 호출 → 데이터 변환 → 요약 통계 생성 후 반환
 export async function fetchViewerPullRequests({
   accessToken,
+  viewerLogin = '',
   first = 20,
   after = null,
   states = null,
@@ -97,7 +99,11 @@ export async function fetchViewerPullRequests({
     after,
     states,
   })
-  const items = nodes.map(toPullRequestItem)
+
+  // 본인 레포에 올린 PR 제외 — repoFullName은 "owner/repo" 형태
+  const items = nodes
+    .map(toPullRequestItem)
+    .filter((item) => !viewerLogin || item.repoFullName.split('/')[0] !== viewerLogin)
 
   return {
     items,
