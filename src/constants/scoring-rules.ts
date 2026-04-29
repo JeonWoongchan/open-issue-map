@@ -4,7 +4,7 @@ import type { ContributionType, ExperienceLevel, Purpose, WeeklyHours } from '@/
 // ****규칙을 명확한 기준으로 재정비할 필요가 있음****
 // GitHub Search API로 후보 이슈를 가져온 뒤, 아래 규칙으로 사용자 온보딩 답변과 이슈 메타데이터를 비교한다.
 // 최종 score는 카드 우측 상단의 매칭 점수로 노출되며, 높은 점수일수록 사용자 설정에 더 잘 맞는 이슈로 본다.
-export const STAR_CUTOFF = 10
+export const PAGE_SIZE = 10
 export const REPO_HEALTH_CACHE_TTL_HOURS = 1
 export const MATCH_SCORE_MINIMUM = 0
 // GitHub API 권장 캐시 TTL (Cache-Control: max-age=60 기준)
@@ -308,4 +308,4 @@ export const REPO_HEALTH_WEIGHTS = {
   },
 } as const
 
-export const HEALTH_THRESHOLD = 40
+export const HEALTH_THRESHOLD = 50

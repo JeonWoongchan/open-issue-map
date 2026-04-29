@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   // 페이지네이션 쿼리 파라미터 정규화 단계.
   const { searchParams } = new URL(req.url)
-  const limit = Math.min(Number(searchParams.get('limit') ?? '20') || 20, 20)
+  const limit = Math.min(Number(searchParams.get('limit') ?? '10') || 10, 20)
   const offset = Math.max(Number(searchParams.get('offset') ?? '0') || 0, 0)
 
   // 북마크 목록 조회 서비스 호출 단계.

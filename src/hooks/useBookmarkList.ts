@@ -1,9 +1,10 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { fetchApi } from '@/lib/fetch-api'
 import type { IssueCardItem } from '@/types/issue'
-import { QUERY_KEYS, toBaseResult, type BaseQueryResult } from './queryKeys'
+import { QUERY_KEYS } from './queryKeys'
 
 type BookmarkPageInfo = {
     limit: number
@@ -12,29 +13,51 @@ type BookmarkPageInfo = {
     hasMore: boolean
 }
 
-type BookmarkListData = {
+type BookmarkListPage = {
     issues: IssueCardItem[]
     pageInfo: BookmarkPageInfo
 }
 
-export type UseBookmarkListResult = BaseQueryResult & {
+export type UseBookmarkListResult = {
     issues: IssueCardItem[]
-    pageInfo: BookmarkPageInfo | undefined
+    hasNextPage: boolean
+    fetchNextPage: () => void
+    isFetchingNextPage: boolean
+    isPending: boolean
+    isError: boolean
+    errorMessage: string
+    refetch: () => void
 }
 
 const DEFAULT_ERROR_MESSAGE = '북마크 목록을 불러오지 못했습니다.'
 
-const fetchBookmarks = () => fetchApi<BookmarkListData>('/api/bookmarks', DEFAULT_ERROR_MESSAGE)
-
 export function useBookmarkList(): UseBookmarkListResult {
-    const query = useQuery({
+    const query = useInfiniteQuery({
         queryKey: QUERY_KEYS.bookmarks,
-        queryFn: fetchBookmarks,
+        queryFn: ({ pageParam }) =>
+            fetchApi<BookmarkListPage>(`/api/bookmarks?offset=${pageParam}`, DEFAULT_ERROR_MESSAGE),
+        initialPageParam: 0,
+        getNextPageParam: (lastPage) =>
+            lastPage.pageInfo.hasMore
+                ? lastPage.pageInfo.offset + lastPage.pageInfo.limit
+                : undefined,
     })
 
+    const issues = useMemo(
+        () => query.data?.pages.flatMap((p) => p.issues) ?? [],
+        [query.data],
+    )
+
     return {
-        ...toBaseResult(query, DEFAULT_ERROR_MESSAGE),
-        issues: query.data?.issues ?? [],
-        pageInfo: query.data?.pageInfo,
+        issues,
+        hasNextPage: query.hasNextPage,
+        fetchNextPage: () => { void query.fetchNextPage() },
+        isFetchingNextPage: query.isFetchingNextPage,
+        isPending: query.isPending,
+        isError: query.isError,
+        errorMessage: query.isError && query.error instanceof Error
+            ? query.error.message
+            : DEFAULT_ERROR_MESSAGE,
+        refetch: () => { void query.refetch() },
     }
 }

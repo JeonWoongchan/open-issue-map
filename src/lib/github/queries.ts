@@ -42,8 +42,12 @@ export const VIEWER_PULL_REQUESTS_QUERY = `
 `
 
 export const SEARCH_ISSUES_QUERY = `
-  query SearchIssues($query: String!, $first: Int!) {
-    search(query: $query, type: ISSUE, first: $first) {
+  query SearchIssues($query: String!, $first: Int!, $after: String) {
+    search(query: $query, type: ISSUE, first: $first, after: $after) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
       nodes {
         ... on Issue {
           number
