@@ -2,73 +2,99 @@ import { githubGraphQL, GitHubRateLimitError } from '@/lib/github/client'
 import { SEARCH_ISSUES_QUERY } from '@/lib/github/queries'
 import type { RawIssue } from '@/types/issue'
 
+interface PageInfo {
+    hasNextPage: boolean
+    endCursor: string | null
+}
+
 interface SearchResult {
-  search: { nodes: RawIssue[] }
+    search: {
+        pageInfo: PageInfo
+        nodes: RawIssue[]
+    }
 }
 
 export type IssueSearchResult = {
-  issues: RawIssue[]
-  failedQueryCount: number
-  totalQueryCount: number
-  rateLimited: boolean
+    issues: RawIssue[]
+    // 언어별 GitHub endCursor — 다음 배치 요청 시 사용
+    endCursors: Record<string, string | null>
+    hasMoreOnGithub: boolean
+    failedQueryCount: number
+    totalQueryCount: number
+    rateLimited: boolean
 }
 
+// 언어별 GitHub 이슈 검색 쿼리 문자열 생성
 function buildIssueQueries(languages: string[]): string[] {
-  return languages.flatMap((lang) => [
-    `is:open is:issue label:"help wanted" language:${lang}`,
-  ])
+    return languages.map((lang) => `is:open is:issue label:"help wanted" language:${lang}`)
 }
 
+// URL 기준 중복 이슈 제거
 function dedupeIssues(issues: RawIssue[]): RawIssue[] {
-  const seen = new Set<string>()
-
-  return issues.filter((issue) => {
-    if (seen.has(issue.url)) {
-      return false
-    }
-
-    seen.add(issue.url)
-    return true
-  })
+    const seen = new Set<string>()
+    return issues.filter((issue) => {
+        if (seen.has(issue.url)) return false
+        seen.add(issue.url)
+        return true
+    })
 }
 
+// 언어별 병렬 GitHub 검색 후 후보 이슈 수집 및 반환
 export async function fetchCandidateIssues(
-  languages: string[],
-  accessToken: string
+    languages: string[],
+    accessToken: string,
+    afterCursors: Record<string, string | null> = {}
 ): Promise<IssueSearchResult> {
-  const queries = buildIssueQueries(languages)
+    const queries = buildIssueQueries(languages)
 
-  if (queries.length === 0) {
-    return {
-      issues: [],
-      failedQueryCount: 0,
-      totalQueryCount: 0,
-      rateLimited: false,
+    if (queries.length === 0) {
+        return {
+            issues: [],
+            endCursors: {},
+            hasMoreOnGithub: false,
+            failedQueryCount: 0,
+            totalQueryCount: 0,
+            rateLimited: false,
+        }
     }
-  }
 
-  const settled = await Promise.allSettled(
-    queries.map((query) =>
-      githubGraphQL<SearchResult>(SEARCH_ISSUES_QUERY, { query, first: 10 }, accessToken)
+    const settled = await Promise.allSettled(
+        queries.map((query, i) =>
+            githubGraphQL<SearchResult>(
+                SEARCH_ISSUES_QUERY,
+                { query, first: 30, after: afterCursors[languages[i]] ?? null },
+                accessToken
+            )
+        )
     )
-  )
 
-  const issues = dedupeIssues(
-    settled
-      .filter(
-        (result): result is PromiseFulfilledResult<SearchResult> => result.status === 'fulfilled'
-      )
-      .flatMap((result) => result.value.search.nodes ?? [])
-  )
+    // settled 원본 인덱스 기준으로 cursor 수집 — filter 후 인덱스를 쓰면 실패한 쿼리 제외로 언어 매핑이 어긋남
+    const endCursors: Record<string, string | null> = {}
+    let hasMoreOnGithub = false
 
-  const failedResults = settled.filter(
-    (result): result is PromiseRejectedResult => result.status === 'rejected'
-  )
+    settled.forEach((result, i) => {
+        if (result.status !== 'fulfilled') return
+        const { pageInfo } = result.value.search
+        endCursors[languages[i]] = pageInfo.endCursor
+        if (pageInfo.hasNextPage) hasMoreOnGithub = true
+    })
 
-  return {
-    issues,
-    failedQueryCount: failedResults.length,
-    totalQueryCount: queries.length,
-    rateLimited: failedResults.some((result) => result.reason instanceof GitHubRateLimitError),
-  }
+    const issues = dedupeIssues(
+        settled
+            .filter((result): result is PromiseFulfilledResult<SearchResult> => result.status === 'fulfilled')
+            .flatMap((result) => result.value.search.nodes ?? [])
+    )
+
+    const failedResults = settled.filter(
+        (result): result is PromiseRejectedResult => result.status === 'rejected'
+    )
+
+    return {
+        issues,
+        endCursors,
+        hasMoreOnGithub,
+        failedQueryCount: failedResults.length,
+        totalQueryCount: queries.length,
+        rateLimited: failedResults.some((result) => result.reason instanceof GitHubRateLimitError),
+    }
 }

@@ -1,5 +1,3 @@
-import type { UseQueryResult } from '@tanstack/react-query'
-
 export const QUERY_KEYS = {
     issues: ['issues'] as const,
     pullRequests: ['pull-requests'] as const,
@@ -13,10 +11,14 @@ export type BaseQueryResult = {
     refetch: () => void
 }
 
-export function toBaseResult<T>(
-    query: Pick<UseQueryResult<T>, 'isPending' | 'isError' | 'error' | 'refetch'>,
-    defaultError: string
-): BaseQueryResult {
+type QueryBaseFields = {
+    isPending: boolean
+    isError: boolean
+    error: unknown
+    refetch: () => unknown
+}
+
+export function toBaseResult(query: QueryBaseFields, defaultError: string): BaseQueryResult {
     return {
         isPending: query.isPending,
         isError: query.isError,
