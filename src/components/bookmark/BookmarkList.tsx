@@ -16,7 +16,7 @@ export function BookmarkList() {
     const {
         issues,
         hasNextPage,
-        fetchNextPage,
+        fetchNextPageAction,
         isFetchingNextPage,
         isPending,
         isError,
@@ -33,10 +33,10 @@ export function BookmarkList() {
 
     const [query, setQuery] = useState('')
     const filteredItems = useSearchFilter(optimisticIssues, query)
-    const { displayItems, sentinelRef } = useInfiniteScrollDisplay({
+    const { displayItems, sentinelRefAction } = useInfiniteScrollDisplay({
         items: filteredItems,
         hasNextPage,
-        fetchNextPage,
+        fetchNextPageAction,
         isFetchingNextPage,
     })
 
@@ -45,7 +45,7 @@ export function BookmarkList() {
             <div className="flex items-center gap-2">
                 <SearchBar
                     value={query}
-                    onChange={setQuery}
+                    onChangeAction={setQuery}
                     resultCount={query ? filteredItems.length : undefined}
                     className="flex-1"
                 />
@@ -79,7 +79,7 @@ export function BookmarkList() {
             <InfiniteScrollTrigger
                 hasNextPage={hasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
-                sentinelRef={sentinelRef}
+                sentinelRefAction={sentinelRefAction}
             />
         </div>
     )

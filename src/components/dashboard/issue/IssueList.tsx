@@ -10,13 +10,18 @@ import { useIssueBookmarks } from '@/hooks/useIssueBookmarks'
 import { useIssueList } from '@/hooks/useIssueList'
 import { useSearchFilter } from '@/hooks/useSearchFilter'
 import { useInfiniteScrollDisplay } from '@/hooks/useScrollSentinel'
+import { EMPTY_ISSUE_FILTERS } from '@/types/issue'
+import type { IssueFilters } from '@/types/issue'
 import { IssueListContent } from './IssueListContent'
+import { IssueListFilter } from './IssueListFilter'
 
 export function IssueList() {
+    const [filters, setFilters] = useState<IssueFilters>(EMPTY_ISSUE_FILTERS)
+
     const {
         issues,
         hasNextPage,
-        fetchNextPage,
+        fetchNextPageAction,
         isFetchingNextPage,
         isPending,
         isError,
@@ -24,7 +29,8 @@ export function IssueList() {
         refetch,
         partial,
         failedCount,
-    } = useIssueList()
+        availableLanguages,
+    } = useIssueList(filters)
 
     const { optimisticIssues, pendingBookmarkKeys, toggleBookmark } = useIssueBookmarks({
         sourceIssues: issues,
@@ -33,10 +39,10 @@ export function IssueList() {
 
     const [query, setQuery] = useState('')
     const filteredItems = useSearchFilter(optimisticIssues, query)
-    const { displayItems, sentinelRef } = useInfiniteScrollDisplay({
+    const { displayItems, sentinelRefAction } = useInfiniteScrollDisplay({
         items: filteredItems,
         hasNextPage,
-        fetchNextPage,
+        fetchNextPageAction,
         isFetchingNextPage,
     })
 
@@ -45,12 +51,18 @@ export function IssueList() {
             <div className="flex items-center gap-2">
                 <SearchBar
                     value={query}
-                    onChange={setQuery}
+                    onChangeAction={setQuery}
                     resultCount={query ? filteredItems.length : undefined}
                     className="flex-1"
                 />
                 <DashboardHelpDialog />
             </div>
+
+            <IssueListFilter
+                filters={filters}
+                availableLanguages={availableLanguages}
+                onChangeAction={setFilters}
+            />
 
             <SearchDataListState
                 query={query}
@@ -81,7 +93,7 @@ export function IssueList() {
             <InfiniteScrollTrigger
                 hasNextPage={hasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
-                sentinelRef={sentinelRef}
+                sentinelRefAction={sentinelRefAction}
             />
         </div>
     )

@@ -5,10 +5,10 @@ import type { WeeklyHours } from '@/types/user'
 
 type WeeklyHoursStepProps = {
   value: WeeklyHours | null
-  onChange: (value: WeeklyHours) => void
+  onChangeAction: (value: WeeklyHours) => void
 }
 
-export function WeeklyHoursStep({ value, onChange }: WeeklyHoursStepProps) {
+export function WeeklyHoursStep({ value, onChangeAction }: WeeklyHoursStepProps) {
   return (
     <StepSection
       title="매주 어느 정도 시간을 쓸 수 있나요?"
@@ -20,7 +20,7 @@ export function WeeklyHoursStep({ value, onChange }: WeeklyHoursStepProps) {
           label={item.label}
           description={item.description}
           selected={value === item.value}
-          onClick={() => onChange(item.value)}
+          onClick={() => onChangeAction(item.value)}
         />
       ))}
     </StepSection>

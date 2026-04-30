@@ -10,6 +10,20 @@ import { fetchCandidateIssues } from '@/lib/github/issues/search'
 import { loadOnboardingProfile } from '@/lib/user/profile'
 import { GITHUB_API_CACHE_TTL_SECONDS, PAGE_SIZE } from '@/constants/scoring-rules'
 import { encodeBatch, decodeBatch, INITIAL_BATCH } from '@/lib/github/batch'
+import { CONTRIBUTION_TYPES, EXPERIENCE_LEVELS } from '@/constants/contribution-levels'
+import type { IssueFilters, ScoredIssue } from '@/types/issue'
+
+const VALID_DIFFICULTY_LEVELS = new Set<string>(EXPERIENCE_LEVELS.map((l) => l.value))
+const VALID_CONTRIBUTION_TYPES = new Set<string>(CONTRIBUTION_TYPES.map((t) => t.value))
+
+function applyFilters(issues: ScoredIssue[], filters: IssueFilters): ScoredIssue[] {
+    return issues.filter(
+        (issue) =>
+            (!filters.language || issue.language === filters.language) &&
+            (!filters.difficultyLevel || issue.difficultyLevel === filters.difficultyLevel) &&
+            (!filters.contributionType || issue.contributionType === filters.contributionType)
+    )
+}
 
 export async function GET(req: NextRequest) {
     // GitHub 액세스 토큰 기반 인증
@@ -22,10 +36,17 @@ export async function GET(req: NextRequest) {
         return err('Onboarding not complete', 400, ErrorCode.ONBOARDING_REQUIRED)
     }
 
-    // 클라이언트 요청 파라미터 파싱 — offset: 배치 내 위치, batch: GitHub cursor 묶음
+    // 클라이언트 요청 파라미터 파싱 — offset: 배치 내 위치, batch: GitHub cursor 묶음, 필터
     const { searchParams } = new URL(req.url)
     const offset = Math.max(Number(searchParams.get('offset') ?? '0') || 0, 0)
     const batchParam = searchParams.get('batch') ?? INITIAL_BATCH
+    const difficultyParam = searchParams.get('difficultyLevel')
+    const contributionParam = searchParams.get('contributionType')
+    const filters: IssueFilters = {
+        language: searchParams.get('language'),
+        difficultyLevel: VALID_DIFFICULTY_LEVELS.has(difficultyParam ?? '') ? difficultyParam as IssueFilters['difficultyLevel'] : null,
+        contributionType: VALID_CONTRIBUTION_TYPES.has(contributionParam ?? '') ? contributionParam as IssueFilters['contributionType'] : null,
+    }
     const afterCursors = batchParam === INITIAL_BATCH
         ? {}
         : (decodeBatch<Record<string, string | null>>(batchParam) ?? {})
@@ -55,13 +76,18 @@ export async function GET(req: NextRequest) {
     const repoNames = [...new Set(searchResult.issues.map((issue) => issue.repository.nameWithOwner))]
     const healthMap = await getRepoHealthMap(repoNames, auth.accessToken)
 
-    // 이슈 채점·필터링·정렬 후 북마크 여부 병합
+    // 이슈 채점·정렬 후 북마크 여부 병합
     const bookmarkKeys = new Set(bookmarkKeyList)
     const randomSeed = `${auth.userId}:${batchParam}`
-    const allIssues = rankIssues(searchResult.issues, profile, healthMap, randomSeed).map((issue) => ({
+    const rankedIssues = rankIssues(searchResult.issues, profile, healthMap, randomSeed).map((issue) => ({
         ...issue,
         isBookmarked: bookmarkKeys.has(`${issue.repoFullName}#${issue.number}`),
     }))
+
+    // 필터 적용 전 언어 목록 수집 — 필터 적용 여부와 무관하게 사용 가능한 언어 전달
+    const availableLanguages = [...new Set(rankedIssues.map((i) => i.language).filter((l): l is string => l !== null))]
+
+    const allIssues = applyFilters(rankedIssues, filters)
 
     // 현재 배치 캐시 소진 여부 판단 — offset이 캐시 끝에 도달하면 마지막 페이지
     const isLastPage = offset + PAGE_SIZE >= allIssues.length
@@ -75,11 +101,11 @@ export async function GET(req: NextRequest) {
     return ok({
         issues: allIssues.slice(offset, offset + PAGE_SIZE),
         total: allIssues.length,
-        // 현재 배치에 더 있거나 GitHub에 다음 배치가 있으면 hasMore=true
         hasMore: !isLastPage || searchResult.hasMoreOnGithub,
         offset,
         batch: batchParam,
         nextBatch,
+        availableLanguages,
         partialResults: searchResult.failedQueryCount > 0,
         failedQueryCount: searchResult.failedQueryCount,
     })

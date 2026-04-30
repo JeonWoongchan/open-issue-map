@@ -5,10 +5,10 @@ import type { Purpose } from '@/types/user'
 
 type PurposeStepProps = {
   value: Purpose | null
-  onChange: (value: Purpose) => void
+  onChangeAction: (value: Purpose) => void
 }
 
-export function PurposeStep({ value, onChange }: PurposeStepProps) {
+export function PurposeStep({ value, onChangeAction }: PurposeStepProps) {
   return (
     <StepSection
       title="이번 기여를 통해 가장 얻고 싶은 건 무엇인가요?"
@@ -20,7 +20,7 @@ export function PurposeStep({ value, onChange }: PurposeStepProps) {
           label={item.label}
           description={item.description}
           selected={value === item.value}
-          onClick={() => onChange(item.value)}
+          onClick={() => onChangeAction(item.value)}
         />
       ))}
     </StepSection>

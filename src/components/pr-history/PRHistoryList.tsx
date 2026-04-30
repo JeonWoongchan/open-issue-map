@@ -25,17 +25,17 @@ export function PRHistoryList() {
         setStateFilter,
         refetch,
         hasNextPage,
-        fetchNextPage,
+        fetchNextPageAction,
         isFetchingNextPage,
     } = usePullRequestList()
 
     const [query, setQuery] = useState('')
     // 상태 필터 결과에 텍스트 검색을 이어서 적용 (AND 조합)
     const filteredItems = useSearchFilter(items, query)
-    const { displayItems, sentinelRef } = useInfiniteScrollDisplay({
+    const { displayItems, sentinelRefAction } = useInfiniteScrollDisplay({
         items: filteredItems,
         hasNextPage,
-        fetchNextPage,
+        fetchNextPageAction,
         isFetchingNextPage,
     })
 
@@ -47,11 +47,11 @@ export function PRHistoryList() {
             <div className="flex flex-col gap-3">
                 <SearchBar
                     value={query}
-                    onChange={setQuery}
+                    onChangeAction={setQuery}
                     resultCount={query ? filteredItems.length : undefined}
                     placeholder="PR 제목 또는 레포명 검색"
                 />
-                <PRStateFilter current={stateFilter} onChange={setStateFilter} />
+                <PRStateFilter current={stateFilter} onChangeAction={setStateFilter} />
             </div>
 
             <SearchDataListState
@@ -75,7 +75,7 @@ export function PRHistoryList() {
             <InfiniteScrollTrigger
                 hasNextPage={hasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
-                sentinelRef={sentinelRef}
+                sentinelRefAction={sentinelRefAction}
             />
         </div>
     )
