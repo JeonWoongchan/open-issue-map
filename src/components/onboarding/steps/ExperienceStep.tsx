@@ -5,10 +5,10 @@ import type { ExperienceLevel } from '@/types/user'
 
 type ExperienceStepProps = {
   value: ExperienceLevel | null
-  onChange: (value: ExperienceLevel) => void
+  onChangeAction: (value: ExperienceLevel) => void
 }
 
-export function ExperienceStep({ value, onChange }: ExperienceStepProps) {
+export function ExperienceStep({ value, onChangeAction }: ExperienceStepProps) {
   return (
     <StepSection
       title="오픈소스 기여 경험은 어느 정도인가요?"
@@ -20,7 +20,7 @@ export function ExperienceStep({ value, onChange }: ExperienceStepProps) {
           label={item.label}
           description={item.description}
           selected={value === item.value}
-          onClick={() => onChange(item.value)}
+          onClick={() => onChangeAction(item.value)}
         />
       ))}
     </StepSection>

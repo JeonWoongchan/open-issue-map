@@ -40,7 +40,7 @@ export default function OnboardingWizard({ initialLanguages }: { initialLanguage
 
     switch (currentStep.id) {
       case 'experienceLevel':
-        return <ExperienceStep value={form.experienceLevel} onChange={updateExperienceLevel} />
+        return <ExperienceStep value={form.experienceLevel} onChangeAction={updateExperienceLevel} />
       case 'contributionTypes':
         return (
           <ContributionTypesStep
@@ -57,9 +57,9 @@ export default function OnboardingWizard({ initialLanguages }: { initialLanguage
           />
         )
       case 'weeklyHours':
-        return <WeeklyHoursStep value={form.weeklyHours} onChange={updateWeeklyHours} />
+        return <WeeklyHoursStep value={form.weeklyHours} onChangeAction={updateWeeklyHours} />
       case 'purpose':
-        return <PurposeStep value={form.purpose} onChange={updatePurpose} />
+        return <PurposeStep value={form.purpose} onChangeAction={updatePurpose} />
       default:
         return null
     }

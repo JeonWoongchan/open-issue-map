@@ -3,6 +3,14 @@ import type { ContributionType, ExperienceLevel } from './user'
 export type CompetitionLevel = 'OPEN' | 'ACTIVE' | 'HAS_PR'
 export type DifficultyLevel = ExperienceLevel
 
+export type IssueFilters = {
+  language: string | null
+  difficultyLevel: DifficultyLevel | null
+  contributionType: ContributionType | null
+}
+
+export const EMPTY_ISSUE_FILTERS: IssueFilters = { language: null, difficultyLevel: null, contributionType: null }
+
 export interface RawIssue {
   number: number
   title: string
