@@ -19,6 +19,25 @@ import {
   TIME_BUDGET_RULES,
 } from '@/constants/scoring-rules'
 
+// scoreIssue()가 각 채점 함수에 넘기는 컨텍스트.
+// 이슈 원본에서 파생된 값과 프로필 값을 하나로 묶어 각 채점 함수가 필요한 것만 꺼내 쓴다.
+type ScoringContext = {
+  language: string | null
+  commentCount: number
+  hasPR: boolean
+  stargazerCount: number
+  difficultyLevel: ExperienceLevel | null
+  contributionType: ContributionType | null
+  competitionLevel: CompetitionLevel
+  competitionPenalty: number
+  healthScore: number | null
+  topLanguages: string[]
+  experienceLevel: ExperienceLevel | null
+  contributionTypes: ContributionType[]
+  weeklyHours: UserProfile['weeklyHours']
+  purpose: UserProfile['purpose']
+}
+
 function normalizeLabels(labelNames: string[]): string[] {
   return labelNames.map((label) => label.toLowerCase())
 }
@@ -370,6 +389,46 @@ function scorePurposeFit(
   return score
 }
 
+// 채점 차원 레지스트리 — 차원 추가/제거/비활성화는 이 배열만 수정한다.
+// 순서는 점수 결과에 영향을 주지 않는다(합산이므로).
+// 각 항목의 score 함수는 ScoringContext에서 필요한 값만 꺼내 계산한다.
+const SCORING_DIMENSIONS: Array<{ key: string; score: (ctx: ScoringContext) => number }> = [
+  {
+    key: 'language',
+    score: (ctx) => scoreLanguage(ctx.language, ctx.topLanguages),
+  },
+  {
+    key: 'difficulty',
+    score: (ctx) => scoreDifficulty(ctx.difficultyLevel, ctx.experienceLevel),
+  },
+  {
+    key: 'contributionType',
+    score: (ctx) => scoreContributionType(ctx.contributionType, ctx.contributionTypes),
+  },
+  {
+    key: 'competitionFit',
+    score: (ctx) => scoreExperienceCompetitionFit(ctx.experienceLevel, ctx.competitionLevel),
+  },
+  {
+    key: 'competitionPenalty',
+    score: (ctx) => ctx.competitionPenalty,
+  },
+  {
+    key: 'timeBudget',
+    score: (ctx) =>
+      scoreTimeBudgetFit(ctx.weeklyHours, ctx.contributionType, ctx.difficultyLevel, ctx.commentCount, ctx.hasPR),
+  },
+  {
+    key: 'purpose',
+    score: (ctx) =>
+      scorePurposeFit(ctx.purpose, ctx.contributionType, ctx.difficultyLevel, ctx.competitionLevel, ctx.stargazerCount, ctx.healthScore, ctx.hasPR),
+  },
+  {
+    key: 'health',
+    score: (ctx) => scoreHealth(ctx.healthScore),
+  },
+]
+
 export function scoreIssue(
   raw: RawIssue,
   profile: Pick<
@@ -390,34 +449,28 @@ export function scoreIssue(
 
   const difficultyLevel = detectDifficulty(labelNames, searchableText)
   const contributionType = detectContributionType(labelNames, searchableText, commentCount, hasPR)
-  const { level: competitionLevel, penalty } = detectCompetition(commentCount, hasPR)
+  const { level: competitionLevel, penalty: competitionPenalty } = detectCompetition(commentCount, hasPR)
 
-  // 최종 매칭 점수는 온보딩 답변과 이슈/저장소 메타데이터를 각각 점수화해 합산한다.
-  // 이 값이 대시보드 카드 우측 상단에 표시되며, 리스트는 높은 점수순으로 정렬된다.
-  const score = floorScore(
-    scoreLanguage(language, profile.topLanguages) +
-      scoreDifficulty(difficultyLevel, profile.experienceLevel) +
-      scoreContributionType(contributionType, profile.contributionTypes) +
-      scoreExperienceCompetitionFit(profile.experienceLevel, competitionLevel) +
-      scoreTimeBudgetFit(
-        profile.weeklyHours,
-        contributionType,
-        difficultyLevel,
-        commentCount,
-        hasPR
-      ) +
-      scorePurposeFit(
-        profile.purpose,
-        contributionType,
-        difficultyLevel,
-        competitionLevel,
-        raw.repository.stargazerCount,
-        healthScore,
-        hasPR
-      ) +
-      penalty +
-      scoreHealth(healthScore)
-  )
+  const ctx: ScoringContext = {
+    language,
+    commentCount,
+    hasPR,
+    stargazerCount: raw.repository.stargazerCount,
+    difficultyLevel,
+    contributionType,
+    competitionLevel,
+    competitionPenalty,
+    healthScore,
+    topLanguages: profile.topLanguages,
+    experienceLevel: profile.experienceLevel,
+    contributionTypes: profile.contributionTypes,
+    weeklyHours: profile.weeklyHours,
+    purpose: profile.purpose,
+  }
+
+  // SCORING_DIMENSIONS를 순회해 각 차원의 점수를 합산한다.
+  // 최종 매칭 점수는 카드 우측 상단에 표시되며, 리스트는 높은 점수순으로 정렬된다.
+  const score = floorScore(SCORING_DIMENSIONS.reduce((sum, dim) => sum + dim.score(ctx), 0))
 
   return {
     number: raw.number,
