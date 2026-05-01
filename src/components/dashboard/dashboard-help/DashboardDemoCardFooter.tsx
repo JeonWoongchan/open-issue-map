@@ -7,11 +7,12 @@ import { DASHBOARD_HELP_DEMO_ISSUE } from '@/constants/dashboard-help'
 import { formatTimeAgo } from '@/utils/format/time-ago'
 import { getCompetitionMeta } from '@/lib/github/issues/badge-meta'
 import { cn } from '@/lib/utils'
-import type { DashboardHelpGuideInteractionProps } from '@/types/dashboard'
+import type { DashboardHelpGuideId } from '@/constants/dashboard-help'
+import type { HelpGuideInteractionProps } from '@/types/help'
 
 const competition = getCompetitionMeta(DASHBOARD_HELP_DEMO_ISSUE.competitionLevel)
 
-type DemoCardFooterProps = DashboardHelpGuideInteractionProps & {
+type DemoCardFooterProps = HelpGuideInteractionProps<DashboardHelpGuideId> & {
   demoUpdatedAt: string
 }
 

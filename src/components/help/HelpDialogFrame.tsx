@@ -7,6 +7,8 @@ import { HelpGuideList } from './HelpGuideList'
 import { HelpHeader } from './HelpHeader'
 import { HelpTrigger } from './HelpTrigger'
 
+// 대시보드·북마크·PR 히스토리 도움말이 공통으로 사용하는 다이얼로그 프레임.
+// 트리거 버튼, 오버레이, 헤더, 좌우 2단 그리드(데모 카드 + 가이드 목록)를 통합 관리.
 type HelpDialogFrameProps<TGuideId extends string> = {
   demoUpdatedOffsetMs: number
   guideItems: readonly HelpGuideItem<TGuideId>[]
@@ -16,6 +18,8 @@ type HelpDialogFrameProps<TGuideId extends string> = {
   descriptionId: string
   triggerLabel?: string
   footer?: ReactNode
+  // render prop — useHelpDialog 내부 상태(activeGuideId, demoUpdatedAt 등)를
+  // 데모 카드에 직접 전달하기 위해 ReactNode 대신 함수로 받음
   renderDemoCardAction: (props: {
     activeGuideId: TGuideId | null
     demoUpdatedAt: string

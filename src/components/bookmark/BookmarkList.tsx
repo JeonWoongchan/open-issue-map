@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { SearchBar } from '@/components/shared/SearchBar'
+import { SearchBarRow } from '@/components/shared/SearchBarRow'
 import { SearchDataListState } from '@/components/shared/SearchDataListState'
 import { InfiniteScrollTrigger } from '@/components/shared/InfiniteScrollTrigger'
 import { BookmarkHelpDialog } from '@/components/bookmark/bookmark-help/BookmarkHelpDialog'
@@ -42,15 +42,12 @@ export function BookmarkList() {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-                <SearchBar
-                    value={query}
-                    onChangeAction={setQuery}
-                    resultCount={query ? filteredItems.length : undefined}
-                    className="flex-1"
-                />
-                <BookmarkHelpDialog />
-            </div>
+            <SearchBarRow
+                value={query}
+                onChangeAction={setQuery}
+                resultCount={query ? filteredItems.length : undefined}
+                helpSlot={<BookmarkHelpDialog />}
+            />
 
             <SearchDataListState
                 query={query}

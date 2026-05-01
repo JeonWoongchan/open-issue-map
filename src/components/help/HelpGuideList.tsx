@@ -5,6 +5,8 @@ type HelpGuideListProps<TGuideId extends string> = HelpGuideInteractionProps<TGu
   items: readonly HelpGuideItem<TGuideId>[]
 }
 
+// 도움말 다이얼로그 우측 가이드 항목 목록.
+// HelpHotspot과 activeGuideId를 공유해 항목 hover 시 좌측 데모 카드도 동시에 강조.
 export function HelpGuideList<TGuideId extends string>({
   items,
   activeGuideId,

@@ -3,7 +3,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { SearchBar } from '@/components/shared/SearchBar'
+import { SearchBarRow } from '@/components/shared/SearchBarRow'
+import { PRHistoryHelpDialog } from './pr-history-help/PRHistoryHelpDialog'
 import { SearchDataListState } from '@/components/shared/SearchDataListState'
 import { InfiniteScrollTrigger } from '@/components/shared/InfiniteScrollTrigger'
 import { usePullRequestList } from '@/hooks/usePullRequestList'
@@ -45,11 +46,12 @@ export function PRHistoryList() {
             {isPending ? <PRSummaryStatsSkeleton /> : summary ? <PRSummaryStats summary={summary} /> : null}
 
             <div className="flex flex-col gap-3">
-                <SearchBar
+                <SearchBarRow
                     value={query}
                     onChangeAction={setQuery}
                     resultCount={query ? filteredItems.length : undefined}
                     placeholder="PR 제목 또는 레포명 검색"
+                    helpSlot={<PRHistoryHelpDialog />}
                 />
                 <PRStateFilter current={stateFilter} onChangeAction={setStateFilter} />
             </div>

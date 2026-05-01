@@ -25,6 +25,7 @@ export function BookmarkDemoCardFooter({
 }: BookmarkDemoCardFooterProps) {
   return (
     <div className="mt-auto flex flex-col gap-3 text-xs text-muted-foreground">
+      {/* 태그·메트릭스 두 영역이 같은 guideId를 공유 — "missing-github" 설명 하나가 두 구역을 동시에 커버하는 의도적 설계 */}
       <HelpHotspot
         guideId="missing-github"
         activeGuideId={activeGuideId}

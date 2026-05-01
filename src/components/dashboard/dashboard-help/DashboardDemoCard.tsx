@@ -1,9 +1,10 @@
 import { HelpDemoCardFrame } from '@/components/help/HelpDemoCardFrame'
-import type { DashboardHelpGuideInteractionProps } from '@/types/dashboard'
+import type { DashboardHelpGuideId } from '@/constants/dashboard-help'
+import type { HelpGuideInteractionProps } from '@/types/help'
 import { DashboardDemoCardFooter } from './DashboardDemoCardFooter'
 import { DashboardDemoCardHeader } from './DashboardDemoCardHeader'
 
-type DashboardHelpDemoCardProps = DashboardHelpGuideInteractionProps & {
+type DashboardHelpDemoCardProps = HelpGuideInteractionProps<DashboardHelpGuideId> & {
   demoUpdatedAt: string
 }
 

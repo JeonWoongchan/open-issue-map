@@ -1,13 +1,14 @@
 import { HelpHotspot } from '@/components/help/HelpHotspot'
 import { IssueScoreBadge } from '@/components/shared/issue-card/IssueScoreBadge'
 import { DASHBOARD_HELP_DEMO_ISSUE } from '@/constants/dashboard-help'
-import type { DashboardHelpGuideInteractionProps } from '@/types/dashboard'
+import type { DashboardHelpGuideId } from '@/constants/dashboard-help'
+import type { HelpGuideInteractionProps } from '@/types/help'
 
 export function DashboardDemoCardHeader({
   activeGuideId,
   onActivateGuide,
   onClearGuide,
-}: DashboardHelpGuideInteractionProps) {
+}: HelpGuideInteractionProps<DashboardHelpGuideId>) {
   return (
     <>
       <div className="flex items-start justify-between gap-3">

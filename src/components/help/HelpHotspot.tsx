@@ -8,6 +8,9 @@ type HelpHotspotProps<TGuideId extends string> = HelpGuideInteractionProps<TGuid
   children: ReactNode
 }
 
+// 데모 카드 내 개별 요소를 감싸는 인터랙션 래퍼.
+// div 대신 button으로 구현해 키보드 포커스(Tab) 이벤트를 지원.
+// HelpGuideList와 같은 activeGuideId를 공유해 좌측 카드 ↔ 우측 설명 양방향 강조 동기화.
 export function HelpHotspot<TGuideId extends string>({
   guideId,
   activeGuideId,

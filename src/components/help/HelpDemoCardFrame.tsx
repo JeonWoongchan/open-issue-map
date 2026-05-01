@@ -7,6 +7,8 @@ type HelpDemoCardFrameProps = {
   note?: string
 }
 
+// 도움말 다이얼로그 좌측 예시 카드 컨테이너.
+// 바이올렛 외곽선(shadow ring)으로 '설명 중인 카드'임을 시각적으로 구분.
 export function HelpDemoCardFrame({
   children,
   label = '예시 카드',
