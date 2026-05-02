@@ -7,23 +7,12 @@ import { INITIAL_BATCH } from '@/lib/github/batch'
 import { fetchApi } from '@/lib/fetch-api'
 import type { IssueFilters, ScoredIssue } from '@/types/issue'
 import { EMPTY_ISSUE_FILTERS } from '@/types/issue'
+import type { IssueListPage } from '@/types/api'
 import { QUERY_KEYS, toBaseResult, type BaseQueryResult } from './queryKeys'
 
 type IssuePageParam = {
   offset: number
   batch: string
-}
-
-type IssueListPage = {
-  issues: ScoredIssue[]
-  total: number
-  hasMore: boolean
-  offset: number
-  batch: string
-  nextBatch: string | null
-  availableLanguages: string[]
-  partialResults: boolean
-  failedQueryCount: number
 }
 
 export type UseIssueListResult = BaseQueryResult & {

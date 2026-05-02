@@ -5,15 +5,8 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { PAGE_SIZE } from '@/constants/scoring-rules'
 import { fetchApi } from '@/lib/fetch-api'
 import type { PullRequestItem, PullRequestState, PullRequestSummary } from '@/types/pull-request'
+import type { PRListPage } from '@/types/api'
 import { QUERY_KEYS, toBaseResult, type BaseQueryResult } from './queryKeys'
-
-type PRListPage = {
-  items: PullRequestItem[]
-  summary: PullRequestSummary
-  total: number
-  hasMore: boolean
-  offset: number
-}
 
 export type UsePullRequestListResult = BaseQueryResult & {
   items: PullRequestItem[]
