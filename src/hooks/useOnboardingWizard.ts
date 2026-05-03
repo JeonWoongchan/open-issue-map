@@ -2,6 +2,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { isStepComplete, ONBOARDING_STEPS, POPULAR_LANGUAGES } from '@/constants/contribution-levels'
+import { isUnauthorizedApiResponse, redirectToLogin } from '@/lib/client-auth'
 import type { FormState } from '@/types/onboarding'
 import type { ContributionType, ExperienceLevel, Purpose, WeeklyHours } from '@/types/user'
 import type { ApiResponse } from '@/types/api'
@@ -27,6 +28,10 @@ export function useOnboardingWizard(initialLanguages: string[] = []) {
         body: JSON.stringify(form),
       })
       const json = (await res.json()) as ApiResponse<{ success: boolean }>
+      if (isUnauthorizedApiResponse(res, json)) {
+        redirectToLogin()
+        throw new Error(!json.ok ? (json.error?.message ?? DEFAULT_ERROR_MESSAGE) : DEFAULT_ERROR_MESSAGE)
+      }
       if (!json.ok) throw new Error(json.error?.message ?? DEFAULT_ERROR_MESSAGE)
     },
     onSuccess: () => {

@@ -1,17 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { isUnauthorizedApiResponse, redirectToLogin } from '@/lib/client-auth'
+import type { ApiResponse } from '@/types/api'
 import type { IssueCardItem } from '@/types/issue'
 import type { ContributionType } from '@/types/user'
-
-type IssueBookmarksResponse =
-  | { ok: true }
-  | {
-      ok: false
-      error?: {
-        message?: string
-      }
-    }
 
 type UseIssueBookmarksOptions = {
   sourceIssues: IssueCardItem[]
@@ -102,7 +95,13 @@ export function useIssueBookmarks({
           contributionType: issue.contributionType as ContributionType | null,
         }),
       })
-      const json = (await response.json()) as IssueBookmarksResponse
+      const json = (await response.json()) as ApiResponse<{ saved?: boolean; deleted?: boolean }>
+
+      if (isUnauthorizedApiResponse(response, json)) {
+        redirectToLogin()
+        undoOptimisticUpdate()
+        return
+      }
 
       // 비정상 응답 발생 시 낙관적 업데이트 롤백 실행부.
       if (!response.ok || !json.ok) {
