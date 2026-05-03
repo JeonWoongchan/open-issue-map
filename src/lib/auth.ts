@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth'
 import GitHub from 'next-auth/providers/github'
 import sql from '@/lib/db'
+import { env } from '@/lib/env'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -9,8 +10,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   providers: [
     GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      clientId: env.GITHUB_CLIENT_ID,
+      clientSecret: env.GITHUB_CLIENT_SECRET,
       authorization: {
         params: { scope: 'read:user public_repo' },
       },

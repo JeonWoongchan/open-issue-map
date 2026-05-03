@@ -122,7 +122,9 @@ export type FetchPullRequestsResult = {
     summary: PullRequestSummary
 }
 
-// 100개씩 cursor 기반으로 GitHub PR을 모두 수집 → 본인 레포 제외 → 통계 계산 후 반환
+// 100개씩 최대 MAX_PR_FETCH_PAGES 페이지까지 조회 — PR 1,000개 초과 시 GitHub API 연속 호출 방지
+const MAX_PR_FETCH_PAGES = 10
+
 export async function fetchViewerPullRequests({
     accessToken,
     viewerLogin = '',
@@ -130,13 +132,15 @@ export async function fetchViewerPullRequests({
 }: FetchPullRequestsParams): Promise<FetchPullRequestsResult> {
     let after: string | null = null
     let hasNextPage = true
+    let pageCount = 0
     const allItems: PullRequestItem[] = []
 
-    while (hasNextPage) {
+    while (hasNextPage && pageCount < MAX_PR_FETCH_PAGES) {
         const connection = await fetchPullRequestPage(accessToken, after, states)
         allItems.push(...excludeOwnRepoPRs(connection.nodes.map(toPullRequestItem), viewerLogin))
         hasNextPage = connection.pageInfo.hasNextPage
         after = connection.pageInfo.endCursor
+        pageCount++
     }
 
     return { items: allItems, summary: computeSummary(allItems) }

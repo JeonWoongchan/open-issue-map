@@ -18,16 +18,21 @@ export async function GET(req: NextRequest) {
   const limit = z.coerce.number().int().min(1).max(20).catch(10).parse(searchParams.get('limit'))
   const offset = offsetSchema.parse(searchParams.get('offset'))
 
-  // 북마크 목록 조회 서비스 호출 단계.
-  const bookmarkList = await getBookmarkList({
-    userId: authResult.userId,
-    accessToken: authResult.accessToken,
-    limit,
-    offset,
-  })
+  try {
+    // 북마크 목록 조회 서비스 호출 단계.
+    const bookmarkList = await getBookmarkList({
+      userId: authResult.userId,
+      accessToken: authResult.accessToken,
+      limit,
+      offset,
+    })
 
-  // 북마크 목록 응답 반환 단계.
-  return ok(bookmarkList)
+    // 북마크 목록 응답 반환 단계.
+    return ok(bookmarkList)
+  } catch (error) {
+    console.error('[GET /api/bookmarks] 북마크 목록 조회 실패:', error)
+    return err('Failed to fetch bookmarks', 500, ErrorCode.INTERNAL_ERROR)
+  }
 }
 
 export async function POST(req: Request) {
@@ -42,17 +47,22 @@ export async function POST(req: Request) {
     return err('Invalid bookmark payload', 400)
   }
 
-  // 북마크 저장 단계.
-  await createBookmark(session.user.id, {
-    issueNumber: parsed.data.issueNumber,
-    repoFullName: parsed.data.repoFullName,
-    issueTitle: parsed.data.issueTitle,
-    issueUrl: parsed.data.issueUrl,
-    contributionType: parsed.data.contributionType ?? null,
-  })
+  try {
+    // 북마크 저장 단계.
+    await createBookmark(session.user.id, {
+      issueNumber: parsed.data.issueNumber,
+      repoFullName: parsed.data.repoFullName,
+      issueTitle: parsed.data.issueTitle,
+      issueUrl: parsed.data.issueUrl,
+      contributionType: parsed.data.contributionType ?? null,
+    })
 
-  // 저장 결과 응답 반환 단계.
-  return ok({ saved: true }, 201)
+    // 저장 결과 응답 반환 단계.
+    return ok({ saved: true }, 201)
+  } catch (error) {
+    console.error('[POST /api/bookmarks] 북마크 저장 실패:', error)
+    return err('Failed to save bookmark', 500, ErrorCode.INTERNAL_ERROR)
+  }
 }
 
 export async function DELETE(req: Request) {
@@ -67,9 +77,14 @@ export async function DELETE(req: Request) {
     return err('Invalid bookmark payload', 400)
   }
 
-  // 북마크 삭제 단계.
-  await deleteBookmark(session.user.id, parsed.data.repoFullName, parsed.data.issueNumber)
+  try {
+    // 북마크 삭제 단계.
+    await deleteBookmark(session.user.id, parsed.data.repoFullName, parsed.data.issueNumber)
 
-  // 삭제 결과 응답 반환 단계.
-  return ok({ deleted: true })
+    // 삭제 결과 응답 반환 단계.
+    return ok({ deleted: true })
+  } catch (error) {
+    console.error('[DELETE /api/bookmarks] 북마크 삭제 실패:', error)
+    return err('Failed to delete bookmark', 500, ErrorCode.INTERNAL_ERROR)
+  }
 }

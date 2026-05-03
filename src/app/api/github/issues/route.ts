@@ -12,27 +12,32 @@ export async function GET(req: NextRequest) {
     const auth = await requireGithubToken(req)
     if (!auth.ok) return err(auth.error, auth.status, auth.code)
 
-    const profile = await loadOnboardingProfile(auth.userId)
-    if (!profile) return err('Onboarding not complete', 400, ErrorCode.ONBOARDING_REQUIRED)
+    try {
+        const profile = await loadOnboardingProfile(auth.userId)
+        if (!profile) return err('Onboarding not complete', 400, ErrorCode.ONBOARDING_REQUIRED)
 
-    const { searchParams } = new URL(req.url)
-    const offset = offsetSchema.parse(searchParams.get('offset'))
-    const batchParam = searchParams.get('batch') ?? INITIAL_BATCH
-    const filters = parseIssueFilters(searchParams)
+        const { searchParams } = new URL(req.url)
+        const offset = offsetSchema.parse(searchParams.get('offset'))
+        const batchParam = searchParams.get('batch') ?? INITIAL_BATCH
+        const filters = parseIssueFilters(searchParams)
 
-    const result = await fetchIssueListPage({
-        userId: auth.userId,
-        accessToken: auth.accessToken,
-        profile,
-        filters,
-        offset,
-        batchParam,
-    })
+        const result = await fetchIssueListPage({
+            userId: auth.userId,
+            accessToken: auth.accessToken,
+            profile,
+            filters,
+            offset,
+            batchParam,
+        })
 
-    if ('error' in result) {
-        if (result.error === 'rate_limited') return err('GitHub rate limit exceeded', 429, ErrorCode.RATE_LIMITED)
-        return err('Failed to fetch GitHub issues', 502, ErrorCode.GITHUB_ERROR)
+        if ('error' in result) {
+            if (result.error === 'rate_limited') return err('GitHub rate limit exceeded', 429, ErrorCode.RATE_LIMITED)
+            return err('Failed to fetch GitHub issues', 502, ErrorCode.GITHUB_ERROR)
+        }
+
+        return ok(result)
+    } catch (error) {
+        console.error('[GET /api/github/issues] 이슈 목록 조회 실패:', error)
+        return err('Failed to fetch issues', 500, ErrorCode.INTERNAL_ERROR)
     }
-
-    return ok(result)
 }
