@@ -30,7 +30,7 @@ export function useOnboardingWizard(initialLanguages: string[] = []) {
       const json = (await res.json()) as ApiResponse<{ success: boolean }>
       if (isUnauthorizedApiResponse(res, json)) {
         redirectToLogin()
-        throw new Error(!json.ok ? (json.error?.message ?? DEFAULT_ERROR_MESSAGE) : DEFAULT_ERROR_MESSAGE)
+        return
       }
       if (!json.ok) throw new Error(json.error?.message ?? DEFAULT_ERROR_MESSAGE)
     },

@@ -53,9 +53,10 @@ export async function githubGraphQL<T>(
     const firstError = json.errors[0]
 
     switch (firstError.type) {
-    case 'RATE_LIMITED': throw new GitHubRateLimitError()
-    case 'NOT_FOUND':    throw new GitHubNotFoundError()
-    default:             throw new Error(firstError.message ?? 'GraphQL error')
+    case 'RATE_LIMITED':  throw new GitHubRateLimitError()
+    case 'NOT_FOUND':     throw new GitHubNotFoundError()
+    case 'UNAUTHORIZED':  throw new GitHubUnauthorizedError()
+    default:              throw new Error(firstError.message ?? 'GraphQL error')
     }
   }
 

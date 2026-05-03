@@ -4,6 +4,9 @@ import { err, ErrorCode } from '@/lib/api-response'
 import { GitHubNotFoundError, GitHubRateLimitError, GitHubUnauthorizedError } from '@/lib/github/client'
 import { GitHubProfileError } from '@/lib/github/profile'
 
+export const GITHUB_RATE_LIMITED_MESSAGE = 'GitHub API 요청 한도를 초과했습니다.'
+export const GITHUB_UNAUTHORIZED_MESSAGE = 'GitHub 인증이 만료되었습니다. 다시 로그인해 주세요.'
+
 type GitHubErrorResponseOptions = {
   fallbackMessage: string
   fallbackStatus?: number
@@ -25,11 +28,11 @@ export function getGitHubErrorResponse(
   }: GitHubErrorResponseOptions
 ): NextResponse {
   if (error instanceof GitHubRateLimitError) {
-    return err('GitHub API 요청 한도를 초과했습니다.', 429, ErrorCode.RATE_LIMITED)
+    return err(GITHUB_RATE_LIMITED_MESSAGE, 429, ErrorCode.RATE_LIMITED)
   }
 
   if (error instanceof GitHubUnauthorizedError) {
-    return err('GitHub 인증이 만료되었습니다. 다시 로그인해 주세요.', 401, ErrorCode.UNAUTHORIZED)
+    return err(GITHUB_UNAUTHORIZED_MESSAGE, 401, ErrorCode.UNAUTHORIZED)
   }
 
   if (error instanceof GitHubNotFoundError && notFoundMessage) {
@@ -37,12 +40,6 @@ export function getGitHubErrorResponse(
   }
 
   if (error instanceof GitHubProfileError) {
-    if (error.status === 401) {
-      return err('GitHub 인증이 만료되었습니다. 다시 로그인해 주세요.', 401, ErrorCode.UNAUTHORIZED)
-    }
-    if (error.status === 429) {
-      return err('GitHub API 요청 한도를 초과했습니다.', 429, ErrorCode.RATE_LIMITED)
-    }
     return err(error.message, error.status, ErrorCode.GITHUB_ERROR)
   }
 

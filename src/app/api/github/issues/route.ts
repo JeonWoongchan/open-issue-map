@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 
 import { err, ErrorCode, ok } from '@/lib/api-response'
 import { requireGithubToken } from '@/lib/auth-utils'
+import { GITHUB_RATE_LIMITED_MESSAGE, GITHUB_UNAUTHORIZED_MESSAGE } from '@/lib/github/error-response'
 import { INITIAL_BATCH } from '@/lib/github/batch'
 import { parseIssueFilters } from '@/lib/github/issues/filters'
 import { fetchIssueListPage } from '@/lib/github/issues/service'
@@ -31,11 +32,9 @@ export async function GET(req: NextRequest) {
         })
 
         if ('error' in result) {
-            if (result.error === 'rate_limited') return err('GitHub rate limit exceeded', 429, ErrorCode.RATE_LIMITED)
-            if (result.error === 'unauthorized') {
-                return err('GitHub authorization expired. Please sign in again.', 401, ErrorCode.UNAUTHORIZED)
-            }
-            return err('Failed to fetch GitHub issues', 502, ErrorCode.GITHUB_ERROR)
+            if (result.error === 'rate_limited') return err(GITHUB_RATE_LIMITED_MESSAGE, 429, ErrorCode.RATE_LIMITED)
+            if (result.error === 'unauthorized') return err(GITHUB_UNAUTHORIZED_MESSAGE, 401, ErrorCode.UNAUTHORIZED)
+            return err('이슈 목록을 불러오지 못했습니다.', 502, ErrorCode.GITHUB_ERROR)
         }
 
         return ok(result)

@@ -4,6 +4,7 @@ import { getToken } from 'next-auth/jwt'
 import type { GitHubRepo } from '@/types/github'
 import { GITHUB_API_TIMEOUT_MS } from '@/constants/scoring-rules'
 import { env } from '@/lib/env'
+import { GitHubRateLimitError, GitHubUnauthorizedError } from '@/lib/github/client'
 
 const GITHUB_USER_REPOS_URL = 'https://api.github.com/user/repos?per_page=100&sort=updated'
 
@@ -42,12 +43,8 @@ export async function fetchUserRepos(accessToken: string): Promise<GitHubRepo[]>
   })
 
   if (!response.ok) {
-    if (response.status === 401) {
-      throw new GitHubProfileError('GitHub authorization expired', 401)
-    }
-    if (response.status === 403 && response.headers.get('x-ratelimit-remaining') === '0') {
-      throw new GitHubProfileError('GitHub rate limit exceeded', 429)
-    }
+    if (response.status === 401) throw new GitHubUnauthorizedError()
+    if (response.status === 403 && response.headers.get('x-ratelimit-remaining') === '0') throw new GitHubRateLimitError()
     throw new GitHubProfileError('GitHub API error', response.status)
   }
 
