@@ -47,16 +47,10 @@ export function useIssueBookmarks({
     setOptimisticIssues(sourceIssues)
   }, [isSourceIssuesReady, sourceIssues])
 
-  // 북마크 토글 실패 시 원래 상태로 복구하는 롤백 처리부.
-  function rollbackIssues(previousIssues: IssueCardItem[]) {
-    setOptimisticIssues(previousIssues)
-  }
-
   // 대시보드 이슈 카드 기준 북마크 저장 및 해제 토글 처리부.
   async function toggleBookmark(issue: IssueCardItem) {
     const bookmarkKey = getBookmarkKey(issue)
     const wasBookmarked = issue.isBookmarked ?? false
-    let previousIssuesSnapshot: IssueCardItem[] = []
 
     // 중복 클릭 방지를 위한 요청 중 상태 등록부.
     setPendingBookmarkKeys((current) =>
@@ -64,19 +58,34 @@ export function useIssueBookmarks({
     )
 
     // 응답 대기 전 UI를 즉시 반영하기 위한 낙관적 업데이트 처리부.
+    // removeOnUnbookmark 모드에서 북마크 해제 시 목록에서 즉시 제거하고,
+    // 그 외에는 해당 항목의 isBookmarked만 반전.
     setOptimisticIssues((current) => {
-      previousIssuesSnapshot = current
-
       if (removeOnUnbookmark && wasBookmarked) {
-        return current.filter((currentIssue) => getBookmarkKey(currentIssue) !== bookmarkKey)
+        return current.filter((i) => getBookmarkKey(i) !== bookmarkKey)
       }
-
-      return current.map((currentIssue) =>
-        getBookmarkKey(currentIssue) === bookmarkKey
-          ? { ...currentIssue, isBookmarked: !wasBookmarked }
-          : currentIssue
+      return current.map((i) =>
+        getBookmarkKey(i) === bookmarkKey ? { ...i, isBookmarked: !wasBookmarked } : i
       )
     })
+
+    // 실패 시 해당 이슈 하나만 이전 북마크 상태로 되돌리는 함수형 롤백 선언부.
+    // snapshot 전체 복원 대신 현재 상태에서 bookmarkKey 항목만 수정하므로
+    // 동시에 진행 중인 다른 이슈의 낙관적 업데이트에 간섭 없음.
+    // removeOnUnbookmark 케이스: 낙관적으로 삭제된 항목을 목록 끝에 재삽입.
+    // (원래 순서 복원 불가 — 네트워크 실패라는 희귀 케이스에 한정되므로 수용)
+    function undoOptimisticUpdate() {
+      setOptimisticIssues((current) => {
+        if (removeOnUnbookmark && wasBookmarked) {
+          // 중복 삽입 방지 — 이미 목록에 있으면 현재 상태 유지
+          if (current.some((i) => getBookmarkKey(i) === bookmarkKey)) return current
+          return [...current, { ...issue, isBookmarked: true }]
+        }
+        return current.map((i) =>
+          getBookmarkKey(i) === bookmarkKey ? { ...i, isBookmarked: wasBookmarked } : i
+        )
+      })
+    }
 
     try {
       // 서버 북마크 저장 및 삭제 요청 전송부.
@@ -95,16 +104,16 @@ export function useIssueBookmarks({
       })
       const json = (await response.json()) as IssueBookmarksResponse
 
-      // 비정상 응답 발생 시 상태 복구 처리부.
+      // 비정상 응답 발생 시 낙관적 업데이트 롤백 실행부.
       if (!response.ok || !json.ok) {
-        rollbackIssues(previousIssuesSnapshot)
+        undoOptimisticUpdate()
         return
       }
 
       await onMutationSuccessAction?.()
     } catch {
-      // 네트워크 예외 발생 시 상태 복구 처리부.
-      rollbackIssues(previousIssuesSnapshot)
+      // 네트워크 예외 발생 시 낙관적 업데이트 롤백 실행부.
+      undoOptimisticUpdate()
     } finally {
       // 요청 완료 후 pending 상태 해제 처리부.
       setPendingBookmarkKeys((current) => current.filter((key) => key !== bookmarkKey))
