@@ -1,6 +1,5 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
 import { isStepComplete, ONBOARDING_STEPS, POPULAR_LANGUAGES } from '@/constants/contribution-levels'
 import { isUnauthorizedApiResponse, redirectToLogin } from '@/lib/client-auth'
 import type { FormState } from '@/types/onboarding'
@@ -19,9 +18,13 @@ export function useOnboardingWizard(initialLanguages: string[] = []) {
     weeklyHours: null,
     purpose: null,
   })
+  const [isPending, setIsPending] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const mutation = useMutation({
-    mutationFn: async () => {
+  async function handleSubmit() {
+    setIsPending(true)
+    setErrorMessage(null)
+    try {
       const res = await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -32,12 +35,17 @@ export function useOnboardingWizard(initialLanguages: string[] = []) {
         redirectToLogin()
         return
       }
-      if (!json.ok) throw new Error(json.error?.message ?? DEFAULT_ERROR_MESSAGE)
-    },
-    onSuccess: () => {
+      if (!json.ok) {
+        setErrorMessage(json.error?.message ?? DEFAULT_ERROR_MESSAGE)
+        return
+      }
       router.push('/dashboard')
-    },
-  })
+    } catch {
+      setErrorMessage(DEFAULT_ERROR_MESSAGE)
+    } finally {
+      setIsPending(false)
+    }
+  }
 
   const canNext = isStepComplete(step, form)
 
@@ -92,10 +100,10 @@ export function useOnboardingWizard(initialLanguages: string[] = []) {
     form,
     goNext,
     goPrev,
-    handleSubmit: () => { mutation.mutate() },
-    isPending: mutation.isPending,
-    isError: mutation.isError,
-    errorMessage: mutation.isError ? mutation.error.message : DEFAULT_ERROR_MESSAGE,
+    handleSubmit,
+    isPending,
+    isError: errorMessage !== null,
+    errorMessage,
     step,
     toggleAllTopLanguages,
     toggleContributionType,

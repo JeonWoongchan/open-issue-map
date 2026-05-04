@@ -40,7 +40,8 @@ export function getGitHubErrorResponse(
   }
 
   if (error instanceof GitHubProfileError) {
-    return err(error.message, error.status, ErrorCode.GITHUB_ERROR)
+    // error.message를 그대로 노출하지 않고 status만 참조해 정적 메시지 반환
+    return err(fallbackMessage, error.status, ErrorCode.GITHUB_ERROR)
   }
 
   return err(fallbackMessage, fallbackStatus, fallbackCode)
