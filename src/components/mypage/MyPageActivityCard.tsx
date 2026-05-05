@@ -1,7 +1,7 @@
 'use client'
 
 import { Bookmark, GitPullRequest } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useMyPageActivity } from '@/hooks/useMyPageActivity'
 import { CardListError } from '@/components/shared/CardListError'
 import { MyPageStatCard } from './MyPageStatCard'
@@ -44,7 +44,6 @@ export function MyPageActivityCard() {
         <Card className="border border-border/70 bg-card/95">
             <CardHeader>
                 <CardTitle>내 활동 요약</CardTitle>
-                <CardDescription>저장한 이슈와 GitHub 활동 이력을 빠르게 확인합니다.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3">
                 <MyPageStatCard

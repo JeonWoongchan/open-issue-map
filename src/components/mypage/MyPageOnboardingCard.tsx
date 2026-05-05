@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { MyPageData } from '@/lib/user/my-page'
 import { RotateCcw } from 'lucide-react'
 import Link from 'next/link'
@@ -22,10 +22,6 @@ export function MyPageOnboardingCard({ onboarding }: MyPageOnboardingCardProps) 
     <Card className="border border-border/70 bg-card/95">
       <CardHeader>
         <CardTitle>내 추천 기준</CardTitle>
-        <CardDescription>
-          온보딩 답변을 추천 프로필 형태로 정리했습니다. 이 값들이 현재 이슈 추천과 북마크 점수 계산에
-          반영됩니다.
-        </CardDescription>
         <CardAction>
           <Button asChild variant="outline" size="sm">
             <Link href="/onboarding">

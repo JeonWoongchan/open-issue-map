@@ -17,23 +17,28 @@ const FILTERS: { label: string; value: PullRequestState | null }[] = [
 
 export function PRStateFilter({ current, onChangeAction }: PRStateFilterProps) {
   return (
-    <div className="flex gap-2">
-      {FILTERS.map((filter) => (
-        <Button
-          key={filter.label}
-          variant="outline"
-          size="sm"
-          className={cn(
-            'text-xs',
-            current === filter.value
-              ? 'border-interactive-selected-border bg-interactive-selected text-interactive-action-hover'
-              : 'text-muted-foreground hover:bg-interactive-hover'
-          )}
-          onClick={() => onChangeAction(filter.value)}
-        >
-          {filter.label}
-        </Button>
-      ))}
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-wrap gap-2">
+        {FILTERS.map((filter) => (
+          <Button
+            key={filter.label}
+            variant="outline"
+            size="sm"
+            className={cn(
+              'text-xs',
+              current === filter.value
+                ? 'border-interactive-selected-border bg-interactive-selected text-interactive-action-hover'
+                : 'text-muted-foreground hover:bg-interactive-hover'
+            )}
+            onClick={() => onChangeAction(filter.value)}
+          >
+            {filter.label}
+          </Button>
+        ))}
+      </div>
+      <p className="self-end text-right text-xs text-muted-foreground">
+        * 본인 소유 저장소에 올린 PR은 제외한 목록만 표시됩니다.
+      </p>
     </div>
   )
 }

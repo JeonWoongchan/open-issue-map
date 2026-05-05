@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import {Card, CardContent, CardFooter} from '@/components/ui/card'
 
 type MyPageStatCardProps = {
   icon: ReactNode
@@ -27,6 +27,13 @@ export function MyPageStatCard({ icon, label, value, href }: MyPageStatCardProps
           <Link href={href}>보기</Link>
         </Button>
       </CardContent>
+      {label === "Pull Requests" &&
+        <CardFooter>
+            <p className="text-xs text-muted-foreground">
+              * 본인 소유 저장소에 올린 PR은 이 개수에서 제외.
+            </p>
+        </CardFooter>
+      }
     </Card>
   )
 }
