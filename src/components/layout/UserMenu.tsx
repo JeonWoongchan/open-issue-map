@@ -17,8 +17,9 @@ type UserMenuProps = {
 export function UserMenu({ logoutAction }: UserMenuProps) {
   return (
     <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Menu className="size-5 shrink-0 cursor-pointer opacity-60" />
+      <DropdownMenuTrigger className="shrink-0 cursor-pointer rounded-sm opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+        <Menu className="size-5" />
+        <span className="sr-only">메뉴 열기</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={12}>
         <DropdownMenuItem asChild>
