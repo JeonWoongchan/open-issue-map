@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest'
 import { parseIssueFilters, applyFilters } from '@/lib/github/issues/filters'
 import { SCORE_FILTER_THRESHOLDS } from '@/constants/scoring-rules'
-import type { ScoredIssue } from '@/types/issue'
+import type { IssueFilters, ScoredIssue } from '@/types/issue'
 
 // ─── Factory Function ───────────────────────────────────────────────────────
 /** 테스트용 ScoredIssue 기본값 생성 함수. */
@@ -105,12 +105,12 @@ describe('parseIssueFilters', () => {
 // ─── applyFilters ───────────────────────────────────────────────────────────
 describe('applyFilters', () => {
     // 모든 필터가 비어있는 "필터 없음" 상태를 편하게 만드는 상수
-    const noFilters = {
+    const noFilters: IssueFilters = {
         language: null,
         difficultyLevel: null,
         contributionTypes: [],
         minScore: null,
-    } as const
+    }
 
     it('모든 필터가 null이면 이슈를 전부 통과시킨다', () => {
         const issues = [makeScoredIssue(), makeScoredIssue({ number: 2 })]

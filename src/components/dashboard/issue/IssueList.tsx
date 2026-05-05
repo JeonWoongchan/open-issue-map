@@ -103,7 +103,7 @@ export function IssueList() {
             <InfiniteScrollTrigger
                 hasNextPage={effectiveHasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
-                sentinelRef={sentinelRef}
+                sentinelRefAction={sentinelRef}
             />
         </div>
     )

@@ -6,12 +6,18 @@ import { isUnauthorizedApiResponse, redirectToLogin } from '@/lib/client-auth'
 import type { ApiResponse } from '@/types/api'
 import type { IssueCardItem } from '@/types/issue'
 import type { ContributionType } from '@/types/user'
+import { useToast } from './use-toast'
 import { QUERY_KEYS } from './queryKeys'
 
 type UseIssueBookmarksOptions = {
   sourceIssues: IssueCardItem[]
   isSourceIssuesReady: boolean
   removeOnUnbookmark?: boolean
+}
+
+function getBookmarkFailureMessage(wasBookmarked: boolean): string {
+  const action = wasBookmarked ? '제거' : '저장'
+  return `북마크를 ${action}하지 못했습니다. 잠시 후 다시 시도해 주세요.`
 }
 
 // 카드 단위 북마크 식별 키 생성 유틸리티 함수 선언부.
@@ -25,6 +31,7 @@ export function useIssueBookmarks({
   removeOnUnbookmark = false,
 }: UseIssueBookmarksOptions) {
   const queryClient = useQueryClient()
+  const { toast } = useToast()
 
   // 북마크 토글 결과를 반영하는 낙관적 이슈 목록 상태 선언부.
   // 추천 이슈 목록을 복사하고 북마크 여부를 추가 관리해서 사용
@@ -130,6 +137,10 @@ export function useIssueBookmarks({
 
       // 비정상 응답 발생 시 낙관적 업데이트 롤백 실행부.
       if (!response.ok || !json.ok) {
+        toast({
+          variant: 'destructive',
+          title: getBookmarkFailureMessage(wasBookmarked),
+        })
         undoOptimisticUpdate()
         return
       }
@@ -140,6 +151,10 @@ export function useIssueBookmarks({
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myPageActivity }),
       ])
     } catch {
+      toast({
+        variant: 'destructive',
+        title: getBookmarkFailureMessage(wasBookmarked),
+      })
       // 네트워크 예외 발생 시 낙관적 업데이트 롤백 실행부.
       undoOptimisticUpdate()
     } finally {
