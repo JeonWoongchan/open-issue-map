@@ -33,7 +33,7 @@ export function PRHistoryList() {
     const [query, setQuery] = useState('')
     // 상태 필터 결과에 텍스트 검색을 이어서 적용 (AND 조합)
     const filteredItems = useSearchFilter(items, query)
-    const { displayItems, effectiveHasNextPage, sentinelRefAction } = useInfiniteScrollDisplay({
+    const { displayItems, effectiveHasNextPage, sentinelRef } = useInfiniteScrollDisplay({
         items: filteredItems,
         hasNextPage,
         fetchNextPageAction,
@@ -78,7 +78,7 @@ export function PRHistoryList() {
             <InfiniteScrollTrigger
                 hasNextPage={effectiveHasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
-                sentinelRefAction={sentinelRefAction}
+                sentinelRef={sentinelRef}
             />
         </div>
     )

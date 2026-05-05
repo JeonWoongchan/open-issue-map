@@ -33,7 +33,7 @@ export function BookmarkList() {
 
     const [query, setQuery] = useState('')
     const filteredItems = useSearchFilter(optimisticIssues, query)
-    const { displayItems, effectiveHasNextPage, sentinelRefAction } = useInfiniteScrollDisplay({
+    const { displayItems, effectiveHasNextPage, sentinelRef } = useInfiniteScrollDisplay({
         items: filteredItems,
         hasNextPage,
         fetchNextPageAction,
@@ -77,7 +77,7 @@ export function BookmarkList() {
             <InfiniteScrollTrigger
                 hasNextPage={effectiveHasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
-                sentinelRefAction={sentinelRefAction}
+                sentinelRef={sentinelRef}
             />
         </div>
     )

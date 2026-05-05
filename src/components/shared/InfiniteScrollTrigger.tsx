@@ -3,24 +3,24 @@
 import { CardListSkeleton } from './CardListSkeleton'
 
 type InfiniteScrollTriggerProps = {
-  hasNextPage: boolean
-  isFetchingNextPage: boolean
-  sentinelRefAction: (element: HTMLDivElement | null) => void
+    hasNextPage: boolean
+    isFetchingNextPage: boolean
+    sentinelRef: (node?: Element | null) => void
 }
 
 export function InfiniteScrollTrigger({
-  hasNextPage,
-  isFetchingNextPage,
-  sentinelRefAction,
+    hasNextPage,
+    isFetchingNextPage,
+    sentinelRef,
 }: InfiniteScrollTriggerProps) {
-  if (!hasNextPage) {
-    return null
-  }
+    if (!hasNextPage) {
+        return null
+    }
 
-  return (
-    <>
-      {isFetchingNextPage ? <CardListSkeleton count={2} /> : null}
-      <div ref={sentinelRefAction} className="h-10" />
-    </>
-  )
+    return (
+        <>
+            {isFetchingNextPage ? <CardListSkeleton count={2} /> : null}
+            <div ref={sentinelRef} className="h-10" />
+        </>
+    )
 }

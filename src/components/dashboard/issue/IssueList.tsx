@@ -50,7 +50,7 @@ export function IssueList() {
 
     const [query, setQuery] = useState('')
     const filteredItems = useSearchFilter(optimisticIssues, query)
-    const { displayItems, effectiveHasNextPage, sentinelRefAction } = useInfiniteScrollDisplay({
+    const { displayItems, effectiveHasNextPage, sentinelRef } = useInfiniteScrollDisplay({
         items: filteredItems,
         hasNextPage,
         fetchNextPageAction,
@@ -102,7 +102,7 @@ export function IssueList() {
             <InfiniteScrollTrigger
                 hasNextPage={effectiveHasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
-                sentinelRefAction={sentinelRefAction}
+                sentinelRef={sentinelRef}
             />
         </div>
     )
