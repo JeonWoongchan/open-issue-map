@@ -17,7 +17,9 @@ export async function requireGithubToken(req: NextRequest): Promise<AuthResult> 
   }
 
   // NextAuth v5는 AUTH_SECRET을 사용한다. NEXTAUTH_SECRET은 v4 이름으로 다른 변수다.
-  const token = await getToken({ req, secret: env.AUTH_SECRET })
+  // 프로덕션(HTTPS)에서는 __Secure- 접두사 쿠키를 읽기 위해 secureCookie: true 필요
+  const secureCookie = process.env.NODE_ENV === 'production'
+  const token = await getToken({ req, secret: env.AUTH_SECRET, secureCookie })
   if (!token?.accessToken) {
     return { ok: false, error: 'No access token', status: 401, code: ErrorCode.NO_ACCESS_TOKEN }
   }

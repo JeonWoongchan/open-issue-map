@@ -57,9 +57,12 @@ export async function getTopLanguagesByAccessToken(accessToken: string): Promise
 }
 
 async function getAccessToken(): Promise<string | null> {
+  // 프로덕션(HTTPS)에서는 __Secure- 접두사 쿠키를 읽기 위해 secureCookie: true 필요
+  const secureCookie = process.env.NODE_ENV === 'production'
   const token = await getToken({
     req: { headers: await headers() } as Request,
     secret: env.AUTH_SECRET,
+    secureCookie,
   })
 
   return token?.accessToken ?? null
