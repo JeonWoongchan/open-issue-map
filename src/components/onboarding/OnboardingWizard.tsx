@@ -3,6 +3,7 @@
 import { ONBOARDING_STEPS } from '@/constants/contribution-levels'
 import { CenteredPanel } from '@/components/layout/CenteredPanel'
 import { useOnboardingWizard } from '@/hooks/useOnboardingWizard'
+import { OnboardingFooter } from './OnboardingFooter'
 import { OnboardingWizardButton } from './OnboardingWizardButton'
 import { StepProgress } from './StepProgress'
 import { ContributionTypesStep } from './steps/ContributionTypesStep'
@@ -19,6 +20,7 @@ export default function OnboardingWizard({ initialLanguages }: { initialLanguage
     goPrev,
     handleSubmit,
     isPending,
+    errorMessage,
     step,
     toggleAllTopLanguages,
     toggleContributionType,
@@ -66,7 +68,7 @@ export default function OnboardingWizard({ initialLanguages }: { initialLanguage
   }
 
   return (
-    <CenteredPanel>
+    <CenteredPanel footer={<OnboardingFooter />}>
       <div className="mb-6 space-y-2">
         <p className="text-sm font-medium text-interactive-action-hover">추천 설정</p>
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
@@ -78,21 +80,26 @@ export default function OnboardingWizard({ initialLanguages }: { initialLanguage
       </div>
       <StepProgress currentStep={step} labels={ONBOARDING_STEPS.map((item) => item.label)} />
       {renderCurrentStep()}
-      <div className="mt-6 flex gap-3">
-        {canGoPrev ? (
-          <OnboardingWizardButton tone="secondary" onClick={goPrev}>
-            이전
-          </OnboardingWizardButton>
+      <div className="mt-6 flex flex-col gap-3">
+        {errorMessage ? (
+          <p className="text-center text-sm text-status-danger-foreground">{errorMessage}</p>
         ) : null}
-        {isLastStep ? (
-          <OnboardingWizardButton disabled={!canNext || isPending} onClick={handleSubmit}>
-            {isPending ? '저장 중...' : '시작하기'}
-          </OnboardingWizardButton>
-        ) : (
-          <OnboardingWizardButton disabled={!canNext} onClick={goNext}>
-            다음
-          </OnboardingWizardButton>
-        )}
+        <div className="flex gap-3">
+          {canGoPrev ? (
+            <OnboardingWizardButton tone="secondary" onClick={goPrev}>
+              이전
+            </OnboardingWizardButton>
+          ) : null}
+          {isLastStep ? (
+            <OnboardingWizardButton disabled={!canNext || isPending} onClick={handleSubmit}>
+              {isPending ? '저장 중...' : '시작하기'}
+            </OnboardingWizardButton>
+          ) : (
+            <OnboardingWizardButton disabled={!canNext} onClick={goNext}>
+              다음
+            </OnboardingWizardButton>
+          )}
+        </div>
       </div>
     </CenteredPanel>
   )
