@@ -41,15 +41,29 @@ function makeScoredIssue(overrides: Partial<ScoredIssue> = {}): ScoredIssue {
 // new URLSearchParams('language=TypeScript') → language 파라미터를 'TypeScript'로 갖는 객체
 describe('parseIssueFilters', () => {
 
-    it('파라미터가 없으면 모든 필드가 null이다', () => {
+    it('파라미터가 없으면 language·difficultyLevel·minScore는 null, contributionTypes는 빈 배열이다', () => {
         const params = new URLSearchParams()
         const filters = parseIssueFilters(params)
 
         // 빈 파라미터는 "필터 없음" 상태여야 한다
         expect(filters.language).toBeNull()
         expect(filters.difficultyLevel).toBeNull()
-        expect(filters.contributionType).toBeNull()
+        expect(filters.contributionTypes).toEqual([])
         expect(filters.minScore).toBeNull()
+    })
+
+    it('허용된 contributionTypes 값들은 배열로 반환된다', () => {
+        const params = new URLSearchParams()
+        params.append('contributionTypes', 'bug')
+        params.append('contributionTypes', 'doc')
+        expect(parseIssueFilters(params).contributionTypes).toEqual(['bug', 'doc'])
+    })
+
+    it('허용되지 않은 contributionTypes 값("hack")은 제거된다', () => {
+        const params = new URLSearchParams()
+        params.append('contributionTypes', 'bug')
+        params.append('contributionTypes', 'hack')
+        expect(parseIssueFilters(params).contributionTypes).toEqual(['bug'])
     })
 
     it('language 파라미터는 그대로 반환된다', () => {
@@ -90,11 +104,11 @@ describe('parseIssueFilters', () => {
 
 // ─── applyFilters ───────────────────────────────────────────────────────────
 describe('applyFilters', () => {
-    // 모든 필터가 null인 "필터 없음" 상태를 편하게 만드는 상수
+    // 모든 필터가 비어있는 "필터 없음" 상태를 편하게 만드는 상수
     const noFilters = {
         language: null,
         difficultyLevel: null,
-        contributionType: null,
+        contributionTypes: [],
         minScore: null,
     } as const
 
@@ -141,6 +155,35 @@ describe('applyFilters', () => {
         const result = applyFilters(issues, { ...noFilters, language: 'TypeScript', minScore: 70 })
         expect(result).toHaveLength(1)
         expect(result[0].number).toBe(1)
+    })
+
+    it('contributionTypes 필터는 선택된 타입 중 하나라도 일치하는 이슈만 통과시킨다', () => {
+        const issues = [
+            makeScoredIssue({ number: 1, contributionType: 'bug' }),
+            makeScoredIssue({ number: 2, contributionType: 'doc' }),
+            makeScoredIssue({ number: 3, contributionType: 'feat' }),
+        ]
+        const result = applyFilters(issues, { ...noFilters, contributionTypes: ['bug', 'doc'] })
+        expect(result).toHaveLength(2)
+        expect(result.map((i) => i.number)).toEqual([1, 2])
+    })
+
+    it('contributionType이 null인 이슈는 contributionTypes 필터 적용 시 제외된다', () => {
+        const issues = [
+            makeScoredIssue({ number: 1, contributionType: 'bug' }),
+            makeScoredIssue({ number: 2, contributionType: null }),
+        ]
+        const result = applyFilters(issues, { ...noFilters, contributionTypes: ['bug'] })
+        expect(result).toHaveLength(1)
+        expect(result[0].number).toBe(1)
+    })
+
+    it('contributionTypes가 빈 배열이면 모든 이슈를 통과시킨다', () => {
+        const issues = [
+            makeScoredIssue({ number: 1, contributionType: 'bug' }),
+            makeScoredIssue({ number: 2, contributionType: null }),
+        ]
+        expect(applyFilters(issues, noFilters)).toHaveLength(2)
     })
 
     it('빈 이슈 배열은 빈 배열을 반환한다', () => {

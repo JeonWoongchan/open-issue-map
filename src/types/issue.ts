@@ -7,14 +7,14 @@ export type DifficultyLevel = ExperienceLevel
 export type IssueFilters = {
   language: string | null
   difficultyLevel: DifficultyLevel | null
-  contributionType: ContributionType | null
+  contributionTypes: ContributionType[]
   minScore: ScoreThreshold | null
 }
 
 export const EMPTY_ISSUE_FILTERS: IssueFilters = {
   language: null,
   difficultyLevel: null,
-  contributionType: null,
+  contributionTypes: [],
   minScore: null,
 }
 
