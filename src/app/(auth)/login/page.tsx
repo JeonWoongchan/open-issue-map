@@ -15,7 +15,7 @@ export default function LoginPage() {
             <div className="flex items-center justify-center border-l border-border/50 px-8 py-16">
                 <Card className="w-full max-w-sm">
                     <CardHeader className="text-center">
-                        <CardTitle className="text-2xl">Open Issue Map</CardTitle>
+                        <CardTitle className="text-2xl text-interactive-action">Open Issue Map</CardTitle>
                         <CardDescription>
                             GitHub 프로필과 온보딩 기반으로 기여 가능한 오픈소스 이슈를 매칭해드려요.
                         </CardDescription>
