@@ -9,7 +9,7 @@ export default function LoginPage() {
                 <CardHeader className="text-center">
                     <CardTitle className="text-2xl">Open Issue Map</CardTitle>
                     <CardDescription>
-                        내 GitHub 프로필 기반으로 기여 가능한 오픈소스 이슈를 매칭해드려요
+                        GitHub 프로필과 온보딩 기반으로 기여 가능한 오픈소스 이슈를 매칭해드려요.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
