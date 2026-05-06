@@ -131,7 +131,7 @@ export function IssueListFilter({ filters, availableLanguages, onChangeAction }:
                 {SCORE_FILTER_THRESHOLDS.map((threshold) => (
                     <FilterPill
                         key={threshold}
-                        label={`${threshold}점+`}
+                        label={`${threshold}+`}
                         selected={filters.minScore === threshold}
                         onClickAction={() => toggle('minScore', threshold)}
                     />

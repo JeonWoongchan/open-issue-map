@@ -6,7 +6,7 @@ import type { FormState } from '@/types/onboarding'
 import type { ContributionType, ExperienceLevel, Purpose, WeeklyHours } from '@/types/user'
 import type { ApiResponse } from '@/types/api'
 
-const DEFAULT_ERROR_MESSAGE = '온보딩 저장에 실패했습니다.'
+const DEFAULT_ERROR_MESSAGE = '온보딩 저장에 실패했습니다. 잠시 후 다시 시도해주세요.'
 
 export function useOnboardingWizard(initialLanguages: string[] = []) {
   const router = useRouter()
@@ -36,7 +36,7 @@ export function useOnboardingWizard(initialLanguages: string[] = []) {
         return
       }
       if (!json.ok) {
-        setErrorMessage(json.error?.message ?? DEFAULT_ERROR_MESSAGE)
+        setErrorMessage(DEFAULT_ERROR_MESSAGE)
         return
       }
       router.push('/dashboard')

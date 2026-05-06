@@ -8,7 +8,7 @@ export function OnboardingFooter() {
                 href="/login"
                 className="inline-block underline underline-offset-4 transition-colors hover:text-foreground"
             >
-                다른 계정으로 로그인
+                로그인 페이지로 이동
             </Link>
         </div>
     )

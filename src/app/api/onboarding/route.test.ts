@@ -9,6 +9,7 @@ vi.mock('@/lib/user/onboarding', () => ({ saveOnboardingSurvey: vi.fn() }))
 
 import { auth } from '@/lib/auth'
 import { saveOnboardingSurvey } from '@/lib/user/onboarding'
+import { POPULAR_LANGUAGES } from '@/constants/contribution-levels'
 const mockAuth = auth as unknown as Mock<() => Promise<Session | null>>
 const mockSave = vi.mocked(saveOnboardingSurvey)
 
@@ -100,6 +101,26 @@ describe('POST /api/onboarding', () => {
     expect(json.ok).toBe(true)
     expect(json.data.success).toBe(true)
     expect(mockSave).toHaveBeenCalledWith('user-1', validBody)
+  })
+
+  it('전체 언어 선택 payload를 정상 요청으로 처리한다', async () => {
+    mockAuth.mockResolvedValueOnce(session)
+    mockSave.mockResolvedValueOnce(undefined)
+    const body = {
+      ...validBody,
+      experienceLevel: 'senior',
+      contributionTypes: ['review', 'test', 'feat', 'bug', 'doc'],
+      topLanguages: [...POPULAR_LANGUAGES],
+      weeklyHours: 10,
+      purpose: 'community',
+    }
+
+    const res = await POST(makeReq(body))
+    const json = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(json.ok).toBe(true)
+    expect(mockSave).toHaveBeenCalledWith('user-1', body)
   })
 
   it('saveOnboardingSurvey 예외 발생 시 500을 반환한다', async () => {
