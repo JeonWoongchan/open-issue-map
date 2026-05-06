@@ -126,7 +126,7 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
   --bookmark-action: #F59E0B;
   --bookmark-action-foreground: oklch(0.2 0.02 85);
   --bookmark-action-hover: oklch(0.8 0.16 84);
-  --interactive-border: oklch(0.928 0.006 264.531);
+  --interactive-border: oklch(0.828 0.006 264.531);
   --interactive-hover: oklch(0.985 0.002 247.839);
   --interactive-hover-border: oklch(0.872 0.01 258.338);
   --interactive-selected: oklch(0.962 0.018 272.314);
