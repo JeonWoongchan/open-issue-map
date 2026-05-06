@@ -224,5 +224,6 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
   }
   html {
     @apply bg-background font-sans;
+    scrollbar-gutter: stable;
   }
 }
