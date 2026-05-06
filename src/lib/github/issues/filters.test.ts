@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { parseIssueFilters, applyFilters } from '@/lib/github/issues/filters'
-import { SCORE_FILTER_THRESHOLDS } from '@/constants/scoring-rules'
+import { SCORE_FILTER_THRESHOLDS, STAR_FILTER_THRESHOLDS } from '@/constants/scoring-rules'
 import type { IssueFilters, ScoredIssue } from '@/types/issue'
 
 // ─── Factory Function ───────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ function makeScoredIssue(overrides: Partial<ScoredIssue> = {}): ScoredIssue {
 // new URLSearchParams('language=TypeScript') → language 파라미터를 'TypeScript'로 갖는 객체
 describe('parseIssueFilters', () => {
 
-    it('파라미터가 없으면 language·difficultyLevel·minScore는 null, contributionTypes는 빈 배열이다', () => {
+    it('파라미터가 없으면 language·difficultyLevel·minScore·minStars는 null, contributionTypes는 빈 배열이다', () => {
         const params = new URLSearchParams()
         const filters = parseIssueFilters(params)
 
@@ -50,6 +50,7 @@ describe('parseIssueFilters', () => {
         expect(filters.difficultyLevel).toBeNull()
         expect(filters.contributionTypes).toEqual([])
         expect(filters.minScore).toBeNull()
+        expect(filters.minStars).toBeNull()
     })
 
     it('허용된 contributionTypes 값들은 배열로 반환된다', () => {
@@ -100,6 +101,22 @@ describe('parseIssueFilters', () => {
         const params = new URLSearchParams('minScore=abc')
         expect(parseIssueFilters(params).minScore).toBeNull()
     })
+
+    it('STAR_FILTER_THRESHOLDS에 있는 minStars는 숫자로 반환된다', () => {
+        const threshold = STAR_FILTER_THRESHOLDS[0]
+        const params = new URLSearchParams(`minStars=${threshold}`)
+        expect(parseIssueFilters(params).minStars).toBe(threshold)
+    })
+
+    it('허용 목록에 없는 minStars(200)는 null로 폴백한다', () => {
+        const params = new URLSearchParams('minStars=200')
+        expect(parseIssueFilters(params).minStars).toBeNull()
+    })
+
+    it('숫자가 아닌 minStars("abc")는 null로 폴백한다', () => {
+        const params = new URLSearchParams('minStars=abc')
+        expect(parseIssueFilters(params).minStars).toBeNull()
+    })
 })
 
 // ─── applyFilters ───────────────────────────────────────────────────────────
@@ -110,6 +127,7 @@ describe('applyFilters', () => {
         difficultyLevel: null,
         contributionTypes: [],
         minScore: null,
+        minStars: null,
     }
 
     it('모든 필터가 null이면 이슈를 전부 통과시킨다', () => {
@@ -235,6 +253,37 @@ describe('applyFilters', () => {
             const atThreshold = makeScoredIssue({ number: 1, score: threshold })
             const below       = makeScoredIssue({ number: 2, score: threshold - 1 })
             const result = applyFilters([atThreshold, below], { ...noFilters, minScore: threshold })
+            expect(result).toHaveLength(1)
+            expect(result[0].number).toBe(1)
+        }
+    )
+
+    it('minStars 필터는 기준 스타 수 이상인 이슈만 통과시킨다', () => {
+        const issues = [
+            makeScoredIssue({ number: 1, stargazerCount: 1000 }),
+            makeScoredIssue({ number: 2, stargazerCount: 99 }),
+        ]
+        const result = applyFilters(issues, { ...noFilters, minStars: 100 })
+        expect(result).toHaveLength(1)
+        expect(result[0].number).toBe(1)
+    })
+
+    it('minStars 기준값과 정확히 같은 스타 수의 이슈는 통과한다', () => {
+        const issue = makeScoredIssue({ stargazerCount: 500 })
+        expect(applyFilters([issue], { ...noFilters, minStars: 500 })).toHaveLength(1)
+    })
+
+    it('minStars 기준값보다 1 낮은 이슈는 통과하지 못한다', () => {
+        const issue = makeScoredIssue({ stargazerCount: 999 })
+        expect(applyFilters([issue], { ...noFilters, minStars: 1000 })).toHaveLength(0)
+    })
+
+    it.each([...STAR_FILTER_THRESHOLDS])(
+        'STAR_FILTER_THRESHOLDS %i: 기준값은 통과, 기준값-1은 탈락',
+        (threshold) => {
+            const atThreshold = makeScoredIssue({ number: 1, stargazerCount: threshold })
+            const below       = makeScoredIssue({ number: 2, stargazerCount: threshold - 1 })
+            const result = applyFilters([atThreshold, below], { ...noFilters, minStars: threshold })
             expect(result).toHaveLength(1)
             expect(result[0].number).toBe(1)
         }

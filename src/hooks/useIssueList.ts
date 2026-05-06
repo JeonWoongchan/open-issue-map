@@ -29,7 +29,7 @@ const DEFAULT_ERROR_MESSAGE = '오류가 발생했습니다.'
 
 export function useIssueList(filters: IssueFilters = EMPTY_ISSUE_FILTERS): UseIssueListResult {
   const query = useInfiniteQuery({
-    queryKey: [...QUERY_KEYS.issues, filters.language, filters.difficultyLevel, filters.contributionTypes, filters.minScore],
+    queryKey: [...QUERY_KEYS.issues, filters.language, filters.difficultyLevel, filters.contributionTypes, filters.minScore, filters.minStars],
     queryFn: ({ pageParam }) => {
       const { offset, batch } = pageParam as IssuePageParam
       const params = new URLSearchParams({ offset: String(offset) })
@@ -48,6 +48,9 @@ export function useIssueList(filters: IssueFilters = EMPTY_ISSUE_FILTERS): UseIs
       }
       if (filters.minScore !== null) {
         params.set('minScore', String(filters.minScore))
+      }
+      if (filters.minStars !== null) {
+        params.set('minStars', String(filters.minStars))
       }
 
       return fetchApi<IssueListPage>(`/api/github/issues?${params}`, DEFAULT_ERROR_MESSAGE)

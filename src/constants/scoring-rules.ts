@@ -314,3 +314,6 @@ export const HEALTH_THRESHOLD = 50
 
 export const SCORE_FILTER_THRESHOLDS = [10, 20, 30, 40, 50, 60, 70, 80, 90] as const
 export type ScoreThreshold = typeof SCORE_FILTER_THRESHOLDS[number]
+
+export const STAR_FILTER_THRESHOLDS = [100, 500, 1000, 5000] as const
+export type StarThreshold = typeof STAR_FILTER_THRESHOLDS[number]

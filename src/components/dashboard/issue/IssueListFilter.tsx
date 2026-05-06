@@ -1,7 +1,7 @@
 'use client'
 
 import { CONTRIBUTION_TYPES, EXPERIENCE_LEVELS } from '@/constants/contribution-levels'
-import { SCORE_FILTER_THRESHOLDS } from '@/constants/scoring-rules'
+import { SCORE_FILTER_THRESHOLDS, STAR_FILTER_THRESHOLDS } from '@/constants/scoring-rules'
 import { EMPTY_ISSUE_FILTERS } from '@/types/issue'
 import { cn } from '@/lib/utils'
 import type { ContributionType } from '@/types/user'
@@ -64,7 +64,8 @@ export function IssueListFilter({ filters, availableLanguages, onChangeAction }:
         filters.language !== null ||
         filters.difficultyLevel !== null ||
         filters.contributionTypes.length > 0 ||
-        filters.minScore !== null
+        filters.minScore !== null ||
+        filters.minStars !== null
 
     if (availableLanguages.length === 0) {
         return null
@@ -116,18 +117,26 @@ export function IssueListFilter({ filters, availableLanguages, onChangeAction }:
                     />
                 ))}
             </FilterRow>
-            <div className="flex flex-col gap-1">
-                <FilterRow label="추천 점수">
-                    {SCORE_FILTER_THRESHOLDS.map((threshold) => (
-                        <FilterPill
-                            key={threshold}
-                            label={`${threshold}점+`}
-                            selected={filters.minScore === threshold}
-                            onClickAction={() => toggle('minScore', threshold)}
-                        />
-                    ))}
-                </FilterRow>
-            </div>
+            <FilterRow label="스타 수">
+                {STAR_FILTER_THRESHOLDS.map((threshold) => (
+                    <FilterPill
+                        key={threshold}
+                        label={`${threshold.toLocaleString()}+`}
+                        selected={filters.minStars === threshold}
+                        onClickAction={() => toggle('minStars', threshold)}
+                    />
+                ))}
+            </FilterRow>
+            <FilterRow label="추천 점수">
+                {SCORE_FILTER_THRESHOLDS.map((threshold) => (
+                    <FilterPill
+                        key={threshold}
+                        label={`${threshold}점+`}
+                        selected={filters.minScore === threshold}
+                        onClickAction={() => toggle('minScore', threshold)}
+                    />
+                ))}
+            </FilterRow>
         </div>
     )
 }
