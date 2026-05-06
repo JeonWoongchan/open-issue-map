@@ -24,7 +24,7 @@ export function HelpDemoCardFrame({
         <CardContent className="flex h-full flex-col gap-4">{children}</CardContent>
       </Card>
 
-      <div className="rounded-xl border border-dashed border-interactive-selected-border/70 bg-interactive-selected/30 p-4 text-sm text-muted-foreground">
+      <div className="hidden rounded-xl border border-dashed border-interactive-selected-border/70 bg-interactive-selected/30 p-4 text-sm text-muted-foreground lg:block">
         {note}
       </div>
     </div>
