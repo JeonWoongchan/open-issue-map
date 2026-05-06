@@ -8,7 +8,7 @@ type IssueMetricsRowProps = {
 
 export function IssueMetricsRow({ commentCount, stargazerCount }: IssueMetricsRowProps) {
   return (
-    <>
+    <div className="flex flex-wrap gap-3">
       <span className="flex items-center gap-1">
         <Star className="h-3 w-3" />
         {stargazerCount.toLocaleString()}
@@ -17,6 +17,6 @@ export function IssueMetricsRow({ commentCount, stargazerCount }: IssueMetricsRo
         <MessageCircle className="h-3 w-3" />
         {commentCount}
       </span>
-    </>
+    </div>
   )
 }

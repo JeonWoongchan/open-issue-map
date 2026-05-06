@@ -22,7 +22,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Open Issue Map",
-  description: "내 GitHub 프로필 기반으로 기여 가능한 오픈소스 이슈를 매칭해주는 사이트입니다.",
+  description: "GitHub 프로필과 온보딩 기반으로 기여 가능한 오픈소스 이슈를 매칭해주는 사이트입니다.",
   icons: {
     icon: "/brand-signature.svg",
     shortcut: "/brand-signature.svg",

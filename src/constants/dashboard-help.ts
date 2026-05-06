@@ -6,7 +6,7 @@ export const DASHBOARD_HELP_GUIDE_ITEMS = [
     id: 'score',
     title: '추천 점수',
     description:
-      '오른쪽 위 숫자예요. 지금 설정과 선호에 이 이슈가 얼마나 잘 맞는지 빠르게 보여줘요.',
+      '설정과 선호에 이 이슈가 얼마나 잘 맞는지 빠르게 보여줘요.',
   },
   {
     id: 'stack',
