@@ -7,7 +7,7 @@ export default function LoginPage() {
     return (
         <div className="mx-auto flex min-h-svh max-w-6xl flex-col bg-linear-to-br from-background via-background to-brand-subtle/20 lg:grid lg:h-screen lg:grid-cols-[1fr_460px] lg:overflow-hidden">
             {/* 서비스 소개 — 데스크톱에서만 표시 */}
-            <div className="items-center overflow-hidden px-12 py-10">
+            <div className="items-center overflow-hidden px-6 py-5 lg:px-12 lg:py-10">
                 <LoginPreview />
             </div>
 

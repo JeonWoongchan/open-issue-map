@@ -8,7 +8,7 @@ export type Feature = {
 }
 
 export const FEATURES: Feature[] = [
-    { icon: Sparkles, text: 'GitHub 프로필 및 사용자 온보딩 기반 맞춤 이슈 추천' },
+    { icon: Sparkles, text: 'GitHub 프로필 및 사용자 온보딩 기반 이슈 추천' },
     { icon: GitMerge, text: '기여 난이도 점수로 내 수준에 맞는 이슈 탐색' },
     { icon: Bookmark, text: '북마크로 관심 이슈 저장 & PR 기록 관리' },
 ]
