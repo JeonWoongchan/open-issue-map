@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { isUnauthorizedApiResponse, redirectToLogin } from '@/lib/client-auth'
 import type { ApiResponse } from '@/types/api'
@@ -40,6 +40,12 @@ export function useIssueBookmarks({
   // 북마크 저장 및 삭제 요청 진행 중인 카드 키 목록 상태 선언부.
   const [pendingBookmarkKeys, setPendingBookmarkKeys] = useState<string[]>([])
 
+  // pendingBookmarkKeys의 최신값을 effect 재실행 없이 참조하기 위한 ref 선언부.
+  // useEffect 의존성에서 제외함으로써 pending 해제 시점에 stale한 sourceIssues로
+  // 낙관적 상태가 덮어씌워지는 타이밍 레이스를 방지한다.
+  const pendingBookmarkKeysRef = useRef(pendingBookmarkKeys)
+  pendingBookmarkKeysRef.current = pendingBookmarkKeys
+
   useEffect(() => {
     if (!isSourceIssuesReady) {
       return
@@ -48,12 +54,15 @@ export function useIssueBookmarks({
     // 무한 스크롤로 sourceIssues가 교체될 때 낙관적 isBookmarked 상태를 보존하는 병합 처리부.
     // 단순 교체(setOptimisticIssues(sourceIssues))를 하면 pending 중이거나 이미 반영된
     // 낙관적 북마크 상태가 서버 원본값으로 덮어씌워진다.
+    // sourceIssues가 바뀔 때만 실행되고, pendingBookmarkKeys 변경(finally 해제)에는
+    // 반응하지 않도록 ref로 현재값을 읽는다.
     setOptimisticIssues((current) => {
-      if (pendingBookmarkKeys.length === 0) {
+      const currentPendingKeys = pendingBookmarkKeysRef.current
+      if (currentPendingKeys.length === 0) {
         return sourceIssues
       }
 
-      const pendingBookmarkKeySet = new Set(pendingBookmarkKeys)
+      const pendingBookmarkKeySet = new Set(currentPendingKeys)
       const bookmarkStateMap = new Map(
         current.map((i) => [getBookmarkKey(i), i.isBookmarked])
       )
@@ -70,7 +79,10 @@ export function useIssueBookmarks({
           : issue
       })
     })
-  }, [isSourceIssuesReady, pendingBookmarkKeys, sourceIssues])
+    // pendingBookmarkKeys를 의존성에서 제외하고 ref로 읽는 이유:
+    // finally에서 pending 해제 → effect 재실행 → 아직 React에 미반영된 stale sourceIssues로
+    // 낙관적 상태 덮어쓰기가 발생하는 타이밍 레이스를 차단하기 위함.
+  }, [isSourceIssuesReady, sourceIssues])
 
   // 대시보드 이슈 카드 기준 북마크 저장 및 해제 토글 처리부.
   async function toggleBookmark(issue: IssueCardItem) {
