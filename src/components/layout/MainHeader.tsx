@@ -26,7 +26,7 @@ export function MainHeader({ image, name, isGuest = false }: MainHeaderProps) {
                 <div className="flex items-center gap-3">
                     {isGuest ? (
                         <form action={signInWithGitHub}>
-                            <SignInButton size="sm">로그인</SignInButton>
+                            <SignInButton size="sm" />
                         </form>
                     ) : (
                         <>

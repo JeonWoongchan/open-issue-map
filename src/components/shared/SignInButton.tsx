@@ -1,18 +1,19 @@
 'use client'
 
 import { useFormStatus } from 'react-dom'
-import { Loader2 } from 'lucide-react'
+import { Loader2, LogIn } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { ComponentPropsWithoutRef } from 'react'
 
-type SignInButtonProps = Omit<ComponentPropsWithoutRef<typeof Button>, 'type'> & {
+type SignInButtonProps = Omit<ComponentPropsWithoutRef<typeof Button>, 'type' | 'children'> & {
     pendingText?: string
+    showIcon?: boolean
 }
 
 // useFormStatus로 Server Action 진행 상태를 감지해 로딩 UI를 표시한다
 export function SignInButton({
-    children,
     pendingText = '연결 중...',
+    showIcon = false,
     disabled,
     ...props
 }: SignInButtonProps) {
@@ -25,7 +26,12 @@ export function SignInButton({
                     <Loader2 className="h-4 w-4 animate-spin" />
                     {pendingText}
                 </>
-            ) : children}
+            ) : (
+                <>
+                    {showIcon && <LogIn className="h-4 w-4" />}
+                    GitHub으로 로그인
+                </>
+            )}
         </Button>
     )
 }

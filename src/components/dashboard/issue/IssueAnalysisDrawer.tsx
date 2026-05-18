@@ -1,6 +1,6 @@
 'use client'
 
-import { X, RotateCcw, Loader2, TriangleAlert, Sparkles, LogIn } from 'lucide-react'
+import { X, RotateCcw, Loader2, TriangleAlert, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -92,10 +92,7 @@ function AnalysisGuestLimit() {
                 </p>
             </div>
             <form action={signInWithGitHub}>
-                <SignInButton size="sm" className="gap-2">
-                    <LogIn className="h-4 w-4" />
-                    GitHub로 로그인하기
-                </SignInButton>
+                <SignInButton size="sm" className="gap-2" showIcon />
             </form>
         </div>
     )

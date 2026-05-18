@@ -52,9 +52,7 @@ export function HomeLanding() {
                                 <Link href="/dashboard">추천 이슈 미리보기</Link>
                             </Button>
                             <form action={signInWithGitHub}>
-                                <SignInButton variant="outline" size="lg" className="w-full sm:w-auto">
-                                    GitHub로 시작하기
-                                </SignInButton>
+                                <SignInButton variant="outline" size="lg" className="w-full sm:w-auto" />
                             </form>
                         </div>
                     </div>
