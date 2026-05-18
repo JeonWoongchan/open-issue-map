@@ -1,9 +1,12 @@
 import type { ReactNode } from 'react'
+import { Slot } from 'radix-ui'
 import { cn } from '@/lib/utils'
 import type { HelpGuideInteractionProps } from '@/types/help'
 
 type HelpHotspotProps<TGuideId extends string> = HelpGuideInteractionProps<TGuideId> & {
   guideId: TGuideId
+  // 자식이 이미 button인 경우 사용 — button 중첩을 막기 위해 자식 엘리먼트에 이벤트를 병합한다.
+  asChild?: boolean
   className?: string
   children: ReactNode
 }
@@ -16,14 +19,16 @@ export function HelpHotspot<TGuideId extends string>({
   activeGuideId,
   onActivateGuide,
   onClearGuide,
+  asChild = false,
   className,
   children,
 }: HelpHotspotProps<TGuideId>) {
   const isActive = guideId === activeGuideId
+  const Comp = asChild ? Slot.Root : 'button'
 
   return (
-    <button
-      type="button"
+    <Comp
+      {...(!asChild && { type: 'button' })}
       onMouseEnter={() => onActivateGuide(guideId)}
       onMouseLeave={onClearGuide}
       onFocus={() => onActivateGuide(guideId)}
@@ -36,6 +41,6 @@ export function HelpHotspot<TGuideId extends string>({
       )}
     >
       {children}
-    </button>
+    </Comp>
   )
 }

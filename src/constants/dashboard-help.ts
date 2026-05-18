@@ -32,6 +32,12 @@ export const DASHBOARD_HELP_GUIDE_ITEMS = [
     description:
       '이미 다른 사람이 진행하고 있는지, PR이 열려 있는지 보여줘서 진입 부담을 판단하는 데 도움이 돼요.',
   },
+  {
+    id: 'ai-analysis',
+    title: 'AI 작업 가이드',
+    description:
+      '버튼을 누르면 이슈를 분석해서 필요한 개념, 예상 작업 범위, 먼저 봐야 할 코드, 주의사항을 정리해줘요.',
+  },
 ] as const satisfies readonly HelpGuideItem<string>[]
 
 export type DashboardHelpGuideId = (typeof DASHBOARD_HELP_GUIDE_ITEMS)[number]['id']
@@ -46,7 +52,7 @@ export const DASHBOARD_HELP_DEMO_ISSUE: Omit<ScoredIssue, 'createdAt' | 'updated
   repoUrl: 'https://github.com/example/docs',
   language: 'TypeScript',
   stargazerCount: 129000,
-  labels: ['documentation', 'good first issue'],
+  labels: ['good first issue'],
   commentCount: 3,
   score: 82,
   difficultyLevel: 'beginner',

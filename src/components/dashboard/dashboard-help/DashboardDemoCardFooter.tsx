@@ -1,4 +1,5 @@
 import { HelpHotspot } from '@/components/help/HelpHotspot'
+import { IssueAnalysisButton } from '@/components/shared/issue-card/IssueAnalysisButton'
 import { IssueMetricsRow } from '@/components/shared/issue-card/IssueMetricsRow'
 import { IssueTagList } from '@/components/shared/issue-card/IssueTagList'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +17,7 @@ type DemoCardFooterProps = HelpGuideInteractionProps<DashboardHelpGuideId> & {
   demoUpdatedAt: string
 }
 
+// IssueItemFooter와 병렬 구현 — 레이아웃 변경 시 두 파일을 함께 수정한다.
 export function DashboardDemoCardFooter({
   activeGuideId,
   demoUpdatedAt,
@@ -77,6 +79,17 @@ export function DashboardDemoCardFooter({
         </HelpHotspot>
 
         <span className="text-interactive-action-hover">{formatTimeAgo(demoUpdatedAt)}</span>
+
+        <HelpHotspot
+          asChild
+          guideId="ai-analysis"
+          activeGuideId={activeGuideId}
+          onActivateGuide={onActivateGuide}
+          onClearGuide={onClearGuide}
+          className="ml-auto rounded-lg"
+        >
+          <IssueAnalysisButton onClick={() => undefined} />
+        </HelpHotspot>
       </div>
     </div>
   )

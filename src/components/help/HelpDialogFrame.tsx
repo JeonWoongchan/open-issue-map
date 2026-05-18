@@ -142,8 +142,8 @@ export function HelpDialogFrame<TGuideId extends string>({
                 {activeExtraTabContent}
               </div>
             ) : (
-              <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden px-5 py-5 sm:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-                <div className="shrink-0 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 py-5 sm:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-6">
+                <div className="mb-4 shrink-0 lg:mb-0 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:scrollbar-hide">
                   {renderDemoCardAction({
                     activeGuideId,
                     demoUpdatedAt,
@@ -151,13 +151,15 @@ export function HelpDialogFrame<TGuideId extends string>({
                     onClearGuide: clearActiveGuide,
                   })}
                 </div>
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-                  <HelpGuideList
-                    items={guideItems}
-                    activeGuideId={activeGuideId}
-                    onActivateGuide={activateGuide}
-                    onClearGuide={clearActiveGuide}
-                  />
+                <div className="-mx-5 overflow-x-auto overscroll-x-contain sm:-mx-6 lg:mx-0 lg:min-h-0 lg:flex-1 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-contain lg:scrollbar-hide">
+                  <div className="pl-5 sm:pl-6 lg:pl-0">
+                    <HelpGuideList
+                      items={guideItems}
+                      activeGuideId={activeGuideId}
+                      onActivateGuide={activateGuide}
+                      onClearGuide={clearActiveGuide}
+                    />
+                  </div>
                 </div>
               </div>
             )}

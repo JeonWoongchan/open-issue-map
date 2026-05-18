@@ -215,6 +215,13 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

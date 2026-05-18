@@ -14,7 +14,7 @@ export function HelpGuideList<TGuideId extends string>({
   onClearGuide,
 }: HelpGuideListProps<TGuideId>) {
   return (
-    <div className="space-y-3">
+    <div className="flex gap-3 pb-1 lg:flex-col lg:gap-0 lg:space-y-3 lg:pb-0">
       {items.map((item, index) => {
         const isActive = item.id === activeGuideId
 
@@ -27,7 +27,7 @@ export function HelpGuideList<TGuideId extends string>({
             onFocus={() => onActivateGuide(item.id)}
             onBlur={onClearGuide}
             className={cn(
-              'block w-full rounded-xl border bg-card/60 p-4 text-left outline-none transition-all',
+              'w-[75vw] max-w-[280px] shrink-0 rounded-xl border bg-card/60 p-4 text-left outline-none transition-all lg:w-full lg:max-w-none lg:shrink',
               'focus-visible:ring-2 focus-visible:ring-interactive-selected-ring/60',
               isActive
                 ? 'border-border bg-interactive-selected/45 shadow-lg'
@@ -51,6 +51,7 @@ export function HelpGuideList<TGuideId extends string>({
           </button>
         )
       })}
+      <div className="w-3 shrink-0 sm:w-6 lg:hidden" aria-hidden="true" />
     </div>
   )
 }
