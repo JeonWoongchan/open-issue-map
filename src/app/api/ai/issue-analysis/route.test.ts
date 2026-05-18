@@ -19,7 +19,7 @@ const mockGuestUsage = vi.mocked(checkAndIncrementGuestUsage)
 
 afterEach(() => {
     vi.restoreAllMocks()
-    vi.clearAllMocks()
+    vi.resetAllMocks()   // Once 큐까지 초기화 — clearAllMocks는 큐를 남겨 mock 누출 발생
     vi.unstubAllEnvs()
 })
 
@@ -101,6 +101,7 @@ describe('POST /api/ai/issue-analysis', () => {
         it('비로그인 + 한도 초과 시 429를 반환한다', async () => {
             authGuest()
             guestExceeded()
+            apiKeyOk()
 
             const res = await POST(makeReq(validBody, { forwardedFor: '1.2.3.4' }))
             const json = await res.json()
@@ -178,6 +179,7 @@ describe('POST /api/ai/issue-analysis', () => {
     describe('요청 검증', () => {
         it('body가 JSON이 아니면 400을 반환한다', async () => {
             authOk()
+            apiKeyOk()
 
             const res = await POST(new Request('http://localhost/api/ai/issue-analysis', {
                 method: 'POST',
@@ -190,6 +192,7 @@ describe('POST /api/ai/issue-analysis', () => {
 
         it('title이 빈 문자열이면 400을 반환한다', async () => {
             authOk()
+            apiKeyOk()
 
             const res = await POST(makeReq({ ...validBody, title: '' }))
 
@@ -199,6 +202,7 @@ describe('POST /api/ai/issue-analysis', () => {
 
         it('repoFullName이 누락되면 400을 반환한다', async () => {
             authOk()
+            apiKeyOk()
             const { repoFullName: _omit, ...invalid } = validBody
 
             const res = await POST(makeReq(invalid))
@@ -208,6 +212,7 @@ describe('POST /api/ai/issue-analysis', () => {
 
         it('labels가 없으면 400을 반환한다', async () => {
             authOk()
+            apiKeyOk()
             const { labels: _omit, ...invalid } = validBody
 
             const res = await POST(makeReq(invalid))
@@ -218,7 +223,6 @@ describe('POST /api/ai/issue-analysis', () => {
 
     describe('환경 변수', () => {
         it('GEMINI_API_KEY 미설정 시 503을 반환한다', async () => {
-            authOk()
             vi.stubEnv('GEMINI_API_KEY', '')
 
             const res = await POST(makeReq(validBody))

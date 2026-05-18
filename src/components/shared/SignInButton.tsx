@@ -9,8 +9,7 @@ type SignInButtonProps = Omit<ComponentPropsWithoutRef<typeof Button>, 'type'> &
     pendingText?: string
 }
 
-// form action={signInWithGitHub} 안에서 사용한다.
-// useFormStatus로 Server Action 진행 중 여부를 감지해 로딩 상태를 표시한다.
+// useFormStatus로 Server Action 진행 상태를 감지해 로딩 UI를 표시한다
 export function SignInButton({
     children,
     pendingText = '연결 중...',

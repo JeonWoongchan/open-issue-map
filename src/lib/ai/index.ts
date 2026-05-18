@@ -3,7 +3,7 @@ import type { AiProvider } from './types'
 
 export type { AiProvider, IssueAnalysis, IssueAnalysisParams, AnalysisDifficulty } from './types'
 
-// 모듈 수준 싱글턴 — 요청마다 GoogleGenAI 인스턴스를 재생성하지 않는다.
+// 모듈 수준 싱글턴 — 같은 워커 인스턴스 내에서 GoogleGenAI 재생성을 방지한다
 let _provider: AiProvider | null = null
 
 export function createAiProvider(): AiProvider {

@@ -10,7 +10,8 @@ import {
     DrawerTitle,
 } from '@/components/ui/drawer'
 import { useIsDesktop } from '@/hooks/useIsDesktop'
-import { useIssueAnalysis, GuestLimitError } from '@/hooks/useIssueAnalysis'
+import { useIssueAnalysis } from '@/hooks/useIssueAnalysis'
+import { GuestLimitError } from '@/lib/ai/errors'
 import { SignInButton } from '@/components/shared/SignInButton'
 import { signInWithGitHub } from '@/lib/auth-actions'
 import { AI_GUEST_DAILY_LIMIT } from '@/constants/ai-limits'
@@ -78,7 +79,6 @@ function AnalysisError({ message, onRetry }: { message: string; onRetry: () => v
     )
 }
 
-// 비로그인 한도 초과 시 Drawer 본문에 인라인으로 표시하는 안내
 function AnalysisGuestLimit() {
     return (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
@@ -166,7 +166,6 @@ function AnalysisResult({ data }: { data: IssueAnalysis }) {
 function AnalysisBody({ isPending, isError, error, data, refetch }: AnalysisQueryState) {
     if (isPending) return <AnalysisLoading />
     if (isError) {
-        // 한도 초과는 재시도 없이 전용 안내 표시 — 모달이 함께 열린다
         if (error instanceof GuestLimitError) return <AnalysisGuestLimit />
         return (
             <AnalysisError
