@@ -1,6 +1,9 @@
 # DB Schema
 
-현재 DB schema는 `src/lib/db/migrations/001_initial.sql` 기준이다. DB는 Neon PostgreSQL을 사용한다.
+현재 DB schema는 마이그레이션 파일 기준이다. DB는 Neon PostgreSQL을 사용한다.
+
+- `001_initial.sql`: users, user_profiles, bookmarks, repo_health_cache
+- `002_ai_guest_usage.sql`: ai_guest_usage
 
 ## `users`
 
@@ -99,12 +102,40 @@ GitHub 저장소의 health score 캐시다.
 - `src/lib/github/issues/health.ts`: `getRepoHealthMap()`이 배치 SELECT 후 미캐시 레포에 `fetchAndCacheRepoHealth()` 호출
 - TTL: `REPO_HEALTH_CACHE_TTL_HOURS = 1`
 
+## `ai_guest_usage`
+
+비로그인 사용자의 AI 분석 일일 사용 횟수를 IP 기반으로 관리한다.
+
+| Column | Type | Constraint | 설명 |
+| --- | --- | --- | --- |
+| `ip` | `TEXT` | PK | 클라이언트 IP (`x-forwarded-for` 첫 번째 값) |
+| `count` | `INT` | NOT NULL, default `1` | 오늘 사용 횟수 |
+| `expires_at` | `TIMESTAMPTZ` | NOT NULL, default `NOW() + 24h` | 레코드 만료 시각 |
+
+동작 방식:
+
+- `expires_at < NOW()`인 레코드는 유효하지 않은 것으로 간주한다.
+- 실제 삭제는 별도 스케줄러 없이 **피기백 방식**으로 처리한다. AI 분석 요청마다 `DELETE WHERE expires_at < NOW()`를 실행해 만료 행을 자동 정리한다.
+- 한도(`AI_GUEST_DAILY_LIMIT = 5`) 초과 시 `429 RATE_LIMITED`를 반환한다.
+- IP 식별 불가(`x-forwarded-for`, `x-real-ip` 모두 없음) 시 한도 체크를 생략하고 요청을 허용한다.
+
+인덱스:
+
+- `idx_ai_guest_usage_expires_at` on `ai_guest_usage(expires_at)` — 만료 행 일괄 삭제 성능용
+
+사용 위치:
+
+- `src/lib/ai/guest-usage.ts`의 `checkAndIncrementGuestUsage()`
+- `src/app/api/ai/issue-analysis/route.ts` — 비로그인 요청 진입점
+- 관련 상수: `src/constants/ai-limits.ts`
+
 ## 관계
 
 ```text
 users 1 ── 0..1 user_profiles
 users 1 ── 0..N bookmarks
 repo_health_cache는 GitHub repo_full_name 기준 독립 캐시
+ai_guest_usage는 비로그인 IP 기준 독립 임시 테이블 (users와 무관)
 ```
 
 ## 운영 메모

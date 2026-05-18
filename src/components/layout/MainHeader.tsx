@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { signInWithGitHub, signOutToHome } from '@/lib/auth-actions'
+import { SignInButton } from '@/components/shared/SignInButton'
 import { UserAvatar } from './UserAvatar'
 import { UserMenu } from './UserMenu'
 
@@ -26,7 +26,7 @@ export function MainHeader({ image, name, isGuest = false }: MainHeaderProps) {
                 <div className="flex items-center gap-3">
                     {isGuest ? (
                         <form action={signInWithGitHub}>
-                            <Button type="submit" size="sm">로그인</Button>
+                            <SignInButton size="sm">로그인</SignInButton>
                         </form>
                     ) : (
                         <>

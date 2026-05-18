@@ -115,7 +115,7 @@ export function IssueList({ isGuest }: IssueListProps) {
                         partial={partial}
                         failedCount={failedCount}
                         onToggleBookmark={handleToggleBookmark}
-                        onAnalyzeClick={isGuest ? undefined : handleAnalyzeClick}
+                        onAnalyzeClick={handleAnalyzeClick}
                     />
                 )}
             />

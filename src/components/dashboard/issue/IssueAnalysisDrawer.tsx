@@ -1,6 +1,6 @@
 'use client'
 
-import { X, RotateCcw, Loader2, TriangleAlert } from 'lucide-react'
+import { X, RotateCcw, Loader2, TriangleAlert, Sparkles, LogIn } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,7 +10,10 @@ import {
     DrawerTitle,
 } from '@/components/ui/drawer'
 import { useIsDesktop } from '@/hooks/useIsDesktop'
-import { useIssueAnalysis } from '@/hooks/useIssueAnalysis'
+import { useIssueAnalysis, GuestLimitError } from '@/hooks/useIssueAnalysis'
+import { SignInButton } from '@/components/shared/SignInButton'
+import { signInWithGitHub } from '@/lib/auth-actions'
+import { AI_GUEST_DAILY_LIMIT } from '@/constants/ai-limits'
 import { cn } from '@/lib/utils'
 import type { IssueCardItem } from '@/types/issue'
 import type { IssueAnalysis, AnalysisDifficulty } from '@/lib/ai'
@@ -71,6 +74,29 @@ function AnalysisError({ message, onRetry }: { message: string; onRetry: () => v
                 <RotateCcw className="h-3.5 w-3.5" />
                 다시 시도
             </Button>
+        </div>
+    )
+}
+
+// 비로그인 한도 초과 시 Drawer 본문에 인라인으로 표시하는 안내
+function AnalysisGuestLimit() {
+    return (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+            <Sparkles className="h-8 w-8 text-muted-foreground opacity-30" />
+            <div className="flex flex-col gap-1.5">
+                <p className="text-sm font-medium">오늘 무료 AI 분석을 모두 사용했어요</p>
+                <p className="text-xs text-muted-foreground">
+                    비로그인 시 하루 {AI_GUEST_DAILY_LIMIT}회까지 무료로 사용할 수 있어요.
+                    <br />
+                    로그인하면 제한 없이 사용할 수 있습니다.
+                </p>
+            </div>
+            <form action={signInWithGitHub}>
+                <SignInButton size="sm" className="gap-2">
+                    <LogIn className="h-4 w-4" />
+                    GitHub로 로그인하기
+                </SignInButton>
+            </form>
         </div>
     )
 }
@@ -139,12 +165,16 @@ function AnalysisResult({ data }: { data: IssueAnalysis }) {
 
 function AnalysisBody({ isPending, isError, error, data, refetch }: AnalysisQueryState) {
     if (isPending) return <AnalysisLoading />
-    if (isError) return (
-        <AnalysisError
-            message={error instanceof Error ? error.message : 'AI 분석에 실패했습니다.'}
-            onRetry={refetch}
-        />
-    )
+    if (isError) {
+        // 한도 초과는 재시도 없이 전용 안내 표시 — 모달이 함께 열린다
+        if (error instanceof GuestLimitError) return <AnalysisGuestLimit />
+        return (
+            <AnalysisError
+                message={error instanceof Error ? error.message : 'AI 분석에 실패했습니다.'}
+                onRetry={refetch}
+            />
+        )
+    }
     if (data) return (
         <>
             <AnalysisDisclaimer />
@@ -166,7 +196,7 @@ export function IssueAnalysisDrawer({ issue, open, onOpenChangeAction }: IssueAn
     const queryState = useIssueAnalysis(issue)
 
     function handleClose() {
-      onOpenChangeAction(false)
+        onOpenChangeAction(false)
     }
 
     const bodyProps: AnalysisQueryState = {

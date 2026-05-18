@@ -2,11 +2,34 @@ import { auth } from '@/lib/auth'
 import { err, ErrorCode, ok } from '@/lib/api-response'
 import { createAiProvider } from '@/lib/ai'
 import { issueAnalysisRequestSchema } from '@/lib/validators/ai'
+import { checkAndIncrementGuestUsage } from '@/lib/ai/guest-usage'
+
+// x-real-ip를 우선한다 — Vercel이 직접 주입하며 클라이언트가 조작할 수 없다.
+// x-forwarded-for는 클라이언트가 최초값을 임의로 설정할 수 있어 신뢰도가 낮다.
+// 두 헤더 모두 없으면 'unknown' 공유 버킷을 사용한다 — IP null 우회 경로 방지.
+function extractClientIp(req: Request): string {
+    const realIp = req.headers.get('x-real-ip')
+    if (realIp) return realIp.trim()
+    const forwarded = req.headers.get('x-forwarded-for')
+    if (forwarded) return forwarded.split(',')[0].trim()
+    return 'unknown'
+}
 
 export async function POST(req: Request) {
-    // 비로그인 사용자 차단 — AI 기능은 로그인 필수
     const session = await auth()
-    if (!session) return err('Unauthorized', 401, ErrorCode.UNAUTHORIZED)
+
+    // 비로그인 사용자: IP 기반 일일 한도 체크
+    if (!session) {
+        const ip = extractClientIp(req)
+        const { allowed } = await checkAndIncrementGuestUsage(ip)
+        if (!allowed) {
+            return err(
+                '하루 무료 AI 분석 한도를 초과했습니다.',
+                429,
+                ErrorCode.RATE_LIMITED,
+            )
+        }
+    }
 
     // 요청 본문 파싱 및 검증
     const body = (await req.json().catch(() => null)) as unknown

@@ -3,7 +3,7 @@ import { Bookmark, GitPullRequestArrow, Map, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AppFooter } from '@/components/layout/AppFooter'
 import { signInWithGitHub } from '@/lib/auth-actions'
-import { SignInButton } from './SignInButton'
+import { SignInButton } from '@/components/shared/SignInButton'
 
 const featureItems = [
     {
@@ -52,7 +52,9 @@ export function HomeLanding() {
                                 <Link href="/dashboard">추천 이슈 미리보기</Link>
                             </Button>
                             <form action={signInWithGitHub}>
-                                <SignInButton />
+                                <SignInButton variant="outline" size="lg" className="w-full sm:w-auto">
+                                    GitHub로 시작하기
+                                </SignInButton>
                             </form>
                         </div>
                     </div>
