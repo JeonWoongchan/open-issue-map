@@ -104,6 +104,27 @@ route group 예시:
 
 사용자 기준 rate limit은 인증 이후에 가능하므로 middleware보다 Route Handler helper가 더 적합할 수 있다.
 
+## 3.5단계: AI 분석 캐싱
+
+현재 AI 이슈 분석(`POST /api/ai/issue-analysis`)은 캐싱 없이 클릭 시마다 Gemini를 직접 호출한다.
+
+**현재 전제:**
+
+- Gemini Flash 단가가 요청당 약 $0.00022로 이 서비스 규모에서 캐싱 ROI가 없다.
+- 과금 폭주 방지는 Google Cloud Console의 Gemini quota 설정으로 대체한다.
+
+**캐싱이 필요해지는 시점:**
+
+- 동일 이슈에 대한 AI 분석 요청이 하루 수십 건 이상 반복되거나
+- Gemini 청구 비용이 유의미하게 증가하거나
+- Gemini API latency가 UX 문제로 이어질 때
+
+**도입 시 설계 방향:**
+
+- 캐시 키: `repo_full_name + issue_number` (분석 결과는 사용자 비의존적이므로 공유 캐시 사용)
+- 캐시 무효화: 저장 시 `issue_updated_at`을 함께 기록하고, 히트 시 현재 `updatedAt`과 비교해 변경 시 재분석
+- 저장소: DB(Neon) `ai_issue_analysis` 테이블 또는 Vercel KV
+
 ## 4단계: DB 확장성
 
 확인할 지표:
@@ -171,6 +192,7 @@ route group 예시:
 - 복잡한 cache invalidation
 - multi-region 구성
 - DB read replica
+- AI 분석 결과 캐싱 (→ 3.5단계 참고)
 
 ### 배포 직후 확인
 
