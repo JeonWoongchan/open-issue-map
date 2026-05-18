@@ -24,10 +24,16 @@ function cleanReadme(raw: string): string {
 async function fetchRepoReadme(
     owner: string,
     repo: string,
+    accessToken: string,
 ): Promise<string | null> {
     const res = await fetch(
         `https://api.github.com/repos/${owner}/${repo}/contents/README.md`,
-        { headers: { Accept: 'application/vnd.github+json' } },
+        {
+            headers: {
+                Accept: 'application/vnd.github+json',
+                Authorization: `Bearer ${accessToken}`,
+            },
+        },
     )
     if (!res.ok) return null
 

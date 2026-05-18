@@ -1,31 +1,48 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { POST } from '@/app/api/ai/issue-analysis/route'
-import { ErrorCode } from '@/lib/api-response'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
+import { NextRequest } from 'next/server'
 import type { Mock } from 'vitest'
 import type { Session } from 'next-auth'
+import type { JWT } from 'next-auth/jwt'
 import type { IssueAnalysis } from '@/lib/ai/types'
+import { ErrorCode } from '@/lib/api-response'
 
 vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
 vi.mock('@/lib/ai', () => ({ createAiProvider: vi.fn() }))
 vi.mock('@/lib/ai/guest-usage', () => ({ checkAndIncrementGuestUsage: vi.fn() }))
 vi.mock('@/lib/user/profile', () => ({ loadOnboardingProfile: vi.fn() }))
 vi.mock('@/lib/github/readme', () => ({ getContributingGuide: vi.fn() }))
+vi.mock('next-auth/jwt', () => ({ getToken: vi.fn() }))
+vi.mock('@/lib/env', () => ({ env: { AUTH_SECRET: 'secret' } }))
 
+import { POST } from '@/app/api/ai/issue-analysis/route'
 import { auth } from '@/lib/auth'
+import { getToken } from 'next-auth/jwt'
 import { createAiProvider } from '@/lib/ai'
 import { checkAndIncrementGuestUsage } from '@/lib/ai/guest-usage'
 import { loadOnboardingProfile } from '@/lib/user/profile'
 import { getContributingGuide } from '@/lib/github/readme'
 
 const mockAuth = auth as unknown as Mock<() => Promise<Session | null>>
+const mockGetToken = getToken as unknown as Mock<() => Promise<JWT | null>>
 const mockCreateProvider = vi.mocked(createAiProvider)
 const mockGuestUsage = vi.mocked(checkAndIncrementGuestUsage)
 const mockLoadProfile = vi.mocked(loadOnboardingProfile)
 const mockContributing = vi.mocked(getContributingGuide)
 
+const originalGithubToken = process.env.GITHUB_TOKEN
+
+beforeEach(() => {
+    delete process.env.GITHUB_TOKEN
+})
+
 afterEach(() => {
+    if (originalGithubToken === undefined) {
+        delete process.env.GITHUB_TOKEN
+    } else {
+        process.env.GITHUB_TOKEN = originalGithubToken
+    }
     vi.restoreAllMocks()
-    vi.resetAllMocks()   // Once 큐까지 초기화 — clearAllMocks는 큐를 남겨 mock 누출 발생
+    vi.resetAllMocks()
     vi.unstubAllEnvs()
 })
 
@@ -64,12 +81,14 @@ const userProfile = {
 
 function authOk() {
     mockAuth.mockResolvedValueOnce(session)
+    mockGetToken.mockResolvedValueOnce({ accessToken: 'user-token' } as JWT)
     mockLoadProfile.mockResolvedValueOnce(userProfile)
     mockContributing.mockResolvedValueOnce(null)
 }
 
 function authGuest() {
     mockAuth.mockResolvedValueOnce(null)
+    process.env.GITHUB_TOKEN = 'server-token'
     mockContributing.mockResolvedValueOnce(null)
 }
 
@@ -96,15 +115,15 @@ function silenceConsoleError() {
 }
 
 type ReqOptions = {
-    forwardedFor?: string  // x-forwarded-for 헤더
-    realIp?: string        // x-real-ip 헤더
+    forwardedFor?: string
+    realIp?: string
 }
 
 function makeReq(body: unknown, options: ReqOptions = {}) {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     if (options.forwardedFor) headers['x-forwarded-for'] = options.forwardedFor
     if (options.realIp) headers['x-real-ip'] = options.realIp
-    return new Request('http://localhost/api/ai/issue-analysis', {
+    return new NextRequest('http://localhost/api/ai/issue-analysis', {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
@@ -115,6 +134,17 @@ function makeReq(body: unknown, options: ReqOptions = {}) {
 
 describe('POST /api/ai/issue-analysis', () => {
     describe('게스트 한도', () => {
+        it('비로그인 + GITHUB_TOKEN 없으면 401을 반환한다', async () => {
+            mockAuth.mockResolvedValueOnce(null)
+            apiKeyOk()
+
+            const res = await POST(makeReq(validBody))
+            const json = await res.json()
+
+            expect(res.status).toBe(401)
+            expect(json.error.code).toBe(ErrorCode.UNAUTHORIZED)
+        })
+
         it('비로그인 + 한도 초과 시 429를 반환한다', async () => {
             authGuest()
             guestExceeded()
@@ -148,7 +178,6 @@ describe('POST /api/ai/issue-analysis', () => {
             apiKeyOk()
             makeProvider()
 
-            // x-forwarded-for, x-real-ip 모두 없는 요청 → 'unknown' 공유 버킷으로 처리
             const res = await POST(makeReq(validBody))
 
             expect(res.status).toBe(200)
@@ -165,7 +194,6 @@ describe('POST /api/ai/issue-analysis', () => {
 
             await POST(makeReq(validBody, { realIp: '10.0.0.1', forwardedFor: '1.2.3.4' }))
 
-            // x-forwarded-for 조작 시에도 x-real-ip 값이 사용되어야 한다
             expect(mockGuestUsage).toHaveBeenCalledWith('10.0.0.1')
         })
 
@@ -186,7 +214,6 @@ describe('POST /api/ai/issue-analysis', () => {
             apiKeyOk()
             makeProvider()
 
-            // 프록시 체인 — 첫 번째가 원본 클라이언트 IP
             await POST(makeReq(validBody, { forwardedFor: '5.6.7.8, 192.168.0.1, 10.0.0.3' }))
 
             expect(mockGuestUsage).toHaveBeenCalledWith('5.6.7.8')
@@ -198,7 +225,7 @@ describe('POST /api/ai/issue-analysis', () => {
             authOk()
             apiKeyOk()
 
-            const res = await POST(new Request('http://localhost/api/ai/issue-analysis', {
+            const res = await POST(new NextRequest('http://localhost/api/ai/issue-analysis', {
                 method: 'POST',
                 body: 'not-json',
             }))
@@ -252,7 +279,7 @@ describe('POST /api/ai/issue-analysis', () => {
     })
 
     describe('정상 흐름 (로그인)', () => {
-        it('로그인 사용자는 한도 없이 200과 분석 결과를 반환한다', async () => {
+        it('로그인 사용자는 게스트 카운트 없이 200과 분석 결과를 반환한다', async () => {
             authOk()
             apiKeyOk()
             makeProvider()
@@ -263,7 +290,6 @@ describe('POST /api/ai/issue-analysis', () => {
             expect(res.status).toBe(200)
             expect(json.ok).toBe(true)
             expect(json.data).toEqual(analysisResult)
-            // 로그인 사용자는 게스트 카운트를 호출하지 않는다
             expect(mockGuestUsage).not.toHaveBeenCalled()
         })
 
@@ -279,7 +305,7 @@ describe('POST /api/ai/issue-analysis', () => {
             expect(json.ok).toBe(true)
         })
 
-        it('검증된 필드를 그대로 analyzeIssue에 전달한다', async () => {
+        it('검증된 필드와 사용자 프로필을 analyzeIssue에 전달한다', async () => {
             authOk()
             apiKeyOk()
             const provider = makeProvider()

@@ -1,4 +1,8 @@
+import { NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
+
 import { auth } from '@/lib/auth'
+import { env } from '@/lib/env'
 import { err, ErrorCode, ok } from '@/lib/api-response'
 import { createAiProvider } from '@/lib/ai'
 import { issueAnalysisRequestSchema } from '@/lib/validators/ai'
@@ -8,7 +12,7 @@ import { GUEST_ONBOARDING_PROFILE } from '@/constants/guest-profile'
 import { getContributingGuide } from '@/lib/github/readme'
 
 // x-real-ip 우선 — Vercel 주입값이며 x-forwarded-for와 달리 클라이언트가 조작할 수 없다
-function extractClientIp(req: Request): string {
+function extractClientIp(req: NextRequest): string {
     const realIp = req.headers.get('x-real-ip')
     if (realIp) return realIp.trim()
     const forwarded = req.headers.get('x-forwarded-for')
@@ -16,7 +20,7 @@ function extractClientIp(req: Request): string {
     return 'unknown'
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     // GEMINI_API_KEY 미설정 시 기능 비활성화 — 게스트 카운트 소모 전에 차단
     if (!process.env.GEMINI_API_KEY) {
         return err('AI 분석 기능을 사용할 수 없습니다.', 503, ErrorCode.INTERNAL_ERROR)
@@ -24,7 +28,12 @@ export async function POST(req: Request) {
 
     const session = await auth()
 
+    let accessToken: string
+
     if (!session) {
+        const serverToken = process.env.GITHUB_TOKEN
+        if (!serverToken) return err('Unauthorized', 401, ErrorCode.UNAUTHORIZED)
+
         const ip = extractClientIp(req)
         const { allowed } = await checkAndIncrementGuestUsage(ip)
         if (!allowed) {
@@ -34,6 +43,12 @@ export async function POST(req: Request) {
                 ErrorCode.RATE_LIMITED,
             )
         }
+        accessToken = serverToken
+    } else {
+        const secureCookie = process.env.NODE_ENV === 'production'
+        const token = await getToken({ req, secret: env.AUTH_SECRET, secureCookie })
+        if (!token?.accessToken) return err('No access token', 401, ErrorCode.NO_ACCESS_TOKEN)
+        accessToken = token.accessToken as string
     }
 
     const body = (await req.json().catch(() => null)) as unknown
@@ -47,9 +62,8 @@ export async function POST(req: Request) {
         ? (await loadOnboardingProfile(session.user.id)) ?? GUEST_ONBOARDING_PROFILE
         : GUEST_ONBOARDING_PROFILE
 
-    // 저장소 CONTRIBUTING.md 조회 — 없으면 null, 24시간 저장소별 캐싱
     const [owner, repo] = parsed.data.repoFullName.split('/')
-    const contributingGuide = await getContributingGuide(owner, repo)
+    const contributingGuide = await getContributingGuide(owner, repo, accessToken)
 
     try {
         const provider = createAiProvider()
