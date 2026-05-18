@@ -3,7 +3,7 @@ import { countUserBookmarks, listUserBookmarks } from '@/lib/bookmarks'
 import { detectRepoActivity, scoreIssue } from '@/lib/github/issues/scorer'
 import { fetchBookmarkedIssues } from '@/lib/github/issues/bookmark'
 import { loadOnboardingProfile } from '@/lib/user/profile'
-import { GITHUB_API_CACHE_TTL_SECONDS } from '@/constants/scoring-rules'
+import { GITHUB_API_CACHE_TTL_SECONDS, ISSUE_BODY_PREVIEW_LENGTH } from '@/constants/scoring-rules'
 import type { Bookmark } from '@/types/bookmark'
 import type { IssueCardItem, RawIssue } from '@/types/issue'
 
@@ -71,6 +71,7 @@ function toIssueCardItemWithoutProfile(
     commentCount: githubIssue.comments.totalCount,
     createdAt: githubIssue.createdAt,
     updatedAt: githubIssue.updatedAt,
+    body: githubIssue.body ? githubIssue.body.slice(0, ISSUE_BODY_PREVIEW_LENGTH) : null,
     score: null,
     difficultyLevel: null,
     contributionType: bookmark.contributionType,

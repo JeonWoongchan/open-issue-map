@@ -4,6 +4,7 @@ export const QUERY_KEYS = {
     bookmarks: ['bookmarks'] as const,
     myPage: ['my-page'] as const,
     myPageActivity: ['my-page-activity'] as const,
+    aiAnalysis: (issueUrl: string) => ['ai-analysis', issueUrl] as const,
 } as const
 
 export type BaseQueryResult = {

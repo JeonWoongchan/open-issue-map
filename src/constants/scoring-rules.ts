@@ -5,6 +5,8 @@ import type { ContributionType, ExperienceLevel, Purpose, WeeklyHours } from '@/
 // GitHub Search API로 후보 이슈를 가져온 뒤, 아래 규칙으로 사용자 온보딩 답변과 이슈 메타데이터를 비교한다.
 // 최종 score는 카드 우측 상단의 매칭 점수로 노출되며, 높은 점수일수록 사용자 설정에 더 잘 맞는 이슈로 본다.
 export const PAGE_SIZE = 10
+// AI 분석 요청 시 전송할 이슈 본문 최대 길이
+export const ISSUE_BODY_PREVIEW_LENGTH = 500
 export const MATCH_SCORE_MINIMUM = 0
 // 추천 목록에 노출할 최소 점수 — 미달 이슈는 랭킹 단계에서 제거
 export const RANK_SCORE_THRESHOLD = 50

@@ -7,6 +7,7 @@ type IssueListContentProps = {
   partial: boolean
   failedCount: number
   onToggleBookmark: (issue: IssueCardItem) => Promise<void>
+  onAnalyzeClick?: (issue: IssueCardItem) => void
 }
 
 export function IssueListContent({
@@ -14,6 +15,7 @@ export function IssueListContent({
   partial,
   failedCount,
   onToggleBookmark,
+  onAnalyzeClick,
 }: IssueListContentProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -24,6 +26,7 @@ export function IssueListContent({
             key={issue.url}
             issue={issue}
             onToggleBookmark={onToggleBookmark}
+            onAnalyzeClick={onAnalyzeClick}
           />
         ))}
       </div>

@@ -65,19 +65,13 @@ export function IssueScoreBadge({ score, scoreBreakdown, className }: IssueScore
         <div className="space-y-1">
           {DIMENSION_ORDER.map((key) => {
             const s = scoreBreakdown[key]
+            const scoreColor = s > 0 ? 'text-popover-foreground' : s < 0 ? 'text-destructive' : 'text-muted-foreground'
             return (
               <div key={key} className="flex items-center justify-between gap-6">
-                <span className={cn('text-xs', s === 0 ? 'text-muted-foreground' : '')}>
+                <span className={cn('text-xs', s === 0 && 'text-muted-foreground')}>
                   {DIMENSION_LABELS[key]}
                 </span>
-                <span
-                  className={cn(
-                    'tabular-nums text-xs font-medium',
-                    s > 0 && 'text-popover-foreground',
-                    s < 0 && 'text-destructive',
-                    s === 0 && 'text-muted-foreground',
-                  )}
-                >
+                <span className={cn('tabular-nums text-xs font-medium', scoreColor)}>
                   {formatScore(s)}
                 </span>
               </div>

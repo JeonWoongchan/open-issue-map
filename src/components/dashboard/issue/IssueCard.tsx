@@ -6,11 +6,13 @@ import type { IssueCardItem } from '@/types/issue'
 type IssueCardProps = {
   issue: IssueCardItem
   onToggleBookmark: (issue: IssueCardItem) => Promise<void>
+  onAnalyzeClick?: (issue: IssueCardItem) => void
 }
 
 export function IssueCard({
   issue,
   onToggleBookmark,
+  onAnalyzeClick,
 }: IssueCardProps) {
   return (
     <CardShell className="group transition-all" contentClassName="gap-4">
@@ -18,7 +20,10 @@ export function IssueCard({
         issue={issue}
         onToggleBookmark={onToggleBookmark}
       />
-      <IssueItemFooter issue={issue} />
+      <IssueItemFooter
+        issue={issue}
+        onAnalyzeClick={onAnalyzeClick ? () => onAnalyzeClick(issue) : undefined}
+      />
     </CardShell>
   )
 }

@@ -74,6 +74,9 @@ export interface ScoredIssue {
   createdAt: string
   updatedAt: string
 
+  // AI 분석용 본문 (500자 제한, 선택적)
+  body?: string | null
+
   // 스코어링 결과
   score: number
   difficultyLevel: DifficultyLevel | null
@@ -97,6 +100,7 @@ export interface IssueCardItem {
   commentCount: number
   createdAt: string
   updatedAt: string
+  body?: string | null
   score: number | null
   difficultyLevel: DifficultyLevel | null
   contributionType: ContributionType | null
