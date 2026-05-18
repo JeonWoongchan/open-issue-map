@@ -8,12 +8,18 @@ export interface IssueAnalysis {
     difficulty: AnalysisDifficulty
 }
 
+import type { ExperienceLevel, Purpose, WeeklyHours } from '@/types/user'
+
 export interface IssueAnalysisParams {
     title: string
     body: string | null
     labels: string[]
     language: string | null
     repoFullName: string
+    // 개인화된 난이도 판단에 사용하는 사용자 컨텍스트
+    userExperienceLevel: ExperienceLevel
+    userPurpose: Purpose
+    userWeeklyHours: WeeklyHours
 }
 
 export interface AiProvider {

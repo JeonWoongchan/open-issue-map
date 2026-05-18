@@ -3,6 +3,8 @@ import { err, ErrorCode, ok } from '@/lib/api-response'
 import { createAiProvider } from '@/lib/ai'
 import { issueAnalysisRequestSchema } from '@/lib/validators/ai'
 import { checkAndIncrementGuestUsage } from '@/lib/ai/guest-usage'
+import { loadOnboardingProfile } from '@/lib/user/profile'
+import { GUEST_ONBOARDING_PROFILE } from '@/constants/guest-profile'
 
 // x-real-ip 우선 — Vercel 주입값이며 x-forwarded-for와 달리 클라이언트가 조작할 수 없다
 function extractClientIp(req: Request): string {
@@ -39,9 +41,19 @@ export async function POST(req: Request) {
         return err('Invalid request payload', 400, ErrorCode.INVALID_REQUEST)
     }
 
+    // 로그인 사용자는 DB에서 프로필 로드, 게스트는 데모 프로필 사용
+    const profile = session
+        ? (await loadOnboardingProfile(session.user.id)) ?? GUEST_ONBOARDING_PROFILE
+        : GUEST_ONBOARDING_PROFILE
+
     try {
         const provider = createAiProvider()
-        const analysis = await provider.analyzeIssue(parsed.data)
+        const analysis = await provider.analyzeIssue({
+            ...parsed.data,
+            userExperienceLevel: profile.experienceLevel ?? 'beginner',
+            userPurpose: profile.purpose ?? 'portfolio',
+            userWeeklyHours: profile.weeklyHours ?? 5,
+        })
         return ok(analysis)
     } catch (error) {
         console.error('[POST /api/ai/issue-analysis] AI 분석 실패:', error)

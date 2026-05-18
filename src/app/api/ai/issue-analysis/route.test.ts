@@ -8,14 +8,17 @@ import type { IssueAnalysis } from '@/lib/ai/types'
 vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
 vi.mock('@/lib/ai', () => ({ createAiProvider: vi.fn() }))
 vi.mock('@/lib/ai/guest-usage', () => ({ checkAndIncrementGuestUsage: vi.fn() }))
+vi.mock('@/lib/user/profile', () => ({ loadOnboardingProfile: vi.fn() }))
 
 import { auth } from '@/lib/auth'
 import { createAiProvider } from '@/lib/ai'
 import { checkAndIncrementGuestUsage } from '@/lib/ai/guest-usage'
+import { loadOnboardingProfile } from '@/lib/user/profile'
 
 const mockAuth = auth as unknown as Mock<() => Promise<Session | null>>
 const mockCreateProvider = vi.mocked(createAiProvider)
 const mockGuestUsage = vi.mocked(checkAndIncrementGuestUsage)
+const mockLoadProfile = vi.mocked(loadOnboardingProfile)
 
 afterEach(() => {
     vi.restoreAllMocks()
@@ -46,10 +49,19 @@ const analysisResult: IssueAnalysis = {
     difficulty: '쉬움',
 }
 
+const userProfile = {
+    topLanguages: ['TypeScript'],
+    experienceLevel: 'junior' as const,
+    contributionTypes: ['bug' as const],
+    weeklyHours: 5 as const,
+    purpose: 'portfolio' as const,
+}
+
 // ─── 헬퍼 ────────────────────────────────────────────────────────────────────
 
 function authOk() {
     mockAuth.mockResolvedValueOnce(session)
+    mockLoadProfile.mockResolvedValueOnce(userProfile)
 }
 
 function authGuest() {
@@ -269,7 +281,12 @@ describe('POST /api/ai/issue-analysis', () => {
 
             await POST(makeReq(validBody))
 
-            expect(provider.analyzeIssue).toHaveBeenCalledWith(validBody)
+            expect(provider.analyzeIssue).toHaveBeenCalledWith({
+                ...validBody,
+                userExperienceLevel: userProfile.experienceLevel,
+                userPurpose: userProfile.purpose,
+                userWeeklyHours: userProfile.weeklyHours,
+            })
         })
     })
 
