@@ -57,13 +57,15 @@ export async function POST(req: NextRequest) {
         return err('Invalid request payload', 400, ErrorCode.INVALID_REQUEST)
     }
 
-    // 로그인 사용자는 DB에서 프로필 로드, 게스트는 데모 프로필 사용
-    const profile = session
-        ? (await loadOnboardingProfile(session.user.id)) ?? GUEST_ONBOARDING_PROFILE
-        : GUEST_ONBOARDING_PROFILE
-
     const [owner, repo] = parsed.data.repoFullName.split('/')
-    const contributingGuide = await getContributingGuide(owner, repo, accessToken)
+
+    // DB 프로필 조회와 README fetch는 독립적이므로 병렬 실행
+    const [profile, contributingGuide] = await Promise.all([
+        session
+            ? loadOnboardingProfile(session.user.id).then((p) => p ?? GUEST_ONBOARDING_PROFILE)
+            : Promise.resolve(GUEST_ONBOARDING_PROFILE),
+        getContributingGuide(owner, repo, accessToken),
+    ])
 
     try {
         const provider = createAiProvider()
