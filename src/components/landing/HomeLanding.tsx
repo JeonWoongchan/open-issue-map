@@ -43,8 +43,8 @@ export function HomeLanding() {
                             </h1>
                             <p className="max-w-2xl text-base leading-7 text-muted-foreground">
                                 Open Issue Map은 GitHub 프로필과 온보딩 정보를 바탕으로
-                            <br/>
-                                검토해볼 만한 오픈소스 이슈를 추천하는 개발자용 웹 서비스입니다.
+                            <br className="hidden lg:block" />{' '}
+                                검토해볼 만한 오픈소스 이슈를 추천하는 서비스입니다.
                             </p>
                         </div>
                         <div className="flex flex-col gap-3 sm:flex-row">

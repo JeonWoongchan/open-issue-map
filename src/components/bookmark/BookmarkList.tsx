@@ -59,7 +59,7 @@ export function BookmarkList() {
                 helpSlot={<BookmarkHelpDialog />}
             />
             <p className="text-center text-xs text-muted-foreground">
-              북마크 이슈의 추천 점수는 현재 온보딩 답변 기준으로 계산됩니다.
+              북마크 이슈의 추천 점수는 현재 온보딩 답변 기준으로 계산됩니다.<br className="lg:hidden" />{' '}
               온보딩을 수정하면 북마크 목록의 추천 점수도 함께 달라질 수 있습니다.
             </p>
             <SearchDataListState
