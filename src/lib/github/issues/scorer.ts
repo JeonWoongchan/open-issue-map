@@ -1,4 +1,4 @@
-import type { CompetitionLevel, RawIssue, RepoActivityLevel, ScoredIssue } from '@/types/issue'
+import type { CompetitionLevel, RawIssue, RepoActivityLevel, ScoreBreakdown, ScoreBreakdownKey, ScoredIssue } from '@/types/issue'
 import type { ContributionType, ExperienceLevel, UserProfile } from '@/types/user'
 import {
   COMPETITION_PENALTY,
@@ -278,9 +278,9 @@ function scorePurposeFit(
 }
 
 // 채점 차원 레지스트리 — 차원 추가/제거/비활성화는 이 배열만 수정한다.
+// key는 ScoreBreakdownKey와 1:1 대응하므로 추가·삭제 시 types/issue.ts도 함께 수정한다.
 // 순서는 점수 결과에 영향을 주지 않는다(합산이므로).
-// 각 항목의 score 함수는 ScoringContext에서 필요한 값만 꺼내 계산한다.
-const SCORING_DIMENSIONS: Array<{ key: string; score: (ctx: ScoringContext) => number }> = [
+const SCORING_DIMENSIONS: Array<{ key: ScoreBreakdownKey; score: (ctx: ScoringContext) => number }> = [
   {
     key: 'language',
     score: (ctx) => scoreLanguage(ctx.language, ctx.topLanguages),
@@ -356,9 +356,12 @@ export function scoreIssue(
     purpose: profile.purpose,
   }
 
-  // SCORING_DIMENSIONS를 순회해 각 차원의 점수를 합산한다.
-  // 최종 매칭 점수는 카드 우측 상단에 표시되며, 리스트는 높은 점수순으로 정렬된다.
-  const score = floorScore(SCORING_DIMENSIONS.reduce((sum, dim) => sum + dim.score(ctx), 0))
+  // SCORING_DIMENSIONS를 순회해 차원별 점수를 수집하고 합산한다.
+  // scoreBreakdown은 카드 점수 배지 툴팁에서 항목별 기여 점수를 표시하는 데 사용된다.
+  const scoreBreakdown = Object.fromEntries(
+    SCORING_DIMENSIONS.map((dim) => [dim.key, dim.score(ctx)])
+  ) as ScoreBreakdown
+  const score = floorScore(Object.values(scoreBreakdown).reduce((a, b) => a + b, 0))
 
   return {
     number: raw.number,
@@ -373,6 +376,7 @@ export function scoreIssue(
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
     score,
+    scoreBreakdown,
     difficultyLevel,
     contributionType,
     competitionLevel,

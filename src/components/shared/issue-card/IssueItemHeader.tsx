@@ -31,7 +31,9 @@ export function IssueItemHeader({
             issue={issue}
             onToggleBookmarkAction={onToggleBookmark}
           />
-          {issue.score !== null ? <IssueScoreBadge score={issue.score} /> : null}
+          {issue.score !== null ? (
+            <IssueScoreBadge score={issue.score} scoreBreakdown={issue.scoreBreakdown} />
+          ) : null}
         </div>
       }
       title={<CardTitleLink href={issue.url}>{issue.title}</CardTitleLink>}

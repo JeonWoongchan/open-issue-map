@@ -1,6 +1,20 @@
 import type { ScoreThreshold, StarThreshold } from '@/constants/scoring-rules'
 import type { ContributionType, ExperienceLevel } from './user'
 
+// SCORING_DIMENSIONS의 key와 1:1 대응 — 차원 추가·삭제 시 여기도 함께 수정한다.
+export type ScoreBreakdownKey =
+  | 'language'
+  | 'difficulty'
+  | 'contributionType'
+  | 'competitionFit'
+  | 'competitionPenalty'
+  | 'timeBudget'
+  | 'purpose'
+  | 'stars'
+
+// 각 채점 차원의 기여 점수 — 음수 가능(경쟁도 패널티 등)
+export type ScoreBreakdown = Record<ScoreBreakdownKey, number>
+
 export type CompetitionLevel = 'OPEN' | 'ACTIVE' | 'HAS_PR'
 export type DifficultyLevel = ExperienceLevel
 export type RepoActivityLevel = 'active' | 'moderate' | 'quiet'
@@ -67,6 +81,7 @@ export interface ScoredIssue {
   competitionLevel: CompetitionLevel
   hasPR: boolean
   repoActivityLevel: RepoActivityLevel
+  scoreBreakdown?: ScoreBreakdown
   isBookmarked?: boolean
 }
 
@@ -88,5 +103,6 @@ export interface IssueCardItem {
   competitionLevel: CompetitionLevel | null
   hasPR: boolean
   repoActivityLevel: RepoActivityLevel | null
+  scoreBreakdown?: ScoreBreakdown
   isBookmarked?: boolean
 }
