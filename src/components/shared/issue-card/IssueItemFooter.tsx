@@ -42,7 +42,7 @@ export function IssueItemFooter({ issue, onAnalyzeClick }: IssueItemFooterProps)
         ) : null}
         <span className="text-interactive-action-hover">{formatTimeAgo(issue.updatedAt)}</span>
         {onAnalyzeClick ? (
-          <IssueAnalysisButton onClick={onAnalyzeClick} />
+          <IssueAnalysisButton onClick={onAnalyzeClick} className="ml-auto" />
         ) : null}
       </CardMetricsRow>
     </div>

@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { IssueAnalysisDrawer } from '@/components/dashboard/issue/IssueAnalysisDrawer'
+import type { IssueCardItem } from '@/types/issue'
 import { SearchBarRow } from '@/components/shared/SearchBarRow'
 import { SearchDataListState } from '@/components/shared/SearchDataListState'
 import { InfiniteScrollTrigger } from '@/components/shared/InfiniteScrollTrigger'
@@ -30,7 +32,14 @@ export function BookmarkList() {
         removeOnUnbookmark: true,
     })
 
+    const [analysisTarget, setAnalysisTarget] = useState<IssueCardItem | null>(null)
+    const [analysisOpen, setAnalysisOpen] = useState(false)
     const [query, setQuery] = useState('')
+
+    function handleAnalyzeClick(issue: IssueCardItem) {
+        setAnalysisTarget(issue)
+        setAnalysisOpen(true)
+    }
     const filteredItems = useSearchFilter(optimisticIssues, query)
     const { displayItems, effectiveHasNextPage, sentinelRef } = useInfiniteScrollDisplay({
         items: filteredItems,
@@ -72,6 +81,7 @@ export function BookmarkList() {
                     <BookmarkListContent
                         issues={displayItems}
                         onToggleBookmark={toggleBookmark}
+                        onAnalyzeClick={handleAnalyzeClick}
                     />
                 )}
             />
@@ -80,6 +90,12 @@ export function BookmarkList() {
                 hasNextPage={effectiveHasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
                 sentinelRefAction={sentinelRef}
+            />
+
+            <IssueAnalysisDrawer
+                issue={analysisTarget}
+                open={analysisOpen}
+                onOpenChangeAction={setAnalysisOpen}
             />
         </div>
     )
