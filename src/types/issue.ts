@@ -6,13 +6,12 @@ export type ScoreBreakdownKey =
   | 'language'
   | 'difficulty'
   | 'contributionType'
-  | 'competitionFit'
-  | 'competitionPenalty'
+  | 'competition'
   | 'timeBudget'
   | 'purpose'
   | 'stars'
 
-// 각 채점 차원의 기여 점수 — 음수 가능(경쟁도 패널티 등)
+// 각 채점 차원의 기여 점수 — 음수 가능(경쟁도 등)
 export type ScoreBreakdown = Record<ScoreBreakdownKey, number>
 
 export type CompetitionLevel = 'OPEN' | 'ACTIVE' | 'HAS_PR'

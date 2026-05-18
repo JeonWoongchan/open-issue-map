@@ -12,6 +12,7 @@ import type { HelpGuideInteractionProps } from '@/types/help'
 
 const competition = getCompetitionMeta(DASHBOARD_HELP_DEMO_ISSUE.competitionLevel)
 const activity = getRepoActivityMeta(DASHBOARD_HELP_DEMO_ISSUE.repoActivityLevel)
+const noop = () => {}
 
 type DemoCardFooterProps = HelpGuideInteractionProps<DashboardHelpGuideId> & {
   demoUpdatedAt: string
@@ -24,15 +25,11 @@ export function DashboardDemoCardFooter({
   onActivateGuide,
   onClearGuide,
 }: DemoCardFooterProps) {
+  const hotspotProps = { activeGuideId, onActivateGuide, onClearGuide }
+
   return (
     <div className="mt-auto flex flex-col gap-3 text-xs text-muted-foreground">
-      <HelpHotspot
-        guideId="stack"
-        activeGuideId={activeGuideId}
-        onActivateGuide={onActivateGuide}
-        onClearGuide={onClearGuide}
-        className="rounded-xl"
-      >
+      <HelpHotspot guideId="stack" {...hotspotProps} className="rounded-xl">
         <IssueTagList
           difficultyLevel={DASHBOARD_HELP_DEMO_ISSUE.difficultyLevel}
           labels={DASHBOARD_HELP_DEMO_ISSUE.labels}
@@ -40,13 +37,7 @@ export function DashboardDemoCardFooter({
         />
       </HelpHotspot>
 
-      <HelpHotspot
-        guideId="metrics"
-        activeGuideId={activeGuideId}
-        onActivateGuide={onActivateGuide}
-        onClearGuide={onClearGuide}
-        className="rounded-xl"
-      >
+      <HelpHotspot guideId="metrics" {...hotspotProps} className="rounded-xl">
         <IssueMetricsRow
           commentCount={DASHBOARD_HELP_DEMO_ISSUE.commentCount}
           stargazerCount={DASHBOARD_HELP_DEMO_ISSUE.stargazerCount}
@@ -54,25 +45,13 @@ export function DashboardDemoCardFooter({
       </HelpHotspot>
 
       <div className="flex flex-wrap items-center gap-2">
-        <HelpHotspot
-          guideId="activity"
-          activeGuideId={activeGuideId}
-          onActivateGuide={onActivateGuide}
-          onClearGuide={onClearGuide}
-          className="rounded-xl"
-        >
+        <HelpHotspot guideId="activity" {...hotspotProps} className="rounded-xl">
           <Badge variant="outline" className={cn('rounded-md', activity.className)}>
             {activity.label}
           </Badge>
         </HelpHotspot>
 
-        <HelpHotspot
-          guideId="competition"
-          activeGuideId={activeGuideId}
-          onActivateGuide={onActivateGuide}
-          onClearGuide={onClearGuide}
-          className="rounded-xl"
-        >
+        <HelpHotspot guideId="competition" {...hotspotProps} className="rounded-xl">
           <Badge variant="outline" className={cn('rounded-md', competition.className)}>
             {competition.label}
           </Badge>
@@ -80,15 +59,8 @@ export function DashboardDemoCardFooter({
 
         <span className="text-interactive-action-hover">{formatTimeAgo(demoUpdatedAt)}</span>
 
-        <HelpHotspot
-          asChild
-          guideId="ai-analysis"
-          activeGuideId={activeGuideId}
-          onActivateGuide={onActivateGuide}
-          onClearGuide={onClearGuide}
-          className="ml-auto rounded-lg"
-        >
-          <IssueAnalysisButton onClick={() => undefined} />
+        <HelpHotspot asChild guideId="ai-analysis" {...hotspotProps} className="ml-auto rounded-lg">
+          <IssueAnalysisButton onClick={noop} />
         </HelpHotspot>
       </div>
     </div>

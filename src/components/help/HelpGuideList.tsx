@@ -14,7 +14,7 @@ export function HelpGuideList<TGuideId extends string>({
   onClearGuide,
 }: HelpGuideListProps<TGuideId>) {
   return (
-    <div className="flex gap-3 pb-1 lg:flex-col lg:gap-0 lg:space-y-3 lg:pb-0">
+    <div className="flex gap-3 pb-1 lg:flex-col lg:pb-0">
       {items.map((item, index) => {
         const isActive = item.id === activeGuideId
 

@@ -295,12 +295,9 @@ const SCORING_DIMENSIONS: Array<{ key: ScoreBreakdownKey; score: (ctx: ScoringCo
     score: (ctx) => scoreContributionType(ctx.contributionType, ctx.contributionTypes),
   },
   {
-    key: 'competitionFit',
-    score: (ctx) => scoreExperienceCompetitionFit(ctx.experienceLevel, ctx.competitionLevel),
-  },
-  {
-    key: 'competitionPenalty',
-    score: (ctx) => ctx.competitionPenalty,
+    key: 'competition',
+    score: (ctx) =>
+      scoreExperienceCompetitionFit(ctx.experienceLevel, ctx.competitionLevel) + ctx.competitionPenalty,
   },
   {
     key: 'timeBudget',
