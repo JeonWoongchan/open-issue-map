@@ -20,6 +20,8 @@ export interface IssueAnalysisParams {
     userExperienceLevel: ExperienceLevel
     userPurpose: Purpose
     userWeeklyHours: WeeklyHours
+    // 저장소 기여 가이드 — 없으면 null
+    contributingGuide: string | null
 }
 
 export interface AiProvider {

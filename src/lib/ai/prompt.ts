@@ -51,6 +51,10 @@ export function buildAnalysisPrompt(params: IssueAnalysisParams): string {
         params.labels.length > 0 ? `라벨: ${params.labels.join(', ')}` : null,
         `제목: ${params.title}`,
         params.body ? `\n이슈 내용:\n${params.body}` : null,
+        // 저장소 기여 가이드 — startingPoints·cautions 생성 시 실제 프로젝트 규칙 반영
+        params.contributingGuide
+            ? `\n[프로젝트 개요 (README)]\n${params.contributingGuide}`
+            : null,
     ]
 
     return lines.filter((l) => l !== null).join('\n')

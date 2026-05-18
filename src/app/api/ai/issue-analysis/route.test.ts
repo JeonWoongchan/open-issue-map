@@ -9,16 +9,19 @@ vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
 vi.mock('@/lib/ai', () => ({ createAiProvider: vi.fn() }))
 vi.mock('@/lib/ai/guest-usage', () => ({ checkAndIncrementGuestUsage: vi.fn() }))
 vi.mock('@/lib/user/profile', () => ({ loadOnboardingProfile: vi.fn() }))
+vi.mock('@/lib/github/readme', () => ({ getContributingGuide: vi.fn() }))
 
 import { auth } from '@/lib/auth'
 import { createAiProvider } from '@/lib/ai'
 import { checkAndIncrementGuestUsage } from '@/lib/ai/guest-usage'
 import { loadOnboardingProfile } from '@/lib/user/profile'
+import { getContributingGuide } from '@/lib/github/readme'
 
 const mockAuth = auth as unknown as Mock<() => Promise<Session | null>>
 const mockCreateProvider = vi.mocked(createAiProvider)
 const mockGuestUsage = vi.mocked(checkAndIncrementGuestUsage)
 const mockLoadProfile = vi.mocked(loadOnboardingProfile)
+const mockContributing = vi.mocked(getContributingGuide)
 
 afterEach(() => {
     vi.restoreAllMocks()
@@ -62,10 +65,12 @@ const userProfile = {
 function authOk() {
     mockAuth.mockResolvedValueOnce(session)
     mockLoadProfile.mockResolvedValueOnce(userProfile)
+    mockContributing.mockResolvedValueOnce(null)
 }
 
 function authGuest() {
     mockAuth.mockResolvedValueOnce(null)
+    mockContributing.mockResolvedValueOnce(null)
 }
 
 function apiKeyOk() {
@@ -286,6 +291,7 @@ describe('POST /api/ai/issue-analysis', () => {
                 userExperienceLevel: userProfile.experienceLevel,
                 userPurpose: userProfile.purpose,
                 userWeeklyHours: userProfile.weeklyHours,
+                contributingGuide: null,
             })
         })
     })

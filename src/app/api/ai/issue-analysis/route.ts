@@ -5,6 +5,7 @@ import { issueAnalysisRequestSchema } from '@/lib/validators/ai'
 import { checkAndIncrementGuestUsage } from '@/lib/ai/guest-usage'
 import { loadOnboardingProfile } from '@/lib/user/profile'
 import { GUEST_ONBOARDING_PROFILE } from '@/constants/guest-profile'
+import { getContributingGuide } from '@/lib/github/readme'
 
 // x-real-ip 우선 — Vercel 주입값이며 x-forwarded-for와 달리 클라이언트가 조작할 수 없다
 function extractClientIp(req: Request): string {
@@ -46,6 +47,10 @@ export async function POST(req: Request) {
         ? (await loadOnboardingProfile(session.user.id)) ?? GUEST_ONBOARDING_PROFILE
         : GUEST_ONBOARDING_PROFILE
 
+    // 저장소 CONTRIBUTING.md 조회 — 없으면 null, 24시간 저장소별 캐싱
+    const [owner, repo] = parsed.data.repoFullName.split('/')
+    const contributingGuide = await getContributingGuide(owner, repo)
+
     try {
         const provider = createAiProvider()
         const analysis = await provider.analyzeIssue({
@@ -53,6 +58,7 @@ export async function POST(req: Request) {
             userExperienceLevel: profile.experienceLevel ?? 'beginner',
             userPurpose: profile.purpose ?? 'portfolio',
             userWeeklyHours: profile.weeklyHours ?? 5,
+            contributingGuide,
         })
         return ok(analysis)
     } catch (error) {
