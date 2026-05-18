@@ -7,11 +7,12 @@ import { ANALYSIS_SYSTEM_PROMPT, buildAnalysisPrompt } from './prompt'
 const GEMINI_MODEL = 'gemini-3.1-flash-lite'
 
 // Gemini 응답을 IssueAnalysis로 좁히는 스키마 — 외부 데이터이므로 런타임 검증 필수
+// 배열 범위는 ANALYSIS_SYSTEM_PROMPT의 각 필드 작성 기준과 동일하게 유지한다
 const issueAnalysisSchema = z.object({
-    concepts: z.array(z.string()).min(1),
+    concepts: z.array(z.string()).min(2).max(4),
     scope: z.string().min(1),
-    startingPoints: z.array(z.string()).min(1),
-    cautions: z.array(z.string()),
+    startingPoints: z.array(z.string()).min(2).max(3),
+    cautions: z.array(z.string()).min(1).max(3),
     difficulty: z.enum(['쉬움', '보통', '어려움']),
 })
 
