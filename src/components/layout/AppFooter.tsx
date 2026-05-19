@@ -4,6 +4,7 @@ import {Check, Copy, Mail} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { REPORT_EMAIL } from '@/constants/app'
+import { SITE_TITLE } from '@/lib/seo'
 
 const COPIED_RESET_DELAY_MS = 1800
 
@@ -33,9 +34,9 @@ export function AppFooter() {
         <footer className="mt-8 border-t border-border/60 py-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
-                    <p className="text-sm font-medium text-interactive-action">Open Issue Map</p>
+                    <p className="text-sm font-medium text-interactive-action">{SITE_TITLE}</p>
                     <p className="text-xs text-muted-foreground">
-                        &copy; 2026 Open Issue Map. All rights reserved.
+                        &copy; 2026 {SITE_TITLE}. All rights reserved.
                     </p>
                 </div>
                 <div className="flex items-start sm:items-end">

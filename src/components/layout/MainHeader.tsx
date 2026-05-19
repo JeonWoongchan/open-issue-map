@@ -3,6 +3,7 @@ import { signInWithGitHub, signOutToHome } from '@/lib/auth-actions'
 import { SignInButton } from '@/components/shared/SignInButton'
 import { UserAvatar } from './UserAvatar'
 import { UserMenu } from './UserMenu'
+import { SITE_TITLE } from '@/lib/seo'
 
 type MainHeaderProps = {
     image: string | null | undefined
@@ -21,7 +22,7 @@ export function MainHeader({ image, name, isGuest = false }: MainHeaderProps) {
                     href="/dashboard"
                     className="text-sm font-semibold tracking-tight text-interactive-action transition-colors hover:text-bookmark-action"
                 >
-                    Open Issue Map
+                    {SITE_TITLE}
                 </Link>
                 <div className="flex items-center gap-3">
                     {isGuest ? (

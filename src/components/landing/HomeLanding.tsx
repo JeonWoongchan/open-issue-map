@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { AppFooter } from '@/components/layout/AppFooter'
 import { signInWithGitHub } from '@/lib/auth-actions'
 import { SignInButton } from '@/components/shared/SignInButton'
+import { SITE_TITLE } from '@/lib/seo'
 
 const featureItems = [
     {
@@ -41,13 +42,13 @@ export function HomeLanding() {
                     <div className="flex flex-col gap-7">
                         <div className="space-y-4">
                             <p className="text-lg font-semibold text-primary">
-                                Open Issue Map
+                                {SITE_TITLE}
                             </p>
                             <h1 className="max-w-3xl text-3xl font-bold leading-tight text-foreground sm:text-5xl">
                                 나에게 맞는 오픈소스<br/> 이슈를 추천받아보세요
                             </h1>
                             <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-                                Open Issue Map은 GitHub 프로필과 온보딩 정보를 바탕으로
+                                {SITE_TITLE}은 GitHub 프로필과 온보딩 정보를 바탕으로
                             <br className="hidden lg:block" />{' '}
                                 검토해볼 만한 오픈소스 이슈를 추천하는 서비스입니다.
                             </p>
