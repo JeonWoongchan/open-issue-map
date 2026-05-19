@@ -134,18 +134,16 @@ export function IssueListFilter({ filters, availableLanguages, onChangeAction }:
 
                 <CollapsibleContent className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
                     <div className="flex flex-col gap-2 border-t border-border/50 p-4">
-                        {availableLanguages.length > 1 && (
-                            <FilterRow label="언어">
-                                {availableLanguages.map((language) => (
-                                    <FilterPill
-                                        key={language}
-                                        label={language}
-                                        selected={filters.language === language}
-                                        onClickAction={() => toggle('language', language)}
-                                    />
-                                ))}
-                            </FilterRow>
-                        )}
+                        <FilterRow label="언어">
+                            {availableLanguages.map((language) => (
+                                <FilterPill
+                                    key={language}
+                                    label={language}
+                                    selected={filters.language === language}
+                                    onClickAction={() => toggle('language', language)}
+                                />
+                            ))}
+                        </FilterRow>
                         <FilterRow label="난이도">
                             {EXPERIENCE_LEVELS.map((level) => (
                                 <FilterPill
