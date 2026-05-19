@@ -4,14 +4,17 @@ import { Button } from '@/components/ui/button'
 type HelpTriggerProps = {
   onOpen: () => void
   label?: string
+  id?: string
 }
 
 export function HelpTrigger({
   onOpen,
   label = '도움말',
+  id,
 }: HelpTriggerProps) {
   return (
     <Button
+      id={id}
       type="button"
       variant="ghost"
       size="sm"

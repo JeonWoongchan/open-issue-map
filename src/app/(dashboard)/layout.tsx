@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { MainHeader } from '@/components/layout/MainHeader'
 import { QueryProvider } from '@/components/providers/QueryProvider'
+import { DashboardTour } from '@/components/tour/DashboardTour'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
@@ -16,6 +17,7 @@ export default async function DashboardLayout({
 
     return (
         <QueryProvider>
+            <DashboardTour />
             <div className="min-h-screen bg-background">
                 <MainHeader
                     image={session?.user.image}

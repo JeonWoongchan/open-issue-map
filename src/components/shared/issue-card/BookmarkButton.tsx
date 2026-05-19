@@ -39,7 +39,7 @@ export function BookmarkButton({ issue, onToggleBookmarkAction }: BookmarkButton
                     aria-label={issue.isBookmarked ? '북마크 제거' : '북마크 추가'}
                     aria-pressed={issue.isBookmarked ?? false}
                     className={cn(
-                        'text-muted-foreground hover:bg-interactive-hover hover:text-bookmark-action-hover',
+                        'tour-bookmark text-muted-foreground hover:bg-interactive-hover hover:text-bookmark-action-hover',
                         issue.isBookmarked ? 'text-bookmark-action' : null
                     )}
                     onClick={handleClick}

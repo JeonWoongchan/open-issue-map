@@ -78,20 +78,25 @@ export function IssueList({ isGuest }: IssueListProps) {
                 </div>
             )}
 
-            <SearchBarRow
-                value={query}
-                onChangeAction={setQuery}
-                resultCount={query ? filteredItems.length : undefined}
-                totalCount={query ? totalCount : undefined}
-                helpSlot={<DashboardHelpDialog />}
-            />
+            <div id="tour-search">
+                <SearchBarRow
+                    value={query}
+                    onChangeAction={setQuery}
+                    resultCount={query ? filteredItems.length : undefined}
+                    totalCount={query ? totalCount : undefined}
+                    helpSlot={<DashboardHelpDialog />}
+                />
+            </div>
 
-            <IssueListFilter
-                filters={filters}
-                availableLanguages={filterAvailableLanguages}
-                onChangeAction={setFilters}
-            />
+            <div id="tour-filter">
+                <IssueListFilter
+                    filters={filters}
+                    availableLanguages={filterAvailableLanguages}
+                    onChangeAction={setFilters}
+                />
+            </div>
 
+            <div id="tour-issue-list">
             <SearchDataListState
                 query={query}
                 entityLabel="이슈"
@@ -119,6 +124,7 @@ export function IssueList({ isGuest }: IssueListProps) {
                     />
                 )}
             />
+            </div>
 
             <InfiniteScrollTrigger
                 hasNextPage={effectiveHasNextPage}

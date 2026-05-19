@@ -20,6 +20,7 @@ export function DashboardHelpDialog() {
       title="카드 구성과 추천 점수 산정 방식"
       titleId="dashboard-help-title"
       descriptionId="dashboard-help-description"
+      triggerId="tour-help"
       footer={<HelpReportFooter />}
       renderDemoCardAction={(props) => <DashboardDemoCard {...props} />}
       primaryTabLabel="카드 읽는 법"

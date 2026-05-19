@@ -25,6 +25,7 @@ type HelpDialogFrameProps<TGuideId extends string> = {
   titleId: string
   descriptionId: string
   triggerLabel?: string
+  triggerId?: string
   footer?: ReactNode
   // render prop — useHelpDialog 내부 상태(activeGuideId, demoUpdatedAt 등)를
   // 데모 카드에 직접 전달하기 위해 ReactNode 대신 함수로 받음
@@ -46,6 +47,7 @@ export function HelpDialogFrame<TGuideId extends string>({
   titleId,
   descriptionId,
   triggerLabel,
+  triggerId,
   footer,
   renderDemoCardAction,
   primaryTabLabel,
@@ -77,7 +79,7 @@ export function HelpDialogFrame<TGuideId extends string>({
 
   return (
     <>
-      <HelpTrigger onOpen={openDialog} label={triggerLabel} />
+      <HelpTrigger onOpen={openDialog} label={triggerLabel} id={triggerId} />
 
       {isOpen ? (
         <div
