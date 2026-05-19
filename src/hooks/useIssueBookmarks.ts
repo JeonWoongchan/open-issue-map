@@ -158,6 +158,8 @@ export function useIssueBookmarks({
       }
 
       succeededBookmarkState = !wasBookmarked
+      const successMessage = wasBookmarked ? '북마크가 제거되었습니다.' : '북마크가 저장되었습니다.'
+      toast({ variant: 'success', title: successMessage })
 
       await Promise.all([
         // isBookmarked는 optimisticIssues가 이미 관리하므로 즉시 리페치 불필요.

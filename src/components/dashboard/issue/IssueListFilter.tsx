@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { CONTRIBUTION_TYPES, EXPERIENCE_LEVELS } from '@/constants/contribution-levels'
 import { SCORE_FILTER_THRESHOLDS, STAR_FILTER_THRESHOLDS } from '@/constants/scoring-rules'
@@ -52,7 +53,7 @@ function FilterPill({
     )
 }
 
-function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
+function FilterRow({ label, children }: { label: string; children: ReactNode }) {
     return (
         <div className="flex items-center gap-2">
             <span className="w-14 shrink-0 text-xs font-medium text-muted-foreground">{label}</span>
