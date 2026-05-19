@@ -9,6 +9,7 @@ import {
 } from '@/constants/dashboard-help'
 import { DashboardDemoCard } from './DashboardDemoCard'
 import { DashboardScoringGuide } from './DashboardScoringGuide'
+import { DashboardAIGuide } from './DashboardAIGuide'
 
 export function DashboardHelpDialog() {
   return (
@@ -22,7 +23,10 @@ export function DashboardHelpDialog() {
       footer={<HelpReportFooter />}
       renderDemoCardAction={(props) => <DashboardDemoCard {...props} />}
       primaryTabLabel="카드 읽는 법"
-      extraTabs={[{ id: 'scoring', label: '점수 산정 방식', content: <DashboardScoringGuide /> }]}
+      extraTabs={[
+        { id: 'scoring', label: '점수 산정 방식', content: <DashboardScoringGuide /> },
+        { id: 'ai-guide', label: 'AI 분석 방식', content: <DashboardAIGuide /> },
+      ]}
     />
   )
 }

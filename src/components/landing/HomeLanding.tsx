@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Bookmark, GitPullRequestArrow, Map, Search } from 'lucide-react'
+import { Bookmark, GitPullRequestArrow, Map, Search, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AppFooter } from '@/components/layout/AppFooter'
 import { signInWithGitHub } from '@/lib/auth-actions'
@@ -15,6 +15,11 @@ const featureItems = [
         icon: Map,
         title: '온보딩 기반 추천',
         description: '관심 언어와 기여 목적을 반영해 시작하기 좋은 이슈를 우선 보여줍니다.',
+    },
+    {
+      icon: Sparkles,
+      title: 'AI 작업 가이드',
+      description: '이슈별 예상 난이도, 작업 범위, 필요한 개념, 먼저 확인할 파일을 AI가 분석해 알려줍니다.',
     },
     {
         icon: Bookmark,
