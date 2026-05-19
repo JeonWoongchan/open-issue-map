@@ -8,7 +8,7 @@ import { HelpGuideList } from './HelpGuideList'
 import { HelpHeader } from './HelpHeader'
 import { HelpTrigger } from './HelpTrigger'
 
-type ExtraTab = {
+export type ExtraTab = {
     id: string
     label: string
     content: ReactNode

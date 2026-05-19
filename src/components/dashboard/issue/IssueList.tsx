@@ -7,7 +7,6 @@ import { IssueAnalysisDrawer } from './IssueAnalysisDrawer'
 import { SearchBarRow } from '@/components/shared/SearchBarRow'
 import { SearchDataListState } from '@/components/shared/SearchDataListState'
 import { InfiniteScrollTrigger } from '@/components/shared/InfiniteScrollTrigger'
-import { DashboardHelpDialog } from '@/components/dashboard/dashboard-help/DashboardHelpDialog'
 import { useIssueListView } from '@/hooks/useIssueListView'
 import { useToast } from '@/hooks/use-toast'
 import { EMPTY_ISSUE_FILTERS } from '@/types/issue'
@@ -15,13 +14,16 @@ import type { IssueFilters, IssueCardItem } from '@/types/issue'
 import { IssueCandidateLoadMoreNotice } from './IssueCandidateLoadMoreNotice'
 import { IssueListContent } from './IssueListContent'
 import { IssueListFilter } from './IssueListFilter'
+import { type ReactNode } from 'react'
 
 type IssueListProps = {
     // 서버 컴포넌트에서 auth()로 확인한 게스트 여부 — useSession() 클라이언트 캐시 의존을 피함
     isGuest: boolean
+    // 정적 탭 content를 클라이언트 번들에서 제외하기 위해 Server Component에서 주입
+    helpSlot: ReactNode
 }
 
-export function IssueList({ isGuest }: IssueListProps) {
+export function IssueList({ isGuest, helpSlot }: IssueListProps) {
     const [filters, setFilters] = useState<IssueFilters>(EMPTY_ISSUE_FILTERS)
     const [query, setQuery] = useState('')
     const [analysisTarget, setAnalysisTarget] = useState<IssueCardItem | null>(null)
@@ -84,7 +86,7 @@ export function IssueList({ isGuest }: IssueListProps) {
                     onChangeAction={setQuery}
                     resultCount={query ? filteredItems.length : undefined}
                     totalCount={query ? totalCount : undefined}
-                    helpSlot={<DashboardHelpDialog />}
+                    helpSlot={helpSlot}
                 />
             </div>
 

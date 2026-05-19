@@ -11,9 +11,9 @@ import {
     REPO_STAR_SCORE_TIERS,
     TIME_BUDGET_RULES,
 } from '@/constants/scoring-rules'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+import { HelpSection } from './guide-components'
 
 type ScoreRow = {
     label: string
@@ -128,38 +128,6 @@ function NoteBox({ title, children }: { title?: string; children: ReactNode }) {
     )
 }
 
-function Section({
-    number,
-    title,
-    badge,
-    description,
-    children,
-}: {
-    number: number
-    title: string
-    badge?: string
-    description: string
-    children?: ReactNode
-}) {
-    return (
-        <div className="space-y-3">
-            <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-interactive-selected text-[10px] font-semibold text-interactive-selected-foreground">
-                    {number}
-                </span>
-                <span className="text-sm font-semibold text-foreground">{title}</span>
-                {badge ? (
-                    <Badge variant="secondary" className="ml-auto shrink-0 text-xs">
-                        {badge}
-                    </Badge>
-                ) : null}
-            </div>
-            <p className="text-xs leading-5 text-muted-foreground">{description}</p>
-            {children}
-        </div>
-    )
-}
-
 export function DashboardScoringGuide() {
     return (
         <div className="space-y-5">
@@ -169,7 +137,7 @@ export function DashboardScoringGuide() {
             </p>
 
             {/* 1. 언어 일치 */}
-            <Section
+            <HelpSection
                 number={1}
                 title="언어 일치"
                 badge={`최대 +${LANGUAGE_SCORE.EXACT}`}
@@ -185,12 +153,12 @@ export function DashboardScoringGuide() {
                 <p className="text-xs leading-5 text-muted-foreground">
                     계열 언어: TypeScript ↔ JavaScript / C ↔ C++ / Java ↔ Kotlin ↔ Scala ↔ Groovy / Swift ↔ Objective-C
                 </p>
-            </Section>
+            </HelpSection>
 
             <Separator />
 
             {/* 2. 난이도 적합도 */}
-            <Section
+            <HelpSection
                 number={2}
                 title="난이도 적합도"
                 badge={`최대 +${DIFFICULTY_SCORE.PERFECT}`}
@@ -222,12 +190,12 @@ export function DashboardScoringGuide() {
                         <p><span className="font-medium text-foreground">고급</span> — hard, complex, advanced, difficulty:hard, e-hard</p>
                     </div>
                 </NoteBox>
-            </Section>
+            </HelpSection>
 
             <Separator />
 
             {/* 3. 기여 방식 일치 */}
-            <Section
+            <HelpSection
                 number={3}
                 title="기여 방식 일치"
                 badge={`최대 +${CONTRIBUTION_TYPE_SCORE.MATCH}`}
@@ -249,12 +217,12 @@ export function DashboardScoringGuide() {
                         <p><span className="font-medium text-foreground">리뷰(review)</span> — review, feedback</p>
                     </div>
                 </NoteBox>
-            </Section>
+            </HelpSection>
 
             <Separator />
 
             {/* 4. 경쟁도 */}
-            <Section
+            <HelpSection
                 number={4}
                 title="경쟁도"
                 badge={`최대 +${MAX_COMPETITION_SCORE}`}
@@ -321,12 +289,12 @@ export function DashboardScoringGuide() {
                         ]}
                     />
                 </div>
-            </Section>
+            </HelpSection>
 
             <Separator />
 
             {/* 5. 투입 시간 */}
-            <Section
+            <HelpSection
                 number={5}
                 title="투입 시간"
                 badge={`최대 +${MAX_TIME_BUDGET_SCORE}`}
@@ -372,12 +340,12 @@ export function DashboardScoringGuide() {
                         )
                     })}
                 </div>
-            </Section>
+            </HelpSection>
 
             <Separator />
 
             {/* 6. 기여 목적 */}
-            <Section
+            <HelpSection
                 number={6}
                 title="기여 목적"
                 badge={`최대 +${MAX_PURPOSE_SCORE}`}
@@ -413,12 +381,12 @@ export function DashboardScoringGuide() {
                         </div>
                     ))}
                 </div>
-            </Section>
+            </HelpSection>
 
             <Separator />
 
             {/* 7. 저장소 인지도 */}
-            <Section
+            <HelpSection
                 number={7}
                 title="저장소 인지도"
                 badge={`최대 +${REPO_STAR_SCORE_TIERS[0].score}`}
@@ -431,7 +399,7 @@ export function DashboardScoringGuide() {
                         positive: true,
                     }))}
                 />
-            </Section>
+            </HelpSection>
         </div>
     )
 }

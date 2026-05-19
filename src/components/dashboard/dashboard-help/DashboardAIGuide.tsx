@@ -1,37 +1,6 @@
 import { Separator } from '@/components/ui/separator'
 import { TriangleAlert } from 'lucide-react'
-import {ReactNode} from "react";
-
-function Section({
-    number,
-    title,
-    children,
-}: {
-    number: number
-    title: string
-    children: ReactNode
-}) {
-    return (
-        <div className="space-y-3">
-            <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-interactive-selected text-[10px] font-semibold text-interactive-selected-foreground">
-                    {number}
-                </span>
-                <span className="text-sm font-semibold text-foreground">{title}</span>
-            </div>
-            {children}
-        </div>
-    )
-}
-
-function DataRow({ label, description }: { label: string; description: string }) {
-    return (
-        <tr className="border-t border-border/60 first:border-t-0">
-            <td className="w-1/3 px-3 py-2 font-medium text-foreground">{label}</td>
-            <td className="px-3 py-2 text-muted-foreground">{description}</td>
-        </tr>
-    )
-}
+import { HelpSection, HelpTableRow, HelpDataTable } from './guide-components'
 
 function OutputRow({ label, description }: { label: string; description: string }) {
     return (
@@ -50,37 +19,29 @@ export function DashboardAIGuide() {
             </p>
 
             {/* 1. 분석에 사용하는 데이터 */}
-            <Section number={1} title="분석에 사용하는 데이터">
+            <HelpSection number={1} title="분석에 사용하는 데이터">
                 <div className="space-y-2">
                     <p className="text-xs font-medium text-foreground">이슈 정보</p>
-                    <div className="overflow-hidden rounded-lg border border-border">
-                        <table className="w-full text-xs">
-                            <tbody>
-                                <DataRow label="이슈 제목" description="이슈의 핵심 맥락을 파악하는 기본 입력값" />
-                                <DataRow label="이슈 본문" description="재현 방법, 예상 동작, 제안 내용 등 상세 정보" />
-                                <DataRow label="라벨" description="난이도·기여 유형 추정에 사용하는 태그 목록" />
-                                <DataRow label="저장소 언어" description="필요한 개념과 작업 범위 추론에 활용" />
-                                <DataRow label="README" description="프로젝트 구조와 개발 환경을 파악하기 위해 포함 (제공된 경우)" />
-                            </tbody>
-                        </table>
-                    </div>
+                    <HelpDataTable>
+                        <HelpTableRow label="이슈 제목" description="이슈의 핵심 맥락을 파악하는 기본 입력값" />
+                        <HelpTableRow label="이슈 본문" description="재현 방법, 예상 동작, 제안 내용 등 상세 정보" />
+                        <HelpTableRow label="라벨" description="난이도·기여 유형 추정에 사용하는 태그 목록" />
+                        <HelpTableRow label="저장소 언어" description="필요한 개념과 작업 범위 추론에 활용" />
+                        <HelpTableRow label="README" description="프로젝트 구조와 개발 환경을 파악하기 위해 포함 (제공된 경우)" />
+                    </HelpDataTable>
                     <p className="text-xs font-medium text-foreground">온보딩 설문 정보</p>
-                    <div className="overflow-hidden rounded-lg border border-border">
-                        <table className="w-full text-xs">
-                            <tbody>
-                                <DataRow label="경험 수준" description="예상 난이도를 상대적으로 조정하는 기준 (입문·초급·중급·고급)" />
-                                <DataRow label="기여 목적" description="안내 방향을 결정하는 맥락 (포트폴리오·성장·커뮤니티)" />
-                                <DataRow label="주간 투입 시간" description="작업 범위 서술의 기준으로 활용 (주 2·5·10시간)" />
-                            </tbody>
-                        </table>
-                    </div>
+                    <HelpDataTable>
+                        <HelpTableRow label="경험 수준" description="예상 난이도를 상대적으로 조정하는 기준 (입문·초급·중급·고급)" />
+                        <HelpTableRow label="기여 목적" description="안내 방향을 결정하는 맥락 (포트폴리오·성장·커뮤니티)" />
+                        <HelpTableRow label="주간 투입 시간" description="작업 범위 서술의 기준으로 활용 (주 2·5·10시간)" />
+                    </HelpDataTable>
                 </div>
-            </Section>
+            </HelpSection>
 
             <Separator />
 
             {/* 2. 분석 결과 항목 */}
-            <Section number={2} title="분석 결과 항목">
+            <HelpSection number={2} title="분석 결과 항목">
                 <div className="space-y-2">
                     <OutputRow
                         label="예상 난이도"
@@ -103,7 +64,7 @@ export function DashboardAIGuide() {
                         description="놓치기 쉬운 엣지 케이스, 사이드 이펙트, 작업 전에 미리 파악해야 할 사항을 1~3개 정리합니다."
                     />
                 </div>
-            </Section>
+            </HelpSection>
 
             <Separator />
 

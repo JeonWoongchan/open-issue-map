@@ -1,6 +1,6 @@
 'use client'
 
-import { HelpDialogFrame } from '@/components/help/HelpDialogFrame'
+import { HelpDialogFrame, type ExtraTab } from '@/components/help/HelpDialogFrame'
 import { HelpReportFooter } from '@/components/help/HelpReportFooter'
 import {
   DASHBOARD_HELP_DEMO_UPDATED_OFFSET_MS,
@@ -8,11 +8,12 @@ import {
   type DashboardHelpGuideId,
 } from '@/constants/dashboard-help'
 import { DashboardDemoCard } from './DashboardDemoCard'
-import { DashboardScoringGuide } from './DashboardScoringGuide'
-import { DashboardAIGuide } from './DashboardAIGuide'
-import { DashboardContributionGuide } from './DashboardContributionGuide'
 
-export function DashboardHelpDialog() {
+type Props = {
+  extraTabs: readonly ExtraTab[]
+}
+
+export function DashboardHelpDialog({ extraTabs }: Props) {
   return (
     <HelpDialogFrame<DashboardHelpGuideId>
       demoUpdatedOffsetMs={DASHBOARD_HELP_DEMO_UPDATED_OFFSET_MS}
@@ -25,11 +26,7 @@ export function DashboardHelpDialog() {
       footer={<HelpReportFooter />}
       renderDemoCardAction={(props) => <DashboardDemoCard {...props} />}
       primaryTabLabel="카드 읽는 법"
-      extraTabs={[
-        { id: 'scoring', label: '점수 산정 방식', content: <DashboardScoringGuide /> },
-        { id: 'ai-guide', label: 'AI 분석 방식', content: <DashboardAIGuide /> },
-        { id: 'contribution', label: '기여 가이드', content: <DashboardContributionGuide /> },
-      ]}
+      extraTabs={extraTabs}
     />
   )
 }
