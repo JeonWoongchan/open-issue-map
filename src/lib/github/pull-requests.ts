@@ -125,6 +125,9 @@ export type FetchPullRequestsResult = {
 // 100개씩 최대 MAX_PR_FETCH_PAGES 페이지까지 조회 — PR 1,000개 초과 시 GitHub API 연속 호출 방지
 const MAX_PR_FETCH_PAGES = 10
 
+// GitHub GraphQL은 states: null 시 MERGED를 반환하지 않으므로 전체 조회 시 명시적으로 지정
+const ALL_PR_STATES: PullRequestState[] = ['OPEN', 'MERGED', 'CLOSED']
+
 export async function fetchViewerPullRequests({
     accessToken,
     viewerLogin = '',
@@ -135,8 +138,10 @@ export async function fetchViewerPullRequests({
     let pageCount = 0
     const allItems: PullRequestItem[] = []
 
+    const effectiveStates = states ?? ALL_PR_STATES
+
     while (hasNextPage && pageCount < MAX_PR_FETCH_PAGES) {
-        const connection = await fetchPullRequestPage(accessToken, after, states)
+        const connection = await fetchPullRequestPage(accessToken, after, effectiveStates)
         allItems.push(...excludeOwnRepoPRs(connection.nodes.map(toPullRequestItem), viewerLogin))
         hasNextPage = connection.pageInfo.hasNextPage
         after = connection.pageInfo.endCursor
