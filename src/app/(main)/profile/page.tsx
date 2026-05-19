@@ -1,7 +1,15 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { AppFooter } from '@/components/layout/AppFooter'
 import { MainSectionShell } from '@/components/layout/MainSectionShell'
 import { ProfileList } from '@/components/mypage/ProfileList'
+import { createPageMetadata } from '@/lib/metadata'
+
+export const metadata: Metadata = createPageMetadata({
+  title: '마이페이지',
+  description: '내 GitHub 계정과 현재 추천 기준을 한 곳에서 확인합니다.',
+  canonicalPath: '/profile',
+})
 
 export default function ProfilePage() {
   return (

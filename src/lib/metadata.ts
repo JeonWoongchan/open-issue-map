@@ -29,8 +29,8 @@ export function createNoIndexMetadata({
   description?: string
 } = {}): Metadata {
   return {
-    title,
-    description,
+    ...(title !== undefined && { title }),
+    ...(description !== undefined && { description }),
     robots: {
       index: false,
       follow: false,

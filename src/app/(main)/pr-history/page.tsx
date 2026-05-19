@@ -1,8 +1,16 @@
 // PR 히스토리 페이지 — MainSectionShell 래퍼 + PRHistoryList 클라이언트 컴포넌트 조합
 
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { MainSectionShell } from '@/components/layout/MainSectionShell'
 import { PRHistoryList } from '@/components/pr-history/PRHistoryList'
+import { createPageMetadata } from '@/lib/metadata'
+
+export const metadata: Metadata = createPageMetadata({
+  title: 'PR 히스토리',
+  description: 'GitHub에 제출한 Pull Request 기록을 확인합니다.',
+  canonicalPath: '/pr-history',
+})
 
 export default function PRHistoryPage() {
   return (
