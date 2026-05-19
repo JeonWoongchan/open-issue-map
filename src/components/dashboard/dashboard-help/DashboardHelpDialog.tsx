@@ -10,6 +10,7 @@ import {
 import { DashboardDemoCard } from './DashboardDemoCard'
 import { DashboardScoringGuide } from './DashboardScoringGuide'
 import { DashboardAIGuide } from './DashboardAIGuide'
+import { DashboardContributionGuide } from './DashboardContributionGuide'
 
 export function DashboardHelpDialog() {
   return (
@@ -27,6 +28,7 @@ export function DashboardHelpDialog() {
       extraTabs={[
         { id: 'scoring', label: '점수 산정 방식', content: <DashboardScoringGuide /> },
         { id: 'ai-guide', label: 'AI 분석 방식', content: <DashboardAIGuide /> },
+        { id: 'contribution', label: '기여 가이드', content: <DashboardContributionGuide /> },
       ]}
     />
   )
