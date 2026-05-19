@@ -12,19 +12,19 @@ export const dashboardTourSteps: Step[] = [
     {
         target: '#tour-search',
         title: '이슈 검색',
-        content: '키워드로 이슈 제목을 검색할 수 있어요.',
+        content: '추천 목록에서 이슈명/저장소명으로 검색할 수 있어요.',
         skipBeacon: true,
     },
     {
         target: '#tour-filter',
         title: '필터링',
-        content: '언어, 경험 수준, 기여 유형, 활동성 기준으로 이슈를 좁혀볼 수 있어요.',
+        content: '언어, 기여 방식, 진행 상태 등의 기준으로 이슈를 좁혀볼 수 있어요.',
         skipBeacon: true,
     },
     {
         target: '#tour-issue-list',
         title: '추천 이슈',
-        content: '관심사와 기술 수준을 바탕으로 기여하기 좋은 이슈를 카드로 보여드려요. 제목을 클릭하면 GitHub으로 이동합니다.',
+        content: '사용자 온보딩 결과를 바탕으로 기여하기 좋은 이슈를 보여드려요. 제목을 클릭하면 GitHub으로 이동합니다.',
         skipBeacon: true,
     },
     {
