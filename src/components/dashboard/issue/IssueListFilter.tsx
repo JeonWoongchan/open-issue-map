@@ -75,13 +75,21 @@ export function IssueListFilter({ filters, availableLanguages, onChangeAction }:
     const toggleCompetitionLevel = (value: CompetitionLevel) =>
         onChangeAction({ ...filters, competitionLevels: toggleInArray(filters.competitionLevels, value) })
 
-    const activeCount =
-        (filters.language ? 1 : 0) +
-        (filters.difficultyLevel ? 1 : 0) +
-        filters.contributionTypes.length +
-        filters.competitionLevels.length +
-        (filters.minScore !== null ? 1 : 0) +
-        (filters.minStars !== null ? 1 : 0)
+    // 접힌 상태에서 표시할 선택된 필터 라벨 목록
+    const activeFilterLabels: string[] = [
+        ...(filters.language ? [filters.language] : []),
+        ...(filters.difficultyLevel
+            ? [EXPERIENCE_LEVELS.find((l) => l.value === filters.difficultyLevel)?.label ?? filters.difficultyLevel]
+            : []),
+        ...filters.contributionTypes.map(
+            (ct) => CONTRIBUTION_TYPES.find((t) => t.value === ct)?.label ?? ct
+        ),
+        ...filters.competitionLevels.map(
+            (cl) => COMPETITION_LEVEL_OPTIONS.find((o) => o.value === cl)?.label ?? cl
+        ),
+        ...(filters.minStars !== null ? [`${filters.minStars.toLocaleString()}+`] : []),
+        ...(filters.minScore !== null ? [`${filters.minScore}+`] : []),
+    ]
 
     if (availableLanguages.length === 0) {
         return null
@@ -90,34 +98,39 @@ export function IssueListFilter({ filters, availableLanguages, onChangeAction }:
     return (
         <Collapsible open={open} onOpenChange={setOpen}>
             <div className="rounded-xl border border-border/70 bg-background/70">
-                {/* 트리거와 초기화를 형제 요소로 배치 — button 중첩 방지 */}
-                <div className="flex items-center gap-2 px-3 py-2.5">
-                    <CollapsibleTrigger asChild>
-                        <button
-                            type="button"
-                            className="group flex flex-1 cursor-pointer items-center gap-2 text-left"
-                        >
-                            <span className="text-xs font-bold text-interactive-action">필터</span>
-                            {activeCount > 0 && (
-                                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-interactive-selected px-1 text-[10px] font-semibold text-interactive-selected-foreground">
-                                    {activeCount}
+                {/* CollapsibleTrigger asChild에 div[role=button] 사용 — 내부 초기화 button 중첩 허용 */}
+                <CollapsibleTrigger asChild>
+                    <div
+                        role="button"
+                        tabIndex={0}
+                        className="group flex cursor-pointer items-center gap-2 h-9 px-3 py-2.5"
+                    >
+                        <span className="shrink-0 text-xs font-bold text-interactive-action">필터</span>
+                        <div className="flex min-w-0 flex-1 gap-1 overflow-hidden">
+                            {activeFilterLabels.map((label) => (
+                                <span
+                                    key={label}
+                                    className="shrink-0 rounded-full border border-interactive-selected-border bg-interactive-selected px-2 text-xs font-medium text-interactive-selected-foreground"
+                                >
+                                    {label}
                                 </span>
-                            )}
-                            <ChevronDown
-                                className="ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180"
-                            />
-                        </button>
-                    </CollapsibleTrigger>
-                    {activeCount > 0 && (
-                        <button
-                            type="button"
-                            onClick={() => onChangeAction(EMPTY_ISSUE_FILTERS)}
-                            className="shrink-0 cursor-pointer text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
-                        >
-                            초기화
-                        </button>
-                    )}
-                </div>
+                            ))}
+                        </div>
+                        {activeFilterLabels.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onChangeAction(EMPTY_ISSUE_FILTERS)
+                                }}
+                                className="shrink-0 cursor-pointer text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+                            >
+                                초기화
+                            </button>
+                        )}
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                    </div>
+                </CollapsibleTrigger>
 
                 <CollapsibleContent className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
                     <div className="flex flex-col gap-2 border-t border-border/50 p-4">

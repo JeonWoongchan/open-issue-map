@@ -102,7 +102,7 @@ export function IssueList({ isGuest }: IssueListProps) {
                 entityLabel="이슈"
                 fallback={{
                     title: '추천할 이슈가 없습니다',
-                    description: '프로필 설정이나 GitHub 조회 결과에 따라 지금은 보여드릴 추천 이슈가 없습니다.',
+                    description: '온보딩 설정이나 GitHub 조회 결과에 따라 지금은 보여드릴 추천 이슈가 없습니다.',
                     detail: '온보딩 설정을 다시 확인하거나 잠시 후 다시 시도해 주세요.',
                     action: isGuest
                         ? <button type="button" onClick={() => void signIn('github', { callbackUrl: '/dashboard' })}>로그인하여 맞춤 추천 받기</button>
