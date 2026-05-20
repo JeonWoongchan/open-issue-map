@@ -132,8 +132,8 @@ export function DashboardScoringGuide() {
     return (
         <div className="space-y-5">
             <p className="text-xs leading-5 text-muted-foreground">
-                추천 점수는 온보딩 설문 답변을 바탕으로 아래 7가지 항목을 평가해 합산합니다.
-                높은 점수일수록 지금 설정에 더 잘 맞는 이슈입니다.
+                추천 점수는 온보딩 설문 답변을 바탕으로 아래 7가지 항목을 평가해 합산해요.
+                높은 점수일수록 지금 설정에 더 잘 맞는 이슈예요.
             </p>
 
             {/* 1. 언어 일치 */}
@@ -141,7 +141,7 @@ export function DashboardScoringGuide() {
                 number={1}
                 title="언어 일치"
                 badge={`최대 +${LANGUAGE_SCORE.EXACT}`}
-                description="이슈 저장소의 주 언어와 선택한 언어를 비교합니다. 선택한 언어이면 순위에 관계없이 동일한 점수를, 같은 계열 언어면 부분 점수를 드립니다."
+                description="이슈 저장소의 주 언어와 선택한 언어를 비교해요. 선택한 언어이면 순위에 관계없이 동일한 점수를, 같은 계열 언어면 부분 점수를 드려요."
             >
                 <ScoreTable
                     rows={[
@@ -162,7 +162,7 @@ export function DashboardScoringGuide() {
                 number={2}
                 title="난이도 적합도"
                 badge={`최대 +${DIFFICULTY_SCORE.PERFECT}`}
-                description="GitHub은 공식 난이도 필드를 제공하지 않으므로 이슈 라벨로 난이도를 추정한 뒤 내 경험 수준과 비교합니다."
+                description="GitHub은 공식 난이도 필드를 제공하지 않아서 이슈 라벨로 난이도를 추정한 뒤 내 경험 수준과 비교해요."
             >
                 <ScoreTable
                     rows={[
@@ -180,7 +180,7 @@ export function DashboardScoringGuide() {
                     ]}
                 />
                 <p className="text-xs leading-5 text-muted-foreground">
-                    내 수준보다 쉬운 이슈도 기여 자체로 의미가 있으므로 한·두 단계 아래는 낮은 가산점을 부여합니다. 세 단계 이상 차이나면 0점입니다. 난이도 라벨이 없는 이슈는 good first issue 같은 명시적인 쉬운 신호가 없다는 뜻이므로, 경험 수준이 높을수록 더 높은 점수를 부여합니다.
+                    내 수준보다 쉬운 이슈도 기여 자체로 의미가 있어서 한·두 단계 아래는 낮은 가산점을 드려요. 세 단계 이상 차이나면 0점이에요. 난이도 라벨이 없는 이슈는 good first issue 같은 명시적인 쉬운 신호가 없다는 뜻이라서, 경험 수준이 높을수록 더 높은 점수를 드려요.
                 </p>
                 <NoteBox title="주요 난이도 추정 레이블 (이슈 라벨 기준)">
                     <div className="space-y-0.5 text-xs text-muted-foreground">
@@ -199,7 +199,7 @@ export function DashboardScoringGuide() {
                 number={3}
                 title="기여 방식 일치"
                 badge={`최대 +${CONTRIBUTION_TYPE_SCORE.MATCH}`}
-                description="이슈의 작업 성격과 선택한 기여 방식을 라벨·키워드로 추정해 비교합니다. 선택한 방식이면 순서에 관계없이 동일한 점수를 드립니다."
+                description="이슈의 작업 성격과 선택한 기여 방식을 라벨·키워드로 추정해 비교해요. 선택한 방식이면 순서에 관계없이 동일한 점수를 드려요."
             >
                 <ScoreTable
                     rows={[
@@ -226,7 +226,7 @@ export function DashboardScoringGuide() {
                 number={4}
                 title="경쟁도"
                 badge={`최대 +${MAX_COMPETITION_SCORE}`}
-                description="댓글 수와 연결된 PR 여부로 이슈의 진입 경쟁을 추정합니다. 아래 두 항목의 점수를 합산하며, PR이 연결된 이슈는 양쪽 모두에서 감점됩니다."
+                description="댓글 수와 연결된 PR 여부로 이슈의 진입 경쟁을 추정해요. 아래 두 항목의 점수를 합산하며, PR이 연결된 이슈는 양쪽 모두에서 감점돼요."
             >
                 <div className="space-y-3">
                     <NoteBox>
@@ -298,7 +298,7 @@ export function DashboardScoringGuide() {
                 number={5}
                 title="투입 시간"
                 badge={`최대 +${MAX_TIME_BUDGET_SCORE}`}
-                description="설정한 주간 시간에 맞는 작업 유형과 난이도를 우대합니다. 맞지 않는 이슈도 추천되며, 해당 항목에서 가산점만 없습니다."
+                description="설정한 주간 시간에 맞는 작업 유형과 난이도를 우대해요. 맞지 않는 이슈도 추천되며, 해당 항목에서 가산점만 없어요."
             >
                 <div className="space-y-2">
                     {([2, 5, 10] as const).map((hours) => {
@@ -349,7 +349,7 @@ export function DashboardScoringGuide() {
                 number={6}
                 title="기여 목적"
                 badge={`최대 +${MAX_PURPOSE_SCORE}`}
-                description="포트폴리오 · 성장 · 커뮤니티 중 선택한 목적에 따라 저장소 성격과 이슈 유형의 가중치가 달라집니다."
+                description="포트폴리오 · 성장 · 커뮤니티 중 선택한 목적에 따라 저장소 성격과 이슈 유형의 가중치가 달라져요."
             >
                 <div className="space-y-2">
                     {[
@@ -390,7 +390,7 @@ export function DashboardScoringGuide() {
                 number={7}
                 title="저장소 인지도"
                 badge={`최대 +${REPO_STAR_SCORE_TIERS[0].score}`}
-                description={`커뮤니티에서 주목받는 저장소일수록 활발한 피드백을 기대할 수 있어 star 수를 기준으로 가산합니다. star ${MIN_CANDIDATE_REPO_STARS}개 미만인 저장소는 추천 후보에서 제외됩니다.`}
+                description={`커뮤니티에서 주목받는 저장소일수록 활발한 피드백을 기대할 수 있어서 star 수를 기준으로 가산해요. star ${MIN_CANDIDATE_REPO_STARS}개 미만인 저장소는 추천 후보에서 제외돼요.`}
             >
                 <ScoreTable
                     rows={REPO_STAR_SCORE_TIERS.map((tier) => ({
