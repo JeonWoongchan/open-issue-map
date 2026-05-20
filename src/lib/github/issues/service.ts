@@ -101,8 +101,7 @@ export async function fetchIssueListPage({
         ? encodeBatch(searchResult.endCursors)
         : null
 
-    const isFirstPage = offset === 0
-    if (isFirstPage && searchResult.hasMoreOnGithub) {
+    if (searchResult.hasMoreOnGithub) {
         const nextBatchCursors = searchResult.endCursors
         const nextBatchParam = encodeBatch(nextBatchCursors)
         const prefetchNextBatch = unstable_cache(

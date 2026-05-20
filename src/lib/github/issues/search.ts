@@ -109,7 +109,7 @@ export async function fetchCandidateIssues(
         queries.map((query, i) =>
             githubGraphQL<SearchResult>(
                 SEARCH_ISSUES_QUERY,
-                { query, first: 30, after: afterCursors[languages[i]] ?? null },
+                { query, first: 50, after: afterCursors[languages[i]] ?? null },
                 accessToken
             )
         )
