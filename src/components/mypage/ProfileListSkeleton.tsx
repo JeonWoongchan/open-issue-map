@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { MyPageActivityCard } from './MyPageActivityCard'
 
 function BlockSkeleton({ className }: { className?: string }) {
-    return <div className={`animate-pulse rounded bg-muted ${className ?? ''}`} />
+    return <div className={`animate-pulse rounded bg-skeleton ${className ?? ''}`} />
 }
 
 function ProfileHeaderSkeleton() {
