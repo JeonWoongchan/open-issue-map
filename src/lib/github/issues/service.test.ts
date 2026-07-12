@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { fetchIssueListPage } from '@/lib/github/issues/service'
-import { encodeBatch, INITIAL_BATCH } from '@/lib/github/batch'
-import { MIN_CANDIDATE_REPO_STARS, PAGE_SIZE } from '@/constants/scoring-rules'
+import { INITIAL_BATCH } from '@/lib/github/batch'
+import { GitHubRateLimitError, GitHubUnauthorizedError } from '@/lib/github/client'
+import { FOREGROUND_FETCH_SIZE, PAGE_SIZE } from '@/constants/scoring-rules'
 import { EMPTY_ISSUE_FILTERS } from '@/types/issue'
 import type { OnboardingProfile } from '@/lib/user/profile'
 import type { RawIssue, ScoredIssue } from '@/types/issue'
@@ -50,12 +51,8 @@ const baseArgs = {
 function makeSearchResult(overrides: Partial<IssueSearchResult> = {}): IssueSearchResult {
   return {
     issues: [],
-    endCursors: {},
+    endCursor: null,
     hasMoreOnGithub: false,
-    failedQueryCount: 0,
-    totalQueryCount: 1,
-    rateLimited: false,
-    unauthorized: false,
     ...overrides,
   }
 }
@@ -121,17 +118,17 @@ function setupDeps(
 }
 
 describe('fetchIssueListPage — 에러 반환', () => {
-  it('rate_limited이고 이슈가 없으면 { error: rate_limited }를 반환한다', async () => {
-    setupDeps([])
-    mockSearch.mockResolvedValue(makeSearchResult({ rateLimited: true, issues: [], totalQueryCount: 1, failedQueryCount: 1 }))
+  it('GitHubRateLimitError가 throw되면 { error: rate_limited }를 반환한다', async () => {
+    mockSearch.mockRejectedValue(new GitHubRateLimitError())
+    mockBookmarks.mockResolvedValue([])
 
     const result = await fetchIssueListPage(baseArgs)
 
     expect(result).toEqual({ error: 'rate_limited' })
   })
 
-  it('unauthorized이고 이슈가 없으면 { error: unauthorized }를 반환한다', async () => {
-    mockSearch.mockResolvedValue(makeSearchResult({ unauthorized: true, issues: [], totalQueryCount: 1, failedQueryCount: 1 }))
+  it('GitHubUnauthorizedError가 throw되면 { error: unauthorized }를 반환한다', async () => {
+    mockSearch.mockRejectedValue(new GitHubUnauthorizedError())
     mockBookmarks.mockResolvedValue([])
 
     const result = await fetchIssueListPage(baseArgs)
@@ -139,65 +136,74 @@ describe('fetchIssueListPage — 에러 반환', () => {
     expect(result).toEqual({ error: 'unauthorized' })
   })
 
-  it('모든 쿼리가 실패하면 { error: all_failed }를 반환한다', async () => {
-    mockSearch.mockResolvedValue(makeSearchResult({ failedQueryCount: 2, totalQueryCount: 2, issues: [] }))
+  it('그 외 에러가 throw되면 { error: fetch_failed }를 반환한다', async () => {
+    mockSearch.mockRejectedValue(new Error('network error'))
     mockBookmarks.mockResolvedValue([])
 
     const result = await fetchIssueListPage(baseArgs)
 
-    expect(result).toEqual({ error: 'all_failed' })
-  })
-
-  it('rate_limited여도 이슈가 있으면 에러를 반환하지 않는다', async () => {
-    const raw = [makeRawIssue()]
-    const scored = [makeScoredIssue()]
-    setupDeps(raw, scored, { rateLimited: true, failedQueryCount: 1, totalQueryCount: 2 })
-
-    const result = await fetchIssueListPage(baseArgs)
-
-    expect('error' in result).toBe(false)
+    expect(result).toEqual({ error: 'fetch_failed' })
   })
 })
 
 describe('fetchIssueListPage - batch validation', () => {
-  it('invalid batch는 GitHub 조회 없이 invalid_batch를 반환한다', async () => {
-    const result = await fetchIssueListPage({ ...baseArgs, batchParam: '!!!invalid!!!' })
-
-    expect(result).toEqual({ error: 'invalid_batch' })
-    expect(mockSearch).not.toHaveBeenCalled()
-    expect(mockBookmarks).not.toHaveBeenCalled()
-  })
-
   it('길이 제한을 넘는 batch는 GitHub 조회 없이 invalid_batch를 반환한다', async () => {
-    const result = await fetchIssueListPage({ ...baseArgs, batchParam: 'a'.repeat(2049) })
+    const result = await fetchIssueListPage({ ...baseArgs, batchParam: 'a'.repeat(501) })
 
     expect(result).toEqual({ error: 'invalid_batch' })
     expect(mockSearch).not.toHaveBeenCalled()
     expect(mockBookmarks).not.toHaveBeenCalled()
   })
 
-  it('프로필 언어와 맞는 cursor key가 없으면 invalid_batch를 반환한다', async () => {
-    const result = await fetchIssueListPage({ ...baseArgs, batchParam: encodeBatch({ Rust: 'cursor-rust' }) })
-
-    expect(result).toEqual({ error: 'invalid_batch' })
-    expect(mockSearch).not.toHaveBeenCalled()
-    expect(mockBookmarks).not.toHaveBeenCalled()
-  })
-
-  it('프로필 언어와 무관한 cursor key는 캐시 키와 GitHub 요청에서 제거한다', async () => {
+  it('일반 cursor 문자열은 그대로 GitHub after 파라미터로 전달된다', async () => {
     setupDeps([makeRawIssue()], [makeScoredIssue()])
-    const canonicalBatch = encodeBatch({ TypeScript: 'cursor-ts' })
 
-    const result = await fetchIssueListPage({
-      ...baseArgs,
-      batchParam: encodeBatch({ Rust: 'cursor-rust', TypeScript: 'cursor-ts' }),
-    })
+    const result = await fetchIssueListPage({ ...baseArgs, batchParam: 'cursor-ts' })
 
     expect('error' in result).toBe(false)
     if ('error' in result) return
-    expect(result.batch).toBe(canonicalBatch)
-    expect(mockSearch).toHaveBeenCalledWith(['TypeScript'], 'token', { TypeScript: 'cursor-ts' })
-    expect(vi.mocked(unstable_cache).mock.calls[0][1]?.at(-1)).toBe(canonicalBatch)
+    expect(result.batch).toBe('cursor-ts')
+    expect(mockSearch).toHaveBeenCalledWith(['TypeScript'], 'token', 'cursor-ts', FOREGROUND_FETCH_SIZE)
+  })
+})
+
+describe('fetchIssueListPage — foreground/background 분기', () => {
+  it('offset이 FOREGROUND_FETCH_SIZE 미만이면 foreground 크기로 조회한다', async () => {
+    setupDeps([makeRawIssue()], [makeScoredIssue()])
+
+    await fetchIssueListPage({ ...baseArgs, offset: 0 })
+
+    expect(mockSearch).toHaveBeenCalledWith(['TypeScript'], 'token', null, FOREGROUND_FETCH_SIZE)
+  })
+
+  it('offset이 FOREGROUND_FETCH_SIZE 이상이면 background(전체) 크기로 조회한다', async () => {
+    const scored = Array.from({ length: FOREGROUND_FETCH_SIZE + PAGE_SIZE }, (_, i) => makeScoredIssue({ number: i + 1 }))
+    setupDeps([makeRawIssue()], scored)
+
+    await fetchIssueListPage({ ...baseArgs, offset: FOREGROUND_FETCH_SIZE })
+
+    expect(mockSearch).toHaveBeenCalledWith(['TypeScript'], 'token', null, 100)
+  })
+
+  it('offset=0 요청 시 background 캐시도 함께 트리거된다(after 콜백)', async () => {
+    setupDeps([makeRawIssue()], [makeScoredIssue()])
+
+    await fetchIssueListPage({ ...baseArgs, offset: 0 })
+
+    // foreground(30) 호출 + after()로 트리거된 background(100) 호출, 총 2번
+    expect(mockSearch).toHaveBeenCalledWith(['TypeScript'], 'token', null, FOREGROUND_FETCH_SIZE)
+    expect(mockSearch).toHaveBeenCalledWith(['TypeScript'], 'token', null, 100)
+  })
+
+  it('offset>0이면 background 프리페치를 다시 트리거하지 않는다', async () => {
+    const scored = Array.from({ length: FOREGROUND_FETCH_SIZE }, (_, i) => makeScoredIssue({ number: i + 1 }))
+    setupDeps([makeRawIssue()], scored)
+
+    await fetchIssueListPage({ ...baseArgs, offset: PAGE_SIZE })
+
+    // foreground 크기 호출만 있고, background(100) 호출은 없어야 한다
+    expect(mockSearch).toHaveBeenCalledTimes(1)
+    expect(mockSearch).toHaveBeenCalledWith(['TypeScript'], 'token', null, FOREGROUND_FETCH_SIZE)
   })
 })
 
@@ -215,16 +221,31 @@ describe('fetchIssueListPage — 페이지네이션', () => {
     expect(result.canLoadMoreCandidates).toBe(false)
   })
 
-  it('isLastPage이고 GitHub에 다음 페이지가 있으면 nextBatch를 인코딩해 반환한다', async () => {
+  it('foreground 구간에서 GitHub에 더 있으면 total을 경계 너머로 보정해 같은 배치 안에서 계속 진행한다', async () => {
+    // foreground(30개)는 raw fetch 크기가 작아 total이 실제보다 작게 나올 수 있다 — 이걸 그대로
+    // 배치 종료 신호로 쓰면 background(100개) 구간에 도달하기도 전에 새 배치로 넘어가버린다.
     const scored = Array.from({ length: PAGE_SIZE }, (_, i) => makeScoredIssue({ number: i + 1 }))
-    const endCursors = { TypeScript: 'cursor-abc' }
-    setupDeps([makeRawIssue()], scored, { hasMoreOnGithub: true, endCursors })
+    setupDeps([makeRawIssue()], scored, { hasMoreOnGithub: true, endCursor: 'cursor-abc' })
 
-    const result = await fetchIssueListPage(baseArgs)
+    const result = await fetchIssueListPage(baseArgs)  // offset: 0 (foreground 구간)
 
     expect('error' in result).toBe(false)
     if ('error' in result) return
-    expect(result.nextBatch).toBe(encodeBatch(endCursors))
+    expect(result.total).toBeGreaterThan(FOREGROUND_FETCH_SIZE)
+    expect(result.nextBatch).toBeNull()
+    expect(result.hasMore).toBe(true)
+  })
+
+  it('background 구간(offset>=FOREGROUND_FETCH_SIZE)에서 진짜로 다 쓰면 nextBatch로 endCursor를 반환한다', async () => {
+    const scored = Array.from({ length: FOREGROUND_FETCH_SIZE + PAGE_SIZE }, (_, i) => makeScoredIssue({ number: i + 1 }))
+    setupDeps([makeRawIssue()], scored, { hasMoreOnGithub: true, endCursor: 'cursor-abc' })
+
+    const result = await fetchIssueListPage({ ...baseArgs, offset: FOREGROUND_FETCH_SIZE })
+
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+    expect(result.total).toBe(FOREGROUND_FETCH_SIZE + PAGE_SIZE)
+    expect(result.nextBatch).toBe('cursor-abc')
     expect(result.hasMore).toBe(true)
     expect(result.canLoadMoreCandidates).toBe(false)
   })
@@ -306,17 +327,18 @@ describe('fetchIssueListPage — 필터 전달', () => {
     expect(result.issues).toHaveLength(3)
   })
 
-  it('필터가 없으면 이슈가 PAGE_SIZE 미만이어도 GitHub 다음 배치 커서를 반환한다', async () => {
+  it('필터가 없으면 background 구간에서 이슈가 PAGE_SIZE 미만이어도 GitHub 다음 배치 커서를 반환한다', async () => {
     const scored = Array.from({ length: PAGE_SIZE - 1 }, (_, i) => makeScoredIssue({ number: i + 1 }))
     mockSearch.mockResolvedValue(
-      makeSearchResult({ issues: [makeRawIssue()], hasMoreOnGithub: true, endCursors: { TypeScript: 'cursor-xyz' } })
+      makeSearchResult({ issues: [makeRawIssue()], hasMoreOnGithub: true, endCursor: 'cursor-xyz' })
     )
 
     mockBookmarks.mockResolvedValue([])
     mockRank.mockReturnValue(scored)
     mockFilter.mockReturnValue(scored)
 
-    const result = await fetchIssueListPage(baseArgs)
+    // offset을 background 구간으로 줘서 foreground total 보정 로직과 무관하게 진짜 소진 여부를 검증한다
+    const result = await fetchIssueListPage({ ...baseArgs, offset: FOREGROUND_FETCH_SIZE })
 
     expect('error' in result).toBe(false)
     if ('error' in result) return
@@ -330,7 +352,7 @@ describe('fetchIssueListPage — 필터 전달', () => {
     // 90+ 점수나 5000+ 스타처럼 엄격한 조건에서 빈 배치를 계속 넘기지 않도록 끊는다.
     const allScored = Array.from({ length: 20 }, (_, i) => makeScoredIssue({ number: i + 1 }))
     mockSearch.mockResolvedValue(
-      makeSearchResult({ issues: [makeRawIssue()], hasMoreOnGithub: true, endCursors: { TypeScript: 'cursor-xyz' } })
+      makeSearchResult({ issues: [makeRawIssue()], hasMoreOnGithub: true, endCursor: 'cursor-xyz' })
     )
 
     mockBookmarks.mockResolvedValue([])
@@ -353,7 +375,7 @@ describe('fetchIssueListPage — 필터 전달', () => {
   it('활성 필터의 마지막 로컬 페이지가 PAGE_SIZE 미만이면 다음 GitHub 배치를 요청하지 않는다', async () => {
     const allScored = Array.from({ length: PAGE_SIZE + 5 }, (_, i) => makeScoredIssue({ number: i + 1 }))
     mockSearch.mockResolvedValue(
-      makeSearchResult({ issues: [makeRawIssue()], hasMoreOnGithub: true, endCursors: { TypeScript: 'cursor-xyz' } })
+      makeSearchResult({ issues: [makeRawIssue()], hasMoreOnGithub: true, endCursor: 'cursor-xyz' })
     )
 
     mockBookmarks.mockResolvedValue([])
@@ -399,37 +421,17 @@ describe('fetchIssueListPage — 필터 전달', () => {
 })
 
 describe('fetchIssueListPage — 캐시 키', () => {
-  it('캐시 키에 MIN_CANDIDATE_REPO_STARS 값이 포함된다', async () => {
+  it('캐시 키에 batchParam이 포함된다', async () => {
     setupDeps([makeRawIssue()], [makeScoredIssue()])
 
-    await fetchIssueListPage(baseArgs)
+    await fetchIssueListPage({ ...baseArgs, batchParam: 'cursor-ts' })
 
     const cacheKey = vi.mocked(unstable_cache).mock.calls[0][1] as string[]
-    expect(cacheKey).toContain(String(MIN_CANDIDATE_REPO_STARS))
-  })
-
-  it('MIN_CANDIDATE_REPO_STARS가 다른 두 요청은 서로 다른 캐시 키를 갖는다', () => {
-    // 상수 값이 바뀌면 캐시 키도 바뀌어야 star threshold 변경 시 캐시가 무효화된다.
-    // 실제 캐시 동작은 Next.js 런타임에서 처리하므로 키 구성만 검증한다.
-    const key50 = ['github-issues', '50', 'TypeScript', 'initial']
-    const key100 = ['github-issues', '100', 'TypeScript', 'initial']
-    expect(key50).not.toEqual(key100)
+    expect(cacheKey).toContain('cursor-ts')
   })
 })
 
 describe('fetchIssueListPage — 메타데이터', () => {
-  it('partialResults는 failedQueryCount > 0일 때 true이다', async () => {
-    const scored = [makeScoredIssue()]
-    setupDeps([makeRawIssue()], scored, { failedQueryCount: 1, totalQueryCount: 2 })
-
-    const result = await fetchIssueListPage(baseArgs)
-
-    expect('error' in result).toBe(false)
-    if ('error' in result) return
-    expect(result.partialResults).toBe(true)
-    expect(result.failedQueryCount).toBe(1)
-  })
-
   it('availableLanguages는 null을 제외한 중복 없는 언어 목록이다', async () => {
     const scored = [
       makeScoredIssue({ language: 'TypeScript' }),

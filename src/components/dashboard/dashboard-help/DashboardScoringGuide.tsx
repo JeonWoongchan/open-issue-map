@@ -6,7 +6,6 @@ import {
     DIFFICULTY_UNKNOWN_BY_LEVEL,
     EXPERIENCE_COMPETITION_BONUS,
     LANGUAGE_SCORE,
-    MIN_CANDIDATE_REPO_STARS,
     PURPOSE_SCORE_RULES,
     REPO_STAR_SCORE_TIERS,
     TIME_BUDGET_RULES,
@@ -390,7 +389,7 @@ export function DashboardScoringGuide() {
                 number={7}
                 title="저장소 인지도"
                 badge={`최대 +${REPO_STAR_SCORE_TIERS[0].score}`}
-                description={`커뮤니티에서 주목받는 저장소일수록 활발한 피드백을 기대할 수 있어서 star 수를 기준으로 가산해요. star ${MIN_CANDIDATE_REPO_STARS}개 미만인 저장소는 추천 후보에서 제외돼요.`}
+                description="커뮤니티에서 주목받는 저장소일수록 활발한 피드백을 기대할 수 있어서 star 수를 기준으로 가산해요."
             >
                 <ScoreTable
                     rows={REPO_STAR_SCORE_TIERS.map((tier) => ({

@@ -12,13 +12,14 @@ export const MATCH_SCORE_MINIMUM = 0
 export const RANK_SCORE_THRESHOLD = 50
 // 이슈 데이터 캐시 TTL — 추천 목적상 실시간 반영보다 rate limit 절약과 재방문 UX를 우선해 30분으로 설정
 export const GITHUB_API_CACHE_TTL_SECONDS = 1800
+// 배치 시작 시 즉시 보여줄 분량 — 사용자가 직접 기다리는 유일한 요청이므로 작게 유지
+export const FOREGROUND_FETCH_SIZE = 30
+// 배치 시작과 동시에 백그라운드로 미리 채워두는 분량 — 사용자는 기다리지 않으므로 크게 잡아도 됨
+export const BACKGROUND_FETCH_SIZE = 100
 // GitHub API 응답 대기 상한 — 초과 시 AbortError로 함수 조기 종료
 export const GITHUB_API_TIMEOUT_MS = 8_000
 // 이슈 목록 클라이언트 stale 시간 — 서버 캐시 TTL과 맞춰 재방문 시 즉시 표시
 export const ISSUE_LIST_STALE_TIME_MS = GITHUB_API_CACHE_TTL_SECONDS * 1000
-// GitHub 검색 쿼리의 최소 star 수 — 완전히 방치된 저장소를 후보에서 제외
-export const MIN_CANDIDATE_REPO_STARS = 50
-
 // 저장소 활성도 판별 기준
 // pushedAt 경과일과 reactions 수를 조합해 3단계 구분
 export const REPO_ACTIVITY_THRESHOLDS = {

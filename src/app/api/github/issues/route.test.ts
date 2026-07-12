@@ -4,7 +4,7 @@ import type { Mock } from 'vitest'
 import type { Session } from 'next-auth'
 import type { JWT } from 'next-auth/jwt'
 import { ErrorCode } from '@/lib/api-response'
-import { encodeBatch, INITIAL_BATCH } from '@/lib/github/batch'
+import { INITIAL_BATCH } from '@/lib/github/batch'
 
 vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
 vi.mock('next-auth/jwt', () => ({ getToken: vi.fn() }))
@@ -55,8 +55,6 @@ const issueData = {
   nextBatch: null,
   canLoadMoreCandidates: false,
   availableLanguages: [],
-  partialResults: false,
-  failedQueryCount: 0,
 }
 
 beforeEach(() => {
@@ -180,7 +178,7 @@ describe('GET /api/github/issues', () => {
   it('모든 GitHub 쿼리가 실패하면 502를 반환한다', async () => {
     authOk()
     mockProfile.mockResolvedValue(profile)
-    mockFetch.mockResolvedValue({ error: 'all_failed' })
+    mockFetch.mockResolvedValue({ error: 'fetch_failed' })
 
     const res = await GET(req())
     const json = await res.json()
@@ -205,8 +203,8 @@ describe('GET /api/github/issues', () => {
   it('offset과 batch 쿼리 파라미터를 서비스에 전달한다', async () => {
     authOk()
     mockProfile.mockResolvedValue(profile)
-    mockFetch.mockResolvedValue({ error: 'all_failed' })
-    const batch = encodeBatch({ TypeScript: 'cursor-1' })
+    mockFetch.mockResolvedValue({ error: 'fetch_failed' })
+    const batch = 'cursor-1'
 
     await GET(req(`?offset=10&batch=${batch}`))
 
@@ -218,7 +216,7 @@ describe('GET /api/github/issues', () => {
   it('허용된 minScore 쿼리 파라미터를 filters에 담아 전달한다', async () => {
     authOk()
     mockProfile.mockResolvedValue(profile)
-    mockFetch.mockResolvedValue({ error: 'all_failed' })
+    mockFetch.mockResolvedValue({ error: 'fetch_failed' })
 
     await GET(req('?offset=0&minScore=90'))
 
@@ -230,7 +228,7 @@ describe('GET /api/github/issues', () => {
   it('language 쿼리 파라미터를 filters에 담아 전달한다', async () => {
     authOk()
     mockProfile.mockResolvedValue(profile)
-    mockFetch.mockResolvedValue({ error: 'all_failed' })
+    mockFetch.mockResolvedValue({ error: 'fetch_failed' })
 
     await GET(req('?offset=0&language=TypeScript'))
 

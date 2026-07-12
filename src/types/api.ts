@@ -16,8 +16,6 @@ export type IssueListPage = {
     nextBatch: string | null
     canLoadMoreCandidates: boolean
     availableLanguages: string[]
-    partialResults: boolean
-    failedQueryCount: number
 }
 
 // GET /api/github/pull-requests 응답 data 타입

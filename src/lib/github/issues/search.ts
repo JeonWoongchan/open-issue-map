@@ -1,5 +1,4 @@
-import { githubGraphQL, GitHubRateLimitError, GitHubUnauthorizedError } from '@/lib/github/client'
-import { MIN_CANDIDATE_REPO_STARS } from '@/constants/scoring-rules'
+import { githubGraphQL, GitHubInvalidCursorError } from '@/lib/github/client'
 import type { RawIssue } from '@/types/issue'
 
 const SEARCH_ISSUES_QUERY = `
@@ -59,20 +58,16 @@ interface SearchResult {
 
 export type IssueSearchResult = {
     issues: RawIssue[]
-    // 언어별 GitHub endCursor — 다음 배치 요청 시 사용
-    endCursors: Record<string, string | null>
+    endCursor: string | null
     hasMoreOnGithub: boolean
-    failedQueryCount: number
-    totalQueryCount: number
-    rateLimited: boolean
-    unauthorized: boolean
 }
 
-// 언어별 GitHub 이슈 검색 쿼리 문자열 생성(최근 업데이트순 정렬)
-function buildIssueQueries(languages: string[]): string[] {
-    return languages.map(
-        (lang) => `is:open is:issue label:"help wanted" language:${lang} sort:updated-desc`
-    )
+// 여러 언어를 하나의 쿼리에 담는다 — GitHub search는 OR 키워드를 지원하지 않지만
+// 같은 qualifier(language:)를 여러 번 나열하면 자동으로 OR로 해석한다.
+// 언어 개수와 무관하게 항상 요청 1개로 고정되어 GitHub secondary rate limit 위험을 줄인다.
+function buildIssueQuery(languages: string[]): string {
+    const languageQualifiers = languages.map((lang) => `language:${lang}`).join(' ')
+    return `is:open is:issue label:"help wanted" ${languageQualifiers} sort:updated-desc`
 }
 
 // URL 기준 중복 이슈 제거
@@ -85,66 +80,45 @@ function dedupeIssues(issues: RawIssue[]): RawIssue[] {
     })
 }
 
-// 언어별 병렬 GitHub 검색 후 후보 이슈 수집 및 반환
+async function searchIssues(query: string, first: number, after: string | null, accessToken: string): Promise<SearchResult> {
+    return githubGraphQL<SearchResult>(SEARCH_ISSUES_QUERY, { query, first, after }, accessToken)
+}
+
+// 지정한 언어들의 GitHub 후보 이슈를 한 번의 쿼리로 조회한다.
+// rate limit/인증 오류는 그대로 throw해 호출부(service.ts)가 분류하도록 한다 —
+// Promise.allSettled로 감싸지 않으므로 unstable_cache가 실패를 성공으로 착각해 캐싱하는 일이 없다.
 export async function fetchCandidateIssues(
     languages: string[],
     accessToken: string,
-    afterCursors: Record<string, string | null> = {}
+    after: string | null,
+    first: number
 ): Promise<IssueSearchResult> {
-    const queries = buildIssueQueries(languages)
+    if (languages.length === 0) {
+        return { issues: [], endCursor: null, hasMoreOnGithub: false }
+    }
 
-    if (queries.length === 0) {
-        return {
-            issues: [],
-            endCursors: {},
-            hasMoreOnGithub: false,
-            failedQueryCount: 0,
-            totalQueryCount: 0,
-            rateLimited: false,
-            unauthorized: false,
+    const query = buildIssueQuery(languages)
+
+    let result: SearchResult
+    try {
+        result = await searchIssues(query, first, after, accessToken)
+    } catch (error) {
+        // sort:updated-desc는 실시간으로 바뀌는 결과셋이라 예전에 발급된 커서가 나중엔
+        // 무효화될 수 있다 — 이 경우 첫 페이지부터 다시 조회해 캐싱 목적을 유지한다.
+        if (error instanceof GitHubInvalidCursorError && after !== null) {
+            result = await searchIssues(query, first, null, accessToken)
+        } else {
+            throw error
         }
     }
 
-    const settled = await Promise.allSettled(
-        queries.map((query, i) =>
-            githubGraphQL<SearchResult>(
-                SEARCH_ISSUES_QUERY,
-                { query, first: 50, after: afterCursors[languages[i]] ?? null },
-                accessToken
-            )
-        )
-    )
-
-    // settled 원본 인덱스 기준으로 cursor 수집 — filter 후 인덱스를 쓰면 실패한 쿼리 제외로 언어 매핑이 어긋남
-    const endCursors: Record<string, string | null> = {}
-    let hasMoreOnGithub = false
-
-    settled.forEach((result, i) => {
-        if (result.status !== 'fulfilled') return
-        const { pageInfo } = result.value.search
-        endCursors[languages[i]] = pageInfo.endCursor
-        if (pageInfo.hasNextPage) hasMoreOnGithub = true
-    })
-
-    // GitHub 검색 인덱스와 실제 API 응답 간 시차로 인해 stars 조건을 통과한 것처럼
-    // 보이지만 stargazerCount가 기준 미달인 레포가 포함될 수 있어 응답 단에서 한 번 더 필터링
-    const issues = dedupeIssues(
-        settled
-            .filter((result): result is PromiseFulfilledResult<SearchResult> => result.status === 'fulfilled')
-            .flatMap((result) => result.value.search.nodes ?? [])
-    ).filter((issue) => issue.repository.stargazerCount >= MIN_CANDIDATE_REPO_STARS)
-
-    const failedResults = settled.filter(
-        (result): result is PromiseRejectedResult => result.status === 'rejected'
-    )
+    // star 기준 제외는 서버가 강제하지 않고 사용자가 UI에서 선택하는 minStars 필터(IssueFilters)에 맡긴다 —
+    // 여기서 미리 걸러내면 캐시 풀에서 살아남는 후보가 크게 줄어 배치가 너무 빨리 소진된다.
+    const issues = dedupeIssues(result.search.nodes ?? [])
 
     return {
         issues,
-        endCursors,
-        hasMoreOnGithub,
-        failedQueryCount: failedResults.length,
-        totalQueryCount: queries.length,
-        rateLimited: failedResults.some((result) => result.reason instanceof GitHubRateLimitError),
-        unauthorized: failedResults.some((result) => result.reason instanceof GitHubUnauthorizedError),
+        endCursor: result.search.pageInfo.endCursor,
+        hasMoreOnGithub: result.search.pageInfo.hasNextPage,
     }
 }

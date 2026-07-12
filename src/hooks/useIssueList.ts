@@ -50,8 +50,6 @@ export type UseIssueListResult = BaseQueryResult & {
   fetchMoreCandidatesAction: () => Promise<void>
   isFetchingNextPage: boolean
   canLoadMoreCandidates: boolean
-  partial: boolean
-  failedCount: number
   availableLanguages: string[]
 }
 
@@ -123,8 +121,6 @@ export function useIssueList(filters: IssueFilters = EMPTY_ISSUE_FILTERS): UseIs
     fetchMoreCandidatesAction,
     isFetchingNextPage: query.isFetchingNextPage,
     canLoadMoreCandidates,
-    partial: lastPage?.partialResults ?? false,
-    failedCount: lastPage?.failedQueryCount ?? 0,
     availableLanguages,
   }
 }

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { fetchCandidateIssues } from '@/lib/github/issues/search'
-import { GitHubRateLimitError, GitHubUnauthorizedError } from '@/lib/github/client'
-import { MIN_CANDIDATE_REPO_STARS } from '@/constants/scoring-rules'
+import { GitHubInvalidCursorError, GitHubRateLimitError, GitHubUnauthorizedError } from '@/lib/github/client'
 
 vi.mock('@/lib/github/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/github/client')>()
@@ -21,152 +20,102 @@ function makeSearchPage(
   return {
     search: {
       pageInfo: { hasNextPage, endCursor },
-      nodes: urls.map((url) => ({ url, repository: { stargazerCount: MIN_CANDIDATE_REPO_STARS } } as never)),
+      nodes: urls.map((url) => ({ url, repository: { stargazerCount: 100 } } as never)),
     },
   }
 }
 
-function makeIssueNode(url: string, stargazerCount: number) {
-  return { url, repository: { stargazerCount } } as never
-}
-
 describe('fetchCandidateIssues', () => {
   it('언어 배열이 비어있으면 GitHub 호출 없이 빈 결과를 즉시 반환한다', async () => {
-    const result = await fetchCandidateIssues([], 'token')
+    const result = await fetchCandidateIssues([], 'token', null, 30)
 
     expect(mockGraphQL).not.toHaveBeenCalled()
-    expect(result).toEqual({
-      issues: [],
-      endCursors: {},
-      hasMoreOnGithub: false,
-      failedQueryCount: 0,
-      totalQueryCount: 0,
-      rateLimited: false,
-      unauthorized: false,
-    })
+    expect(result).toEqual({ issues: [], endCursor: null, hasMoreOnGithub: false })
   })
 
-  it('모든 쿼리 성공 시 이슈 목록과 언어별 endCursor를 반환한다', async () => {
-    mockGraphQL
-      .mockResolvedValueOnce(makeSearchPage(['https://github.com/a/b/issues/1'], true, 'cursor-ts'))
-      .mockResolvedValueOnce(makeSearchPage(['https://github.com/c/d/issues/2'], false, null))
+  it('여러 언어를 하나의 쿼리에 담아 한 번만 요청한다', async () => {
+    mockGraphQL.mockResolvedValueOnce(makeSearchPage(['https://github.com/a/b/issues/1'], true, 'cursor-1'))
 
-    const result = await fetchCandidateIssues(['TypeScript', 'Rust'], 'token')
+    const result = await fetchCandidateIssues(['TypeScript', 'JavaScript', 'Python'], 'token', null, 30)
 
-    expect(result.issues).toHaveLength(2)
-    expect(result.endCursors['TypeScript']).toBe('cursor-ts')
-    expect(result.endCursors['Rust']).toBeNull()
+    expect(mockGraphQL).toHaveBeenCalledTimes(1)
+    const [, variables] = mockGraphQL.mock.calls[0] as unknown as [string, { query: string; first: number; after: string | null }]
+    expect(variables.query).toBe('is:open is:issue label:"help wanted" language:TypeScript language:JavaScript language:Python sort:updated-desc')
+    expect(variables.first).toBe(30)
+    expect(variables.after).toBeNull()
+    expect(result.issues).toHaveLength(1)
+    expect(result.endCursor).toBe('cursor-1')
     expect(result.hasMoreOnGithub).toBe(true)
-    expect(result.failedQueryCount).toBe(0)
-    expect(result.rateLimited).toBe(false)
-    expect(result.unauthorized).toBe(false)
   })
 
-  it('GitHubRateLimitError 발생 시 rateLimited=true로 반환한다', async () => {
-    mockGraphQL.mockRejectedValueOnce(new GitHubRateLimitError())
+  it('after cursor를 그대로 전달한다', async () => {
+    mockGraphQL.mockResolvedValueOnce(makeSearchPage([]))
 
-    const result = await fetchCandidateIssues(['TypeScript'], 'token')
+    await fetchCandidateIssues(['TypeScript'], 'token', 'cursor-abc', 100)
 
-    expect(result.rateLimited).toBe(true)
-    expect(result.unauthorized).toBe(false)
-    expect(result.failedQueryCount).toBe(1)
-    expect(result.totalQueryCount).toBe(1)
-    expect(result.issues).toHaveLength(0)
+    const [, variables] = mockGraphQL.mock.calls[0] as unknown as [string, { after: string | null; first: number }]
+    expect(variables.after).toBe('cursor-abc')
+    expect(variables.first).toBe(100)
   })
 
-  it('GitHubUnauthorizedError 발생 시 unauthorized=true로 반환한다', async () => {
-    mockGraphQL.mockRejectedValueOnce(new GitHubUnauthorizedError())
-
-    const result = await fetchCandidateIssues(['Go'], 'token')
-
-    expect(result.unauthorized).toBe(true)
-    expect(result.rateLimited).toBe(false)
-    expect(result.failedQueryCount).toBe(1)
-  })
-
-  it('일부 쿼리만 실패하면 성공한 쿼리의 이슈를 반환하고 실패 수를 센다', async () => {
-    mockGraphQL
-      .mockResolvedValueOnce(makeSearchPage(['https://github.com/a/b/issues/1']))
-      .mockRejectedValueOnce(new GitHubRateLimitError())
-
-    const result = await fetchCandidateIssues(['TypeScript', 'Go'], 'token')
-
-    expect(result.issues).toHaveLength(1)
-    expect(result.failedQueryCount).toBe(1)
-    expect(result.totalQueryCount).toBe(2)
-    expect(result.rateLimited).toBe(true)
-  })
-
-  it('여러 언어에서 같은 URL의 이슈가 오면 하나만 남긴다', async () => {
+  it('중복 URL의 이슈는 하나만 남긴다', async () => {
     const sameUrl = 'https://github.com/a/b/issues/1'
-    mockGraphQL
-      .mockResolvedValueOnce(makeSearchPage([sameUrl]))
-      .mockResolvedValueOnce(makeSearchPage([sameUrl]))
+    mockGraphQL.mockResolvedValueOnce(makeSearchPage([sameUrl, sameUrl]))
 
-    const result = await fetchCandidateIssues(['TypeScript', 'JavaScript'], 'token')
+    const result = await fetchCandidateIssues(['TypeScript'], 'token', null, 30)
 
     expect(result.issues).toHaveLength(1)
   })
 
-  it('실패한 언어의 endCursor는 결과에 포함되지 않는다', async () => {
-    mockGraphQL
-      .mockResolvedValueOnce(makeSearchPage([], false, 'ts-cursor'))
-      .mockRejectedValueOnce(new Error('timeout'))
-
-    const result = await fetchCandidateIssues(['TypeScript', 'Go'], 'token')
-
-    expect(result.endCursors['TypeScript']).toBe('ts-cursor')
-    expect('Go' in result.endCursors).toBe(false)
-  })
-
-  it('GitHub 검색 쿼리에 sort:updated-desc가 포함된다', async () => {
-    mockGraphQL.mockResolvedValue(makeSearchPage([]))
-
-    await fetchCandidateIssues(['TypeScript'], 'token')
-
-    const [, variables] = mockGraphQL.mock.calls[0] as unknown as [string, { query: string }]
-    expect(variables.query).toContain('sort:updated-desc')
-  })
-
-  it('stargazerCount가 MIN_CANDIDATE_REPO_STARS 미만인 이슈는 응답에서 제거된다', async () => {
-    // GitHub 검색 인덱스와 실제 API 응답 간 시차로 stars 조건 미달 레포가 섞여 올 수 있음
+  it('star 수와 무관하게 모든 이슈를 그대로 반환한다(star 필터는 사용자 UI 필터에서 처리)', async () => {
     mockGraphQL.mockResolvedValueOnce({
       search: {
         pageInfo: { hasNextPage: false, endCursor: null },
         nodes: [
-          makeIssueNode('https://github.com/a/b/issues/1', 0),
-          makeIssueNode('https://github.com/c/d/issues/2', MIN_CANDIDATE_REPO_STARS - 1),
-          makeIssueNode('https://github.com/e/f/issues/3', MIN_CANDIDATE_REPO_STARS),
-          makeIssueNode('https://github.com/g/h/issues/4', MIN_CANDIDATE_REPO_STARS + 100),
-        ],
+          { url: 'https://github.com/a/b/issues/1', repository: { stargazerCount: 0 } },
+          { url: 'https://github.com/c/d/issues/2', repository: { stargazerCount: 5000 } },
+        ] as never,
       },
     })
 
-    const result = await fetchCandidateIssues(['TypeScript'], 'token')
+    const result = await fetchCandidateIssues(['TypeScript'], 'token', null, 30)
 
     expect(result.issues).toHaveLength(2)
-    expect(result.issues.every((i) => i.repository.stargazerCount >= MIN_CANDIDATE_REPO_STARS)).toBe(true)
   })
 
-  it('afterCursors를 각 언어에 맞게 전달한다', async () => {
-    mockGraphQL.mockResolvedValue(makeSearchPage([]))
+  it('INVALID_CURSOR_ARGUMENTS면 첫 페이지(after: null)로 한 번 더 재시도한다', async () => {
+    mockGraphQL
+      .mockRejectedValueOnce(new GitHubInvalidCursorError('`cursor:100` does not appear to be a valid cursor.'))
+      .mockResolvedValueOnce(makeSearchPage(['https://github.com/a/b/issues/1'], true, 'cursor-fresh'))
 
-    await fetchCandidateIssues(['TypeScript', 'Rust'], 'token', {
-      TypeScript: 'ts-after',
-      Rust: null,
-    })
+    const result = await fetchCandidateIssues(['TypeScript'], 'token', 'cursor:100', 30)
 
-    expect(mockGraphQL).toHaveBeenNthCalledWith(
-      1,
-      expect.any(String),
-      expect.objectContaining({ after: 'ts-after' }),
-      'token'
-    )
-    expect(mockGraphQL).toHaveBeenNthCalledWith(
-      2,
-      expect.any(String),
-      expect.objectContaining({ after: null }),
-      'token'
-    )
+    expect(mockGraphQL).toHaveBeenCalledTimes(2)
+    expect(mockGraphQL.mock.calls[1][1]).toMatchObject({ after: null })
+    expect(result.issues).toHaveLength(1)
+    expect(result.endCursor).toBe('cursor-fresh')
+  })
+
+  it('첫 페이지 재조회도 INVALID_CURSOR_ARGUMENTS면 그대로 throw한다', async () => {
+    mockGraphQL
+      .mockRejectedValueOnce(new GitHubInvalidCursorError('bad cursor'))
+      .mockRejectedValueOnce(new GitHubInvalidCursorError('bad cursor'))
+
+    await expect(fetchCandidateIssues(['TypeScript'], 'token', 'cursor:100', 30))
+      .rejects.toBeInstanceOf(GitHubInvalidCursorError)
+  })
+
+  it('GitHubRateLimitError는 그대로 호출부로 전파된다', async () => {
+    mockGraphQL.mockRejectedValueOnce(new GitHubRateLimitError())
+
+    await expect(fetchCandidateIssues(['TypeScript'], 'token', null, 30))
+      .rejects.toBeInstanceOf(GitHubRateLimitError)
+  })
+
+  it('GitHubUnauthorizedError는 그대로 호출부로 전파된다', async () => {
+    mockGraphQL.mockRejectedValueOnce(new GitHubUnauthorizedError())
+
+    await expect(fetchCandidateIssues(['TypeScript'], 'token', null, 30))
+      .rejects.toBeInstanceOf(GitHubUnauthorizedError)
   })
 })

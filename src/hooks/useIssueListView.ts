@@ -20,8 +20,6 @@ export function useIssueListView(filters: IssueFilters, query: string) {
         isError,
         errorMessage,
         refetch,
-        partial,
-        failedCount,
         availableLanguages,
     } = useIssueList(filters)
 
@@ -75,8 +73,6 @@ export function useIssueListView(filters: IssueFilters, query: string) {
         errorMessage,
         refetch,
         displayItems,
-        partial,
-        failedCount,
         toggleBookmark,
         effectiveHasNextPage,
         isFetchingNextPage,

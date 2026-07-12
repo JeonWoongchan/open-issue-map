@@ -44,8 +44,6 @@ export function IssueList({ isGuest, helpSlot }: IssueListProps) {
         errorMessage,
         refetch,
         displayItems,
-        partial,
-        failedCount,
         toggleBookmark,
         effectiveHasNextPage,
         isFetchingNextPage,
@@ -121,8 +119,6 @@ export function IssueList({ isGuest, helpSlot }: IssueListProps) {
                 renderContent={() => (
                     <IssueListContent
                         issues={displayItems}
-                        partial={partial}
-                        failedCount={failedCount}
                         onToggleBookmark={handleToggleBookmark}
                         onAnalyzeClick={handleAnalyzeClick}
                     />
