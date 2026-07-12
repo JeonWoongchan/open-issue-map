@@ -53,28 +53,37 @@ export async function fetchIssueListPage({
     const sortedLanguages = profile.topLanguages.slice().sort()
     const cacheKeyBase = ['github-issues', cacheUserId, ...sortedLanguages, batchParam]
 
-    // 배치가 열리자마자 보여줄 소량(foreground)
-    const getForegroundIssues = unstable_cache(
-        () => fetchCandidateIssues(profile.topLanguages, accessToken, cursor, FOREGROUND_FETCH_SIZE),
-        [...cacheKeyBase, 'foreground'],
-        { revalidate: GITHUB_API_CACHE_TTL_SECONDS }
-    )
-    // 같은 배치를 더 깊이 스크롤할 때 대비해 미리 채워두는 대량(background) 버퍼
-    const getFullBatchIssues = unstable_cache(
-        () => fetchCandidateIssues(profile.topLanguages, accessToken, cursor, BACKGROUND_FETCH_SIZE),
-        [...cacheKeyBase, 'full'],
-        { revalidate: GITHUB_API_CACHE_TTL_SECONDS }
-    )
-    const foregroundKey = [...cacheKeyBase, 'foreground'].join('::')
-    const fullBatchKey = [...cacheKeyBase, 'full'].join('::')
+
+    // 배치 티어별 unstable_cache 래퍼 + singleflight key를 한 번에 만든다 —
+    // 키 배열을 두 번 따로 만들면 한쪽만 고쳤을 때 캐시 key와 singleflight key가 어긋날 수 있다.
+    function makeCachedFetch(size: number, tier: 'foreground' | 'full') {
+        const keyParts = [...cacheKeyBase, tier]
+        return {
+            key: keyParts.join('::'),
+            fetch: unstable_cache(
+                () => fetchCandidateIssues(profile.topLanguages, accessToken, cursor, size),
+                keyParts,
+                { revalidate: GITHUB_API_CACHE_TTL_SECONDS }
+            ),
+        }
+    }
+
+    // 이 요청에 실제로 필요한 티어만 만든다 — foreground 구간 요청에서 안 쓰일 background 래퍼(또는 그 반대)까지
+    // 매번 등록하는 건 낭비다. offset=0만 예외로 둘 다 필요하다(응답은 foreground, background는 미리 준비).
+    const isWithinForegroundRange = offset < FOREGROUND_FETCH_SIZE
+    const foreground = isWithinForegroundRange ? makeCachedFetch(FOREGROUND_FETCH_SIZE, 'foreground') : null
+    const fullBatch = (!isWithinForegroundRange || offset === 0) ? makeCachedFetch(BACKGROUND_FETCH_SIZE, 'full') : null
+    const primary = foreground ?? fullBatch!
 
     // 배치의 첫 요청(offset=0) 시점에 background 버퍼 준비를 바로 시작한다.
     // 사용자가 foreground 분량(첫 몇 페이지)을 보는 동안 준비가 끝나도록, 최대한 이르게 트리거한다.
     if (offset === 0) {
         // 실패해도(rate limit 등) foreground 응답에는 영향 없으므로 조용히 무시한다 —
         // catch 없이 두면 unhandled rejection이 된다.
-        after(() => { withSingleFlight(fullBatchKey, getFullBatchIssues).catch(() => {}) })
+        after(() => { withSingleFlight(fullBatch!.key, fullBatch!.fetch).catch(() => {}) })
     }
+
+    const bookmarkPromise = userId ? listUserBookmarkKeys(userId) : Promise.resolve([])
 
     // foreground 범위 안에서는 대기 없이 빠른 소량 캐시를, 그 이후는 background 대량 캐시를 사용한다.
     // background가 아직 준비 안 된 상태에서 여기 도달하면 그 자리에서 계산되어 기다리게 될 수 있으나,
@@ -83,13 +92,9 @@ export async function fetchIssueListPage({
     // unstable_cache는 "이미 끝난 계산"만 캐싱하고 아직 응답이 안 온 동시 요청끼리는 중복 계산해버리므로
     // (예: 빠른 스크롤로 같은 배치에 대한 요청이 겹치는 경우), withSingleFlight로 감싸서
     // 같은 key로 진행 중인 요청이 있으면 그 결과를 공유하도록 한다.
-    const bookmarkPromise = userId ? listUserBookmarkKeys(userId) : Promise.resolve([])
-
     let searchResult: IssueSearchResult
     try {
-        searchResult = await (offset < FOREGROUND_FETCH_SIZE
-            ? withSingleFlight(foregroundKey, getForegroundIssues)
-            : withSingleFlight(fullBatchKey, getFullBatchIssues))
+        searchResult = await withSingleFlight(primary.key, primary.fetch)
     } catch (error) {
         if (error instanceof GitHubRateLimitError) return { error: 'rate_limited' }
         if (error instanceof GitHubUnauthorizedError) return { error: 'unauthorized' }
@@ -109,6 +114,7 @@ export async function fetchIssueListPage({
     const allIssues = applyFilters(rankedIssues, filters)
     const pageIssues = allIssues.slice(offset, offset + PAGE_SIZE)
     const isActiveFilterResultUnderfilled = hasActiveFilters(filters) && pageIssues.length < PAGE_SIZE
+    const canAutoRequestNextBatch = searchResult.hasMoreOnGithub && !isActiveFilterResultUnderfilled
 
     // foreground(30개)는 GitHub에 더 있어도 raw fetch 크기 자체가 작아 total이 실제보다 작게 나온다.
     // 이걸 그대로 배치 종료 신호로 쓰면, background(100개) 구간(offset>=FOREGROUND_FETCH_SIZE)에
@@ -116,14 +122,12 @@ export async function fetchIssueListPage({
     // GitHub에 더 있는 한(hasMoreOnGithub) foreground 구간에서는 total을 그 경계 너머로 보정해
     // 같은 배치 안에서 offset이 자연스럽게 background 구간까지 이어지도록 한다.
     // 단, 활성 필터로 인한 underfill은 이 보정과 무관하게 별도로(canLoadMoreCandidates) 처리해야 하므로 제외한다.
-    const isWithinForegroundRange = offset < FOREGROUND_FETCH_SIZE
-    const shouldInflateTotal = isWithinForegroundRange && searchResult.hasMoreOnGithub && !isActiveFilterResultUnderfilled
+    const shouldInflateTotal = isWithinForegroundRange && canAutoRequestNextBatch
     const reportedTotal = shouldInflateTotal
         ? Math.max(allIssues.length, FOREGROUND_FETCH_SIZE + 1)
         : allIssues.length
 
     const isLastPage = offset + PAGE_SIZE >= reportedTotal
-    const canAutoRequestNextBatch = searchResult.hasMoreOnGithub && !isActiveFilterResultUnderfilled
 
     const candidateNextBatch = isLastPage && searchResult.hasMoreOnGithub
         ? searchResult.endCursor

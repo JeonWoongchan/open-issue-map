@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { MainHeader } from '@/components/layout/MainHeader'
-import { QueryProvider } from '@/components/providers/QueryProvider'
 import { DashboardTour } from '@/components/tour/DashboardTour'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
@@ -16,7 +15,7 @@ export default async function DashboardLayout({
     if (session && !session.user.isOnboarded) redirect('/onboarding')
 
     return (
-        <QueryProvider>
+        <>
             <DashboardTour />
             <div className="min-h-screen bg-background">
                 <MainHeader
@@ -26,6 +25,6 @@ export default async function DashboardLayout({
                 />
                 <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
             </div>
-        </QueryProvider>
+        </>
     )
 }
