@@ -43,11 +43,14 @@ export function useIssueListView(filters: IssueFilters, query: string) {
     })
 
     const filteredItems = useSearchFilter(optimisticIssues, query)
+    // 이미 목록이 있는 상태에서 다음 페이지만 실패한 경우 — 기존 목록은 유지하고 하단에만 에러 표시
+    const isNextPageError = isError && optimisticIssues.length > 0
     const { displayItems, effectiveHasNextPage, sentinelRef } = useInfiniteScrollDisplay({
         items: filteredItems,
         hasNextPage,
         fetchNextPageAction,
         isFetchingNextPage,
+        isError: isNextPageError,
         isSearchActive: !!query,
     })
 
@@ -77,6 +80,8 @@ export function useIssueListView(filters: IssueFilters, query: string) {
         toggleBookmark,
         effectiveHasNextPage,
         isFetchingNextPage,
+        isNextPageError,
+        retryNextPageAction: fetchNextPageAction,
         sentinelRef,
         shouldShowCandidateLoadMoreNotice,
         emptyCandidateFetchCount,

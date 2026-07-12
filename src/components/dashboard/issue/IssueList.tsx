@@ -49,6 +49,8 @@ export function IssueList({ isGuest, helpSlot }: IssueListProps) {
         toggleBookmark,
         effectiveHasNextPage,
         isFetchingNextPage,
+        isNextPageError,
+        retryNextPageAction,
         sentinelRef,
         shouldShowCandidateLoadMoreNotice,
         emptyCandidateFetchCount,
@@ -131,6 +133,9 @@ export function IssueList({ isGuest, helpSlot }: IssueListProps) {
             <InfiniteScrollTrigger
                 hasNextPage={effectiveHasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
+                isError={isNextPageError}
+                errorMessage={errorMessage}
+                onRetryAction={retryNextPageAction}
                 sentinelRefAction={sentinelRef}
             />
 

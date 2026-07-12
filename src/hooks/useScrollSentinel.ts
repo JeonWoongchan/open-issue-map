@@ -10,12 +10,14 @@ export function useInfiniteScrollDisplay<T>({
     hasNextPage,
     fetchNextPageAction,
     isFetchingNextPage,
+    isError = false,
     isSearchActive = false,
 }: {
     items: T[]
     hasNextPage: boolean
     fetchNextPageAction: () => void
     isFetchingNextPage: boolean
+    isError?: boolean
     isSearchActive?: boolean
 }): { displayItems: T[]; effectiveHasNextPage: boolean; sentinelRef: (node?: Element | null) => void } {
     const effectiveHasNextPage = isSearchActive ? false : hasNextPage
@@ -24,10 +26,10 @@ export function useInfiniteScrollDisplay<T>({
     const { ref, inView } = useInView({ rootMargin: '100px' })
 
     useEffect(() => {
-        if (inView && effectiveHasNextPage && !isFetchingNextPage) {
+        if (inView && effectiveHasNextPage && !isFetchingNextPage && !isError) {
             fetchNextPageAction()
         }
-    }, [inView, effectiveHasNextPage, isFetchingNextPage, fetchNextPageAction])
+    }, [inView, effectiveHasNextPage, isFetchingNextPage, isError, fetchNextPageAction])
 
     return { displayItems, effectiveHasNextPage, sentinelRef: ref }
 }
