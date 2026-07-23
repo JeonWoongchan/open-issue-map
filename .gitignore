@@ -45,6 +45,8 @@ DESIGN.md
 .agents/
 # AI 협업 개발 가이드라인 — 내부 컨벤션 및 개발자 자기 서술 포함
 CLAUDE.md
+# 개인 작업 문서 — README에서 링크하지 않는 내부/연습용 문서 (docs/는 README 링크만 유지)
+docs-personal/
 
 # vercel
 .vercel
