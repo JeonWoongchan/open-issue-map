@@ -7,8 +7,9 @@
 #   1. 코드 체크아웃
 #   2. pnpm·Node.js 환경 셋업
 #   3. 의존성 설치
-#   4. 린트 검사 (ESLint)
-#   5. 단위 테스트 (Vitest)
+#   4. 타입 체크 (tsc --noEmit)
+#   5. 린트 검사 (ESLint)
+#   6. 단위 테스트 (Vitest)
 #
 # 이 파일이 있으면?
 #   GitHub PR 화면에 CI 통과 여부가 표시된다.
@@ -52,11 +53,16 @@ jobs:
       - name: 의존성 설치
         run: pnpm install --frozen-lockfile
 
-      # 5. ESLint로 코드 품질을 검사한다.
+      # 5. TypeScript 컴파일러로 타입 에러를 검사한다 (빌드 산출물은 만들지 않음).
+      #    ESLint는 타입을 검사하지 않으므로 이 단계가 없으면 타입 에러가 있는 PR도 통과할 수 있다.
+      - name: 타입 체크
+        run: pnpm typecheck
+
+      # 6. ESLint로 코드 품질을 검사한다.
       - name: 린트 검사
         run: pnpm lint
 
-      # 6. Vitest로 단위 테스트를 실행한다.
+      # 7. Vitest로 단위 테스트를 실행한다.
       #    하나라도 실패하면 잡 전체가 실패로 표시된다.
       - name: 단위 테스트
         run: pnpm test
