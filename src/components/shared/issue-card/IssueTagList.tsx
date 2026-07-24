@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { CardTagsRow } from '@/components/shared/card/CardTagsRow'
 import { DIFFICULTY_LABELS_KO } from '@/lib/github/issues/badge-meta'
+import { getLanguageColor } from '@/lib/github/language-colors'
 import type { DifficultyLevel } from '@/types/issue'
 
 type IssueTagListProps = {
@@ -17,6 +18,11 @@ export function IssueTagList({ difficultyLevel, labels, language }: IssueTagList
           variant="outline"
           className="rounded-md border-interactive-selected-border bg-interactive-selected text-interactive-selected-foreground"
         >
+          <span
+            aria-hidden="true"
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: getLanguageColor(language) }}
+          />
           {language}
         </Badge>
       )}

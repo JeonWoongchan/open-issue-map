@@ -1,5 +1,4 @@
-import { Zap } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { useId } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { ScoreBreakdown, ScoreBreakdownKey } from '@/types/issue'
@@ -29,34 +28,75 @@ function formatScore(score: number): string {
   return score > 0 ? `+${score}` : String(score)
 }
 
+// 카드에서는 소형, 상세 페이지 헤더에서는 대형 — 링 지름과 스트로크는 같은 비율(약 8%)로 유지
+const RING_SIZE = { sm: 36, lg: 60 } as const
+const STROKE_WIDTH = { sm: 3, lg: 5 } as const
+const TEXT_SIZE = { sm: 'text-[11px]', lg: 'text-base' } as const
+
 type IssueScoreBadgeProps = {
   score: number
   scoreBreakdown?: ScoreBreakdown
+  size?: 'sm' | 'lg'
   className?: string
 }
 
-export function IssueScoreBadge({ score, scoreBreakdown, className }: IssueScoreBadgeProps) {
-  const badge = (
-    <Badge
-      variant="outline"
-      className={cn(
-        'shrink-0 select-none rounded-md border-transparent bg-interactive-action text-interactive-action-foreground',
-        className,
-      )}
+export function IssueScoreBadge({ score, scoreBreakdown, size = 'sm', className }: IssueScoreBadgeProps) {
+  const gradientId = useId()
+  const dimension = RING_SIZE[size]
+  const strokeWidth = STROKE_WIDTH[size]
+  const center = dimension / 2
+  const radius = center - strokeWidth / 2
+  const circumference = 2 * Math.PI * radius
+  // 점수가 100을 넘거나 음수여도 링 채움은 0~100% 범위로만 시각화한다.
+  const fillRatio = Math.min(100, Math.max(0, score)) / 100
+  const dashOffset = circumference * (1 - fillRatio)
+
+  const ring = (
+    <div
+      role="img"
+      aria-label={`매칭 점수 ${score}점, 100점 만점`}
+      className={cn('relative inline-flex shrink-0 select-none items-center justify-center', className)}
+      style={{ width: dimension, height: dimension }}
     >
-      <Zap className="h-3 w-3" />
-      <span className="tabular-nums ">{score}</span>
-    </Badge>
+      <svg width={dimension} height={dimension} className="-rotate-90" aria-hidden="true">
+        <circle cx={center} cy={center} r={radius} fill="none" strokeWidth={strokeWidth} className="stroke-border" />
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill="none"
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          stroke={`url(#${gradientId})`}
+        />
+        <defs>
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="var(--interactive-action-hover)" />
+            <stop offset="100%" stopColor="var(--interactive-action)" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <span
+        className={cn(
+          'absolute inset-0 flex items-center justify-center font-semibold tabular-nums text-interactive-action',
+          TEXT_SIZE[size]
+        )}
+      >
+        {score}
+      </span>
+    </div>
   )
 
   if (!scoreBreakdown) {
-    return badge
+    return ring
   }
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        {badge}
+        {ring}
       </TooltipTrigger>
       <TooltipContent side="bottom" align="end" className="min-w-44 p-3">
         <p className="mb-2 text-xs font-semibold">매칭 점수 분석</p>
