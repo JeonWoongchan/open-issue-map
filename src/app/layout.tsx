@@ -64,7 +64,8 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="ko" className={cn("font-sans", inter.variable)}>
+    // 임시: 디자인 리뉴얼 비교를 위해 다크 모드를 기본값으로 설정. ThemeToggleTemp와 함께 나중에 제거.
+    <html lang="ko" className={cn("dark font-sans", inter.variable)}>
       <body
         className={`${geistMono.variable} antialiased`}
       >
