@@ -1,4 +1,6 @@
 import sql from '@/lib/db'
+import { createAiProvider } from '@/lib/ai'
+import type { OnboardingInsightParams } from '@/lib/ai'
 import type { OnboardingInsight } from '@/types/onboarding-insight'
 
 type SaveOnboardingInsightInput =
@@ -44,5 +46,20 @@ export async function loadOnboardingInsight(githubUserId: string): Promise<Onboa
   return {
     status: row.status,
     adviceItems: row.advice_items ?? null,
+  }
+}
+
+// AI 호출 실패든 그 이후 실패 상태 기록이든, 이 함수 자체는 절대 throw하지 않는다 —
+// 호출부(온보딩 제출, 대시보드 재시도)의 주 흐름을 AI 결과와 무관하게 항상 성공시키기 위함.
+export async function generateAndCacheOnboardingInsight(
+  githubUserId: string,
+  params: OnboardingInsightParams
+): Promise<void> {
+  try {
+    const result = await createAiProvider().generateOnboardingInsight(params)
+    await saveOnboardingInsight(githubUserId, { status: 'success', adviceItems: result.adviceItems })
+  } catch (error) {
+    console.error('Onboarding insight generation error:', error)
+    await saveOnboardingInsight(githubUserId, { status: 'failed' }).catch(() => {})
   }
 }

@@ -6,12 +6,15 @@ import type { Session } from 'next-auth'
 
 vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
 vi.mock('@/lib/user/onboarding', () => ({ saveOnboardingSurvey: vi.fn() }))
+vi.mock('@/lib/user/onboarding-insight', () => ({ generateAndCacheOnboardingInsight: vi.fn() }))
 
 import { auth } from '@/lib/auth'
 import { saveOnboardingSurvey } from '@/lib/user/onboarding'
+import { generateAndCacheOnboardingInsight } from '@/lib/user/onboarding-insight'
 import { POPULAR_LANGUAGES } from '@/constants/contribution-levels'
 const mockAuth = auth as unknown as Mock<() => Promise<Session | null>>
 const mockSave = vi.mocked(saveOnboardingSurvey)
+const mockGenerateInsight = vi.mocked(generateAndCacheOnboardingInsight)
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -94,6 +97,7 @@ describe('POST /api/onboarding', () => {
   it('정상 요청 시 200과 { success: true }를 반환한다', async () => {
     mockAuth.mockResolvedValueOnce(session)
     mockSave.mockResolvedValueOnce(undefined)
+    mockGenerateInsight.mockResolvedValueOnce(undefined)
 
     const res = await POST(makeReq(validBody))
     const json = await res.json()
@@ -102,11 +106,13 @@ describe('POST /api/onboarding', () => {
     expect(json.ok).toBe(true)
     expect(json.data.success).toBe(true)
     expect(mockSave).toHaveBeenCalledWith('user-1', validBody)
+    expect(mockGenerateInsight).toHaveBeenCalledWith('user-1', validBody)
   })
 
   it('전체 언어 선택 payload를 정상 요청으로 처리한다', async () => {
     mockAuth.mockResolvedValueOnce(session)
     mockSave.mockResolvedValueOnce(undefined)
+    mockGenerateInsight.mockResolvedValueOnce(undefined)
     const body = {
       ...validBody,
       experienceLevel: 'senior',
