@@ -16,8 +16,13 @@ type DashboardReportCardProps = {
 
 export function DashboardReportCard({ profile, insight }: DashboardReportCardProps) {
   const experienceLabel = getExperienceLevelLabel(profile.experienceLevel)
-  const weeklyHoursLabel = getWeeklyHoursLabel(profile.weeklyHours)
-  const purposeLabel = getPurposeLabel(profile.purpose)
+  // 경험 수준만 액센트 칩으로 강조하고, 나머지는 같은 스타일로 나열한다.
+  const secondaryLabels = [
+    ...profile.topLanguages,
+    ...profile.contributionTypes.map(getContributionTypeLabel),
+    getWeeklyHoursLabel(profile.weeklyHours),
+    getPurposeLabel(profile.purpose),
+  ].filter((label): label is string => Boolean(label))
 
   return (
     <div className="rounded-2xl border border-border bg-report-card p-5">
@@ -31,26 +36,11 @@ export function DashboardReportCard({ profile, insight }: DashboardReportCardPro
             {experienceLabel}
           </Badge>
         ) : null}
-        {profile.topLanguages.map((language) => (
-          <Badge key={language} variant="outline" size="lg" className="rounded-full bg-card text-muted-foreground">
-            {language}
+        {secondaryLabels.map((label) => (
+          <Badge key={label} variant="outline" size="lg" className="rounded-full bg-card text-muted-foreground">
+            {label}
           </Badge>
         ))}
-        {profile.contributionTypes.map((type) => (
-          <Badge key={type} variant="outline" size="lg" className="rounded-full bg-card text-muted-foreground">
-            {getContributionTypeLabel(type)}
-          </Badge>
-        ))}
-        {weeklyHoursLabel ? (
-          <Badge variant="outline" size="lg" className="rounded-full bg-card text-muted-foreground">
-            {weeklyHoursLabel}
-          </Badge>
-        ) : null}
-        {purposeLabel ? (
-          <Badge variant="outline" size="lg" className="rounded-full bg-card text-muted-foreground">
-            {purposeLabel}
-          </Badge>
-        ) : null}
       </div>
 
       <div className="pt-4">

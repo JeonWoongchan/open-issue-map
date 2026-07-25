@@ -13,7 +13,8 @@ type IssueTagListProps = {
 }
 
 export function IssueTagList({ difficultyLevel, labels, language, competitionLevel }: IssueTagListProps) {
-  const hasPRMeta = competitionLevel === 'HAS_PR' ? getCompetitionMeta('HAS_PR') : null
+  const competitionMeta = competitionLevel ? getCompetitionMeta(competitionLevel) : null
+  const highlightedCompetitionMeta = competitionMeta?.highlightOnCard ? competitionMeta : null
 
   return (
     <CardTagsRow>
@@ -40,9 +41,9 @@ export function IssueTagList({ difficultyLevel, labels, language, competitionLev
           {label}
         </Badge>
       ))}
-      {hasPRMeta && (
-        <Badge variant="outline" className={cn('rounded-md', hasPRMeta.className)}>
-          {hasPRMeta.label}
+      {highlightedCompetitionMeta && (
+        <Badge variant="outline" className={cn('rounded-md', highlightedCompetitionMeta.className)}>
+          {highlightedCompetitionMeta.label}
         </Badge>
       )}
     </CardTagsRow>

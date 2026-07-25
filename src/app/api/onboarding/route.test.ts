@@ -97,7 +97,7 @@ describe('POST /api/onboarding', () => {
   it('정상 요청 시 200과 { success: true }를 반환한다', async () => {
     mockAuth.mockResolvedValueOnce(session)
     mockSave.mockResolvedValueOnce(undefined)
-    mockGenerateInsight.mockResolvedValueOnce(undefined)
+    mockGenerateInsight.mockResolvedValueOnce({ status: 'success', adviceItems: ['조언'] })
 
     const res = await POST(makeReq(validBody))
     const json = await res.json()
@@ -112,7 +112,7 @@ describe('POST /api/onboarding', () => {
   it('전체 언어 선택 payload를 정상 요청으로 처리한다', async () => {
     mockAuth.mockResolvedValueOnce(session)
     mockSave.mockResolvedValueOnce(undefined)
-    mockGenerateInsight.mockResolvedValueOnce(undefined)
+    mockGenerateInsight.mockResolvedValueOnce({ status: 'success', adviceItems: ['조언'] })
     const body = {
       ...validBody,
       experienceLevel: 'senior',

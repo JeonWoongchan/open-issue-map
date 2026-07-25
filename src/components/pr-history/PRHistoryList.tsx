@@ -10,6 +10,7 @@ import { InfiniteScrollTrigger } from '@/components/shared/InfiniteScrollTrigger
 import { usePullRequestList } from '@/hooks/usePullRequestList'
 import { useSearchFilter } from '@/hooks/useSearchFilter'
 import { useInfiniteScrollDisplay } from '@/hooks/useScrollSentinel'
+import { PR_HISTORY_GRID_BREAKPOINTS, useResponsiveColumnCount } from '@/hooks/useResponsiveColumnCount'
 import { PRHistoryContent } from './PRHistoryContent'
 import { PRStateFilter } from './PRStateFilter'
 import { PRSummaryStats } from './PRSummaryStats'
@@ -31,6 +32,7 @@ export function PRHistoryList() {
     } = usePullRequestList()
 
     const [query, setQuery] = useState('')
+    const columnCount = useResponsiveColumnCount(PR_HISTORY_GRID_BREAKPOINTS)
     // 상태 필터 결과에 텍스트 검색을 이어서 적용 (AND 조합)
     const filteredItems = useSearchFilter(items, query)
     const { displayItems, effectiveHasNextPage, sentinelRef } = useInfiniteScrollDisplay({
@@ -39,6 +41,7 @@ export function PRHistoryList() {
         fetchNextPageAction,
         isFetchingNextPage,
         isSearchActive: !!query,
+        columnCount,
     })
 
     return (
@@ -80,6 +83,7 @@ export function PRHistoryList() {
                 hasNextPage={effectiveHasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
                 sentinelRefAction={sentinelRef}
+                columnCount={columnCount}
             />
         </div>
     )

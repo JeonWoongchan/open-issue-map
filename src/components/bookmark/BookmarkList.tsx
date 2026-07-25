@@ -10,6 +10,7 @@ import { useBookmarkList } from '@/hooks/useBookmarkList'
 import { useIssueBookmarks } from '@/hooks/useIssueBookmarks'
 import { useSearchFilter } from '@/hooks/useSearchFilter'
 import { useInfiniteScrollDisplay } from '@/hooks/useScrollSentinel'
+import { useResponsiveColumnCount } from '@/hooks/useResponsiveColumnCount'
 import { BookmarkListContent } from './BookmarkListContent'
 
 export function BookmarkList() {
@@ -31,6 +32,7 @@ export function BookmarkList() {
     })
 
     const [query, setQuery] = useState('')
+    const columnCount = useResponsiveColumnCount()
 
     const filteredItems = useSearchFilter(optimisticIssues, query)
     const { displayItems, effectiveHasNextPage, sentinelRef } = useInfiniteScrollDisplay({
@@ -39,6 +41,7 @@ export function BookmarkList() {
         fetchNextPageAction,
         isFetchingNextPage,
         isSearchActive: !!query,
+        columnCount,
     })
 
     return (
@@ -81,6 +84,7 @@ export function BookmarkList() {
                 hasNextPage={effectiveHasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
                 sentinelRefAction={sentinelRef}
+                columnCount={columnCount}
             />
         </div>
     )

@@ -52,42 +52,47 @@ export async function loadOnboardingInsight(githubUserId: string): Promise<Onboa
 
 // AI 호출 실패든 그 이후 실패 상태 기록이든, 이 함수 자체는 절대 throw하지 않는다 —
 // 호출부(온보딩 제출, 대시보드 재시도)의 주 흐름을 AI 결과와 무관하게 항상 성공시키기 위함.
+// 방금 저장한 값을 그대로 반환하므로 호출부가 다시 조회할 필요가 없다.
 export async function generateAndCacheOnboardingInsight(
   githubUserId: string,
   params: OnboardingInsightParams
-): Promise<void> {
+): Promise<OnboardingInsight> {
   try {
     const result = await createAiProvider().generateOnboardingInsight(params)
     await saveOnboardingInsight(githubUserId, { status: 'success', adviceItems: result.adviceItems })
+    return { status: 'success', adviceItems: result.adviceItems }
   } catch (error) {
     console.error('Onboarding insight generation error:', error)
     await saveOnboardingInsight(githubUserId, { status: 'failed' }).catch(() => {})
+    return { status: 'failed', adviceItems: null }
   }
 }
 
 // 대시보드 진입 시점의 읽기 전용 조회 + 실패 상태일 때만 재시도.
 // 행이 아예 없으면(온보딩 미완료, 또는 이 기능 배포 전 가입자) 재시도하지 않고 null을 반환한다 —
 // 호출부에서 카드 자체를 숨기는 신호로 쓴다.
+// profile을 이미 resolve된 값이 아니라 Promise로 받는다 — 대부분의 방문(success거나 행이 없는 경우)은
+// 프로필이 전혀 필요 없으므로, 호출부가 loadOnboardingProfile을 미리 시작해두면 이 함수의 자체 조회와
+// 동시에 진행되고 실패 재시도가 필요할 때만 await해서 기다린다.
 export async function loadOrRetryOnboardingInsight(
   githubUserId: string,
-  profile: OnboardingProfile
+  profilePromise: Promise<OnboardingProfile | null>
 ): Promise<OnboardingInsight | null> {
   const insight = await loadOnboardingInsight(githubUserId)
   if (!insight || insight.status === 'success') {
     return insight
   }
 
-  if (!profile.experienceLevel || !profile.weeklyHours || !profile.purpose) {
+  const profile = await profilePromise
+  if (!profile || !profile.experienceLevel || !profile.weeklyHours || !profile.purpose) {
     return insight
   }
 
-  await generateAndCacheOnboardingInsight(githubUserId, {
+  return generateAndCacheOnboardingInsight(githubUserId, {
     experienceLevel: profile.experienceLevel,
     topLanguages: profile.topLanguages,
     contributionTypes: profile.contributionTypes,
     weeklyHours: profile.weeklyHours,
     purpose: profile.purpose,
   })
-
-  return loadOnboardingInsight(githubUserId)
 }

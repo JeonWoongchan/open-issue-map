@@ -6,21 +6,28 @@ export type BadgeMeta = {
   className: string
 }
 
-export type CompetitionMeta = BadgeMeta
+export type CompetitionMeta = BadgeMeta & {
+  // 이슈 카드처럼 태그가 많이 몰리는 곳에서 이 경쟁도까지 배지로 강조할지 — 지금은 PR이 이미
+  // 있는 경우만 "예외 신호"로 취급하고 나머지(OPEN/ACTIVE)는 조용히 둔다는 결정을 데이터로 표현한다.
+  highlightOnCard: boolean
+}
 export type RepoActivityMeta = BadgeMeta
 
 const COMPETITION_META: Record<CompetitionLevel, CompetitionMeta> = {
   OPEN: {
     label: '오픈',
     className: 'border-status-success-border bg-status-success text-status-success-foreground',
+    highlightOnCard: false,
   },
   ACTIVE: {
     label: '진행중',
     className: 'border-status-warning-border bg-status-warning text-status-warning-foreground',
+    highlightOnCard: false,
   },
   HAS_PR: {
     label: 'PR 있음',
     className: 'border-status-danger-border bg-status-danger text-status-danger-foreground',
+    highlightOnCard: true,
   },
 }
 

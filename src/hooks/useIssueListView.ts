@@ -8,7 +8,7 @@ import { useSearchFilter } from './useSearchFilter'
 import { useInfiniteScrollDisplay } from './useScrollSentinel'
 import type { IssueFilters } from '@/types/issue'
 
-export function useIssueListView(filters: IssueFilters, query: string) {
+export function useIssueListView(filters: IssueFilters, query: string, columnCount: number) {
     const {
         issues,
         hasNextPage,
@@ -50,6 +50,7 @@ export function useIssueListView(filters: IssueFilters, query: string) {
         isFetchingNextPage,
         isError: isNextPageError,
         isSearchActive: !!query,
+        columnCount,
     })
 
     const {

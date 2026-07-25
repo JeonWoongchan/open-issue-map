@@ -18,8 +18,11 @@ export const metadata: Metadata = createPageMetadata({
 
 export default async function DashboardPage() {
     const session = await auth()
-    const profile = session ? await loadOnboardingProfile(session.user.id) : null
-    const insight = session && profile ? await loadOrRetryOnboardingInsight(session.user.id, profile) : null
+    // profile은 await하지 않고 넘긴다 — insight 조회가 success/no-row로 끝나는 대부분의 경우
+    // profile이 아예 필요 없어서, 두 조회가 동시에 진행되고 재시도가 필요할 때만 profile을 기다린다.
+    const profilePromise = session ? loadOnboardingProfile(session.user.id) : Promise.resolve(null)
+    const insight = session ? await loadOrRetryOnboardingInsight(session.user.id, profilePromise) : null
+    const profile = await profilePromise
 
     return (
         <MainSectionShell

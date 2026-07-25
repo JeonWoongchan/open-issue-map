@@ -1,20 +1,14 @@
+import { CONTRIBUTION_TYPES, EXPERIENCE_LEVELS, PURPOSES, WEEKLY_HOURS } from '@/constants/contribution-levels'
 import type { OnboardingInsightParams } from './types'
 
-const EXPERIENCE_LEVEL_LABEL: Record<string, string> = {
-    beginner: '입문 (처음 오픈소스 기여)',
-    junior:   '초급 (간단한 버그·문서 경험 있음)',
-    mid:      '중급 (기능 추가·리팩토링 경험 있음)',
-    senior:   '고급 (대규모 변경·설계 경험 있음)',
-}
-
-const PURPOSE_LABEL: Record<string, string> = {
-    portfolio: '포트폴리오 구축',
-    growth:    '실력 향상',
-    community: '커뮤니티 기여',
-}
-
-const CONTRIBUTION_TYPE_LABEL: Record<string, string> = {
-    doc: '문서', bug: '버그 수정', feat: '기능 개발', test: '테스트', review: '리뷰',
+// 온보딩 화면에서 쓰는 라벨/설명(contribution-levels.ts)을 그대로 재사용한다 —
+// 프롬프트용으로 따로 문구를 만들면 온보딩 문항이 바뀔 때 조용히 어긋날 수 있다.
+function describeOption<T extends string | number>(
+    options: readonly { value: T; label: string; description: string }[],
+    value: T
+): string {
+    const option = options.find((o) => o.value === value)
+    return option ? `${option.label} — ${option.description}` : String(value)
 }
 
 export const ONBOARDING_INSIGHT_SYSTEM_PROMPT = `당신은 오픈소스 기여를 시작하려는 개발자에게 조언하는 커리어 코치입니다.
@@ -35,11 +29,11 @@ export const ONBOARDING_INSIGHT_SYSTEM_PROMPT = `당신은 오픈소스 기여�
 
 export function buildOnboardingInsightPrompt(params: OnboardingInsightParams): string {
     const lines = [
-        `경험 수준: ${EXPERIENCE_LEVEL_LABEL[params.experienceLevel] ?? params.experienceLevel}`,
+        `경험 수준: ${describeOption(EXPERIENCE_LEVELS, params.experienceLevel)}`,
         `선호 언어: ${params.topLanguages.join(', ') || '미지정'}`,
-        `기여 방식: ${params.contributionTypes.map((t) => CONTRIBUTION_TYPE_LABEL[t] ?? t).join(', ') || '미지정'}`,
-        `주당 투입 가능 시간: ${params.weeklyHours}시간`,
-        `기여 목적: ${PURPOSE_LABEL[params.purpose] ?? params.purpose}`,
+        `기여 방식: ${params.contributionTypes.map((t) => describeOption(CONTRIBUTION_TYPES, t)).join(' / ') || '미지정'}`,
+        `주당 투입 가능 시간: ${describeOption(WEEKLY_HOURS, params.weeklyHours)}`,
+        `기여 목적: ${describeOption(PURPOSES, params.purpose)}`,
     ]
 
     return lines.join('\n')

@@ -1,6 +1,5 @@
 'use client'
 
-import { useResponsiveColumnCount } from '@/hooks/useResponsiveColumnCount'
 import { CardListError } from './CardListError'
 import { CardListSkeleton } from './CardListSkeleton'
 
@@ -12,6 +11,8 @@ type InfiniteScrollTriggerProps = {
     errorMessage?: string
     onRetryAction?: () => void
     sentinelRefAction: (node?: Element | null) => void
+    // 로딩 스켈레톤을 몇 개 보여줄지 — 호출부의 그리드 열 수(useResponsiveColumnCount 결과)를 그대로 받는다.
+    columnCount?: number
 }
 
 export function InfiniteScrollTrigger({
@@ -21,9 +22,8 @@ export function InfiniteScrollTrigger({
     errorMessage,
     onRetryAction,
     sentinelRefAction,
+    columnCount = 1,
 }: InfiniteScrollTriggerProps) {
-    const columnCount = useResponsiveColumnCount()
-
     if (!hasNextPage) {
         return null
     }

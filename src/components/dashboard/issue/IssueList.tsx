@@ -7,6 +7,7 @@ import { SearchBarRow } from '@/components/shared/SearchBarRow'
 import { SearchDataListState } from '@/components/shared/SearchDataListState'
 import { InfiniteScrollTrigger } from '@/components/shared/InfiniteScrollTrigger'
 import { useIssueListView } from '@/hooks/useIssueListView'
+import { useResponsiveColumnCount } from '@/hooks/useResponsiveColumnCount'
 import { useToast } from '@/hooks/use-toast'
 import { EMPTY_ISSUE_FILTERS } from '@/types/issue'
 import type { IssueFilters, IssueCardItem } from '@/types/issue'
@@ -26,6 +27,7 @@ export function IssueList({ isGuest, helpSlot }: IssueListProps) {
     const [filters, setFilters] = useState<IssueFilters>(EMPTY_ISSUE_FILTERS)
     const [query, setQuery] = useState('')
     const { toast } = useToast()
+    const columnCount = useResponsiveColumnCount()
 
     const {
         filterAvailableLanguages,
@@ -46,7 +48,7 @@ export function IssueList({ isGuest, helpSlot }: IssueListProps) {
         emptyCandidateFetchCount,
         canLoadMoreCandidates,
         loadMoreCandidatesAction,
-    } = useIssueListView(filters, query)
+    } = useIssueListView(filters, query, columnCount)
 
     // 게스트 북마크 클릭 시 토스트 안내 후 차단
     async function handleToggleBookmark(issue: IssueCardItem) {
@@ -125,6 +127,7 @@ export function IssueList({ isGuest, helpSlot }: IssueListProps) {
                 errorMessage={errorMessage}
                 onRetryAction={retryNextPageAction}
                 sentinelRefAction={sentinelRef}
+                columnCount={columnCount}
             />
 
             {shouldShowCandidateLoadMoreNotice ? (
