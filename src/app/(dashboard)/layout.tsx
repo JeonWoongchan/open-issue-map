@@ -17,7 +17,7 @@ export default async function DashboardLayout({
     return (
         <>
             <DashboardTour />
-            <div className="min-h-screen bg-background">
+            <div className="min-h-screen bg-dashboard-banner">
                 <MainHeader
                     image={session?.user.image}
                     name={session?.user.name}

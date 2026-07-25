@@ -156,6 +156,11 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
   --sidebar-accent-foreground: oklch(0.33 0.12 40);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* 그라데이션 토큰 */
+  --gradient-dashboard-banner: radial-gradient(120% 60% at 50% 0%, color-mix(in oklab, var(--interactive-action) 14%, transparent), transparent 70%);
+  --gradient-report-card: linear-gradient(160deg, var(--brand-subtle), transparent 60%);
+  --gradient-card-spotlight: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), var(--brand-subtle), transparent 70%);
 }
 
 .dark {
@@ -222,6 +227,32 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
+  }
+}
+
+@utility bg-dashboard-banner {
+  background: var(--gradient-dashboard-banner), var(--background);
+}
+
+@utility bg-report-card {
+  background: var(--gradient-report-card), var(--card);
+}
+
+/* 카드 위에서 마우스를 따라다니는 스포트라이트 글로우. --mx/--my는 CardShell이
+   mousemove 핸들러로 직접 DOM에 기록한다(리렌더 없이 갱신하기 위함). */
+@utility card-spotlight {
+  position: relative;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 300ms;
+    background: var(--gradient-card-spotlight);
+  }
+  &:hover::before {
+    opacity: 1;
   }
 }
 

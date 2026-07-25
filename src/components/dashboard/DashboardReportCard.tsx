@@ -20,7 +20,7 @@ export function DashboardReportCard({ profile, insight }: DashboardReportCardPro
   const purposeLabel = getPurposeLabel(profile.purpose)
 
   return (
-    <div className="rounded-2xl border border-border p-5 [background:linear-gradient(160deg,var(--brand-subtle),transparent_60%),var(--card)]">
+    <div className="rounded-2xl border border-border bg-report-card p-5">
       <div className="flex flex-wrap gap-2 border-b border-dashed border-border pb-4">
         {experienceLabel ? (
           <Badge

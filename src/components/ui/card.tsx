@@ -10,7 +10,7 @@ const cardVariants = cva(
       variant: {
         default: "",
         interactive:
-          "transition-all duration-200 hover:-translate-y-0.5 hover:border-interactive-selected-border/60 hover:shadow-lg hover:shadow-interactive-selected-border/20",
+          "card-spotlight transition-all duration-200 hover:-translate-y-0.5 hover:border-interactive-selected-border/60 hover:shadow-lg hover:shadow-interactive-selected-border/20",
       },
     },
     defaultVariants: {
