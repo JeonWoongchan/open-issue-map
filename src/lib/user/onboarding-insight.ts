@@ -1,6 +1,7 @@
 import sql from '@/lib/db'
 import { createAiProvider } from '@/lib/ai'
 import type { OnboardingInsightParams } from '@/lib/ai'
+import type { OnboardingProfile } from '@/lib/user/profile'
 import type { OnboardingInsight } from '@/types/onboarding-insight'
 
 type SaveOnboardingInsightInput =
@@ -62,4 +63,31 @@ export async function generateAndCacheOnboardingInsight(
     console.error('Onboarding insight generation error:', error)
     await saveOnboardingInsight(githubUserId, { status: 'failed' }).catch(() => {})
   }
+}
+
+// 대시보드 진입 시점의 읽기 전용 조회 + 실패 상태일 때만 재시도.
+// 행이 아예 없으면(온보딩 미완료, 또는 이 기능 배포 전 가입자) 재시도하지 않고 null을 반환한다 —
+// 호출부에서 카드 자체를 숨기는 신호로 쓴다.
+export async function loadOrRetryOnboardingInsight(
+  githubUserId: string,
+  profile: OnboardingProfile
+): Promise<OnboardingInsight | null> {
+  const insight = await loadOnboardingInsight(githubUserId)
+  if (!insight || insight.status === 'success') {
+    return insight
+  }
+
+  if (!profile.experienceLevel || !profile.weeklyHours || !profile.purpose) {
+    return insight
+  }
+
+  await generateAndCacheOnboardingInsight(githubUserId, {
+    experienceLevel: profile.experienceLevel,
+    topLanguages: profile.topLanguages,
+    contributionTypes: profile.contributionTypes,
+    weeklyHours: profile.weeklyHours,
+    purpose: profile.purpose,
+  })
+
+  return loadOnboardingInsight(githubUserId)
 }
