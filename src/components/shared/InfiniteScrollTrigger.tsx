@@ -1,5 +1,6 @@
 'use client'
 
+import { useResponsiveColumnCount } from '@/hooks/useResponsiveColumnCount'
 import { CardListError } from './CardListError'
 import { CardListSkeleton } from './CardListSkeleton'
 
@@ -21,6 +22,8 @@ export function InfiniteScrollTrigger({
     onRetryAction,
     sentinelRefAction,
 }: InfiniteScrollTriggerProps) {
+    const columnCount = useResponsiveColumnCount()
+
     if (!hasNextPage) {
         return null
     }
@@ -36,7 +39,7 @@ export function InfiniteScrollTrigger({
 
     return (
         <>
-            {isFetchingNextPage ? <CardListSkeleton count={2} /> : null}
+            {isFetchingNextPage ? <CardListSkeleton count={columnCount} /> : null}
             <div ref={sentinelRefAction} className="h-10" />
         </>
     )

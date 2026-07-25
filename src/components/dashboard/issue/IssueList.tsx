@@ -108,7 +108,7 @@ export function IssueList({ isGuest, helpSlot }: IssueListProps) {
                 items={filteredItems}
                 errorMessage={errorMessage}
                 onRetry={refetch}
-                skeletonCount={10}
+                skeletonCount={12}
                 renderContent={() => (
                     <IssueListContent
                         issues={displayItems}

@@ -68,7 +68,7 @@ export function BookmarkList() {
                 items={filteredItems}
                 errorMessage={errorMessage}
                 onRetry={refetch}
-                skeletonCount={10}
+                skeletonCount={12}
                 renderContent={() => (
                     <BookmarkListContent
                         issues={displayItems}
