@@ -12,31 +12,13 @@ export const DASHBOARD_HELP_GUIDE_ITEMS = [
     id: 'stack',
     title: '기술 스택과 라벨',
     description:
-      '언어, 난이도, 라벨을 함께 보면 이슈의 성격을 더 빠르게 파악할 수 있어요.',
+      '언어, 난이도, 라벨을 함께 보면 이슈의 성격을 더 빠르게 파악할 수 있어요. 이미 PR이 연결된 이슈는 "PR 있음" 배지로 표시해서 중복 작업을 피할 수 있게 해줘요.',
   },
   {
     id: 'metrics',
     title: '반응과 규모',
     description:
       '저장소의 스타 수와 댓글 수를 함께 보여줘요. 진입 전에 프로젝트의 관심도와 논의 흐름을 가늠하는 데 도움이 돼요.',
-  },
-  {
-    id: 'activity',
-    title: '저장소 활성도',
-    description:
-      '저장소에 마지막으로 push된 날짜와 커뮤니티 반응을 함께 보고 활성도 활발 · 활성도 보통 · 활성도 낮음 세 단계로 나타내요.',
-  },
-  {
-    id: 'competition',
-    title: '경쟁도',
-    description:
-      '이미 다른 사람이 진행하고 있는지, PR이 열려 있는지 보여줘서 진입 부담을 판단하는 데 도움이 돼요.',
-  },
-  {
-    id: 'ai-analysis',
-    title: 'AI 작업 가이드',
-    description:
-      '버튼을 누르면 이슈를 분석해서 필요한 개념, 예상 작업 범위, 먼저 봐야 할 코드, 주의사항을 정리해줘요.',
   },
 ] as const satisfies readonly HelpGuideItem<string>[]
 
@@ -57,7 +39,7 @@ export const DASHBOARD_HELP_DEMO_ISSUE: Omit<ScoredIssue, 'createdAt' | 'updated
   score: 82,
   difficultyLevel: 'beginner',
   contributionType: 'doc',
-  competitionLevel: 'ACTIVE',
-  hasPR: false,
+  competitionLevel: 'HAS_PR',
+  hasPR: true,
   repoActivityLevel: 'active',
 }

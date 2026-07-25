@@ -4,13 +4,11 @@ import type { IssueCardItem } from '@/types/issue'
 type IssueListContentProps = {
   issues: IssueCardItem[]
   onToggleBookmark: (issue: IssueCardItem) => Promise<void>
-  onAnalyzeClick?: (issue: IssueCardItem) => void
 }
 
 export function IssueListContent({
   issues,
   onToggleBookmark,
-  onAnalyzeClick,
 }: IssueListContentProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -20,7 +18,6 @@ export function IssueListContent({
             key={issue.url}
             issue={issue}
             onToggleBookmark={onToggleBookmark}
-            onAnalyzeClick={onAnalyzeClick}
           />
         ))}
       </div>

@@ -4,13 +4,11 @@ import type { IssueCardItem } from '@/types/issue'
 type BookmarkListContentProps = {
   issues: IssueCardItem[]
   onToggleBookmark: (issue: IssueCardItem) => Promise<void>
-  onAnalyzeClick?: (issue: IssueCardItem) => void
 }
 
 export function BookmarkListContent({
   issues,
   onToggleBookmark,
-  onAnalyzeClick,
 }: BookmarkListContentProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -19,7 +17,6 @@ export function BookmarkListContent({
           key={issue.url}
           issue={issue}
           onToggleBookmark={onToggleBookmark}
-          onAnalyzeClick={onAnalyzeClick}
         />
       ))}
     </div>

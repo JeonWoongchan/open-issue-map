@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
-import { IssueAnalysisDrawer } from './IssueAnalysisDrawer'
 import { SearchBarRow } from '@/components/shared/SearchBarRow'
 import { SearchDataListState } from '@/components/shared/SearchDataListState'
 import { InfiniteScrollTrigger } from '@/components/shared/InfiniteScrollTrigger'
@@ -26,14 +25,7 @@ type IssueListProps = {
 export function IssueList({ isGuest, helpSlot }: IssueListProps) {
     const [filters, setFilters] = useState<IssueFilters>(EMPTY_ISSUE_FILTERS)
     const [query, setQuery] = useState('')
-    const [analysisTarget, setAnalysisTarget] = useState<IssueCardItem | null>(null)
-    const [analysisOpen, setAnalysisOpen] = useState(false)
     const { toast } = useToast()
-
-    function handleAnalyzeClick(issue: IssueCardItem) {
-        setAnalysisTarget(issue)
-        setAnalysisOpen(true)
-    }
 
     const {
         filterAvailableLanguages,
@@ -120,7 +112,6 @@ export function IssueList({ isGuest, helpSlot }: IssueListProps) {
                     <IssueListContent
                         issues={displayItems}
                         onToggleBookmark={handleToggleBookmark}
-                        onAnalyzeClick={handleAnalyzeClick}
                     />
                 )}
             />
@@ -143,12 +134,6 @@ export function IssueList({ isGuest, helpSlot }: IssueListProps) {
                     onLoadMoreAction={loadMoreCandidatesAction}
                 />
             ) : null}
-
-            <IssueAnalysisDrawer
-                issue={analysisTarget}
-                open={analysisOpen}
-                onOpenChangeAction={setAnalysisOpen}
-            />
         </div>
     )
 }

@@ -1,16 +1,20 @@
 import { Badge } from '@/components/ui/badge'
 import { CardTagsRow } from '@/components/shared/card/CardTagsRow'
-import { DIFFICULTY_LABELS_KO } from '@/lib/github/issues/badge-meta'
+import { DIFFICULTY_LABELS_KO, getCompetitionMeta } from '@/lib/github/issues/badge-meta'
 import { getLanguageColor } from '@/lib/github/language-colors'
-import type { DifficultyLevel } from '@/types/issue'
+import { cn } from '@/lib/utils'
+import type { CompetitionLevel, DifficultyLevel } from '@/types/issue'
 
 type IssueTagListProps = {
   difficultyLevel: DifficultyLevel | null
   labels: readonly string[]
   language: string | null
+  competitionLevel: CompetitionLevel | null
 }
 
-export function IssueTagList({ difficultyLevel, labels, language }: IssueTagListProps) {
+export function IssueTagList({ difficultyLevel, labels, language, competitionLevel }: IssueTagListProps) {
+  const hasPRMeta = competitionLevel === 'HAS_PR' ? getCompetitionMeta('HAS_PR') : null
+
   return (
     <CardTagsRow>
       {language && (
@@ -36,6 +40,11 @@ export function IssueTagList({ difficultyLevel, labels, language }: IssueTagList
           {label}
         </Badge>
       ))}
+      {hasPRMeta && (
+        <Badge variant="outline" className={cn('rounded-md', hasPRMeta.className)}>
+          {hasPRMeta.label}
+        </Badge>
+      )}
     </CardTagsRow>
   )
 }

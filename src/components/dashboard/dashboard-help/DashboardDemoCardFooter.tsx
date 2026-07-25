@@ -1,27 +1,15 @@
 import { HelpHotspot } from '@/components/help/HelpHotspot'
-import { IssueAnalysisButton } from '@/components/shared/issue-card/IssueAnalysisButton'
 import { IssueMetricsRow } from '@/components/shared/issue-card/IssueMetricsRow'
 import { IssueTagList } from '@/components/shared/issue-card/IssueTagList'
-import { Badge } from '@/components/ui/badge'
 import { DASHBOARD_HELP_DEMO_ISSUE } from '@/constants/dashboard-help'
-import { formatTimeAgo } from '@/utils/format/time-ago'
-import { getCompetitionMeta, getRepoActivityMeta } from '@/lib/github/issues/badge-meta'
-import { cn } from '@/lib/utils'
 import type { DashboardHelpGuideId } from '@/constants/dashboard-help'
 import type { HelpGuideInteractionProps } from '@/types/help'
 
-const competition = getCompetitionMeta(DASHBOARD_HELP_DEMO_ISSUE.competitionLevel)
-const activity = getRepoActivityMeta(DASHBOARD_HELP_DEMO_ISSUE.repoActivityLevel)
-const noop = () => {}
-
-type DemoCardFooterProps = HelpGuideInteractionProps<DashboardHelpGuideId> & {
-  demoUpdatedAt: string
-}
+type DemoCardFooterProps = HelpGuideInteractionProps<DashboardHelpGuideId>
 
 // IssueItemFooter와 병렬 구현 — 레이아웃 변경 시 두 파일을 함께 수정한다.
 export function DashboardDemoCardFooter({
   activeGuideId,
-  demoUpdatedAt,
   onActivateGuide,
   onClearGuide,
 }: DemoCardFooterProps) {
@@ -34,35 +22,16 @@ export function DashboardDemoCardFooter({
           difficultyLevel={DASHBOARD_HELP_DEMO_ISSUE.difficultyLevel}
           labels={DASHBOARD_HELP_DEMO_ISSUE.labels}
           language={DASHBOARD_HELP_DEMO_ISSUE.language}
+          competitionLevel={DASHBOARD_HELP_DEMO_ISSUE.competitionLevel}
         />
       </HelpHotspot>
 
-      <HelpHotspot guideId="metrics" {...hotspotProps} className="rounded-xl">
+      <HelpHotspot guideId="metrics" {...hotspotProps} className="rounded-xl border-t border-border pt-3">
         <IssueMetricsRow
           commentCount={DASHBOARD_HELP_DEMO_ISSUE.commentCount}
           stargazerCount={DASHBOARD_HELP_DEMO_ISSUE.stargazerCount}
         />
       </HelpHotspot>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <HelpHotspot guideId="activity" {...hotspotProps} className="rounded-xl">
-          <Badge variant="outline" className={cn('rounded-md', activity.className)}>
-            {activity.label}
-          </Badge>
-        </HelpHotspot>
-
-        <HelpHotspot guideId="competition" {...hotspotProps} className="rounded-xl">
-          <Badge variant="outline" className={cn('rounded-md', competition.className)}>
-            {competition.label}
-          </Badge>
-        </HelpHotspot>
-
-        <span className="text-interactive-action-hover">{formatTimeAgo(demoUpdatedAt)}</span>
-
-        <HelpHotspot asChild guideId="ai-analysis" {...hotspotProps} className="ml-auto rounded-lg">
-          <IssueAnalysisButton onClick={noop} />
-        </HelpHotspot>
-      </div>
     </div>
   )
 }

@@ -18,12 +18,12 @@ export function DashboardDemoCard({
     <HelpDemoCardFrame>
       <DashboardDemoCardHeader
         activeGuideId={activeGuideId}
+        demoUpdatedAt={demoUpdatedAt}
         onActivateGuide={onActivateGuide}
         onClearGuide={onClearGuide}
       />
       <DashboardDemoCardFooter
         activeGuideId={activeGuideId}
-        demoUpdatedAt={demoUpdatedAt}
         onActivateGuide={onActivateGuide}
         onClearGuide={onClearGuide}
       />
