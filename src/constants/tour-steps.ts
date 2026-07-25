@@ -24,19 +24,13 @@ export const dashboardTourSteps: Step[] = [
     {
         target: '#tour-issue-list',
         title: '추천 이슈',
-        content: '사용자 온보딩 결과를 바탕으로 기여하기 좋은 이슈를 보여드려요. 제목을 클릭하면 GitHub으로 이동합니다.',
+        content: '사용자 온보딩 결과를 바탕으로 기여하기 좋은 이슈를 보여드려요. 카드를 클릭하면 자세한 내용을 확인할 수 있어요.',
         skipBeacon: true,
     },
     {
         target: '.tour-bookmark',
         title: '북마크',
         content: '관심 이슈를 저장해두고 북마크 페이지에서 다시 확인할 수 있어요.',
-        skipBeacon: true,
-    },
-    {
-        target: '.tour-ai-btn',
-        title: 'AI 분석',
-        content: 'AI가 이슈를 분석해 예상 작업 범위, 필요한 개념, 먼저 봐야 할 파일을 안내해줘요.',
         skipBeacon: true,
     },
     {

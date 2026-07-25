@@ -10,7 +10,7 @@ export function CardListSkeleton({
   count = DEFAULT_COUNT,
 }: CardListSkeletonProps) {
   return (
-    <div className={'grid gap-4 sm:grid-cols-2'}>
+    <div className={'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}>
       {Array.from({ length: count }).map((_, index) => (
         <Card key={index} size="sm" className="border border-border py-4">
           <CardContent className="animate-pulse space-y-3">

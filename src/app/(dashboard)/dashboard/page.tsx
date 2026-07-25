@@ -4,6 +4,7 @@ import { IssueList } from '@/components/dashboard/issue/IssueList'
 import { DashboardHelpDialogWrapper } from '@/components/dashboard/dashboard-help/DashboardHelpDialogWrapper'
 import { DashboardReportCard } from '@/components/dashboard/DashboardReportCard'
 import { MainSectionShell } from '@/components/layout/MainSectionShell'
+import { SectionHeading } from '@/components/layout/SectionHeading'
 import { auth } from '@/lib/auth'
 import { createPageMetadata } from '@/lib/metadata'
 import { loadOnboardingProfile } from '@/lib/user/profile'
@@ -26,8 +27,15 @@ export default async function DashboardPage() {
             description="관심사와 현재 수준을 기준으로 시작하기 좋은 이슈를 모아봤습니다."
             actions={session ? <Link href="/onboarding">온보딩 다시하기</Link> : null}
         >
-            {profile && insight ? <DashboardReportCard profile={profile} insight={insight} /> : null}
-            <IssueList isGuest={!session} helpSlot={<DashboardHelpDialogWrapper />} />
+            {profile && insight ? (
+                <div className="flex flex-col gap-4">
+                    <DashboardReportCard profile={profile} insight={insight} />
+                </div>
+            ) : null}
+            <div className="flex flex-col gap-4">
+                <SectionHeading title="추천 이슈" />
+                <IssueList isGuest={!session} helpSlot={<DashboardHelpDialogWrapper />} />
+            </div>
         </MainSectionShell>
     )
 }

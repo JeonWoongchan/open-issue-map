@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { SlidersHorizontal } from 'lucide-react'
 import { CONTRIBUTION_TYPES, EXPERIENCE_LEVELS } from '@/constants/contribution-levels'
 import { SCORE_FILTER_THRESHOLDS, STAR_FILTER_THRESHOLDS } from '@/constants/scoring-rules'
 import { EMPTY_ISSUE_FILTERS } from '@/types/issue'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import type { CompetitionLevel, IssueFilters } from '@/types/issue'
 import type { ContributionType } from '@/types/user'
@@ -96,107 +96,103 @@ export function IssueListFilter({ filters, availableLanguages, onChangeAction }:
     }
 
     return (
-        <Collapsible open={open} onOpenChange={setOpen}>
-            <div className="rounded-xl border border-border/70 bg-background/70">
-                {/* CollapsibleTrigger asChild에 div[role=button] 사용 — 내부 초기화 button 중첩 허용 */}
-                <CollapsibleTrigger asChild>
-                    <div
-                        role="button"
-                        tabIndex={0}
-                        className="group flex cursor-pointer items-center gap-2 h-9 px-3 py-2.5"
-                    >
-                        <span className="shrink-0 text-xs font-bold text-interactive-action">필터</span>
-                        <div className="flex min-w-0 flex-1 gap-1 overflow-hidden">
-                            {activeFilterLabels.map((label) => (
-                                <span
-                                    key={label}
-                                    className="shrink-0 rounded-full border border-interactive-selected-border bg-interactive-selected px-2 text-xs font-medium text-interactive-selected-foreground"
-                                >
-                                    {label}
-                                </span>
-                            ))}
-                        </div>
-                        {activeFilterLabels.length > 0 && (
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    onChangeAction(EMPTY_ISSUE_FILTERS)
-                                }}
-                                className="shrink-0 cursor-pointer text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
-                            >
-                                초기화
-                            </button>
-                        )}
-                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                    </div>
-                </CollapsibleTrigger>
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <button
+                    type="button"
+                    className={cn(
+                        'inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border px-3 text-xs font-semibold transition-colors',
+                        activeFilterLabels.length > 0
+                            ? 'border-interactive-selected-border bg-interactive-selected text-interactive-selected-foreground'
+                            : 'border-interactive-border bg-background text-interactive-action-hover hover:border-interactive-hover-border hover:bg-interactive-hover'
+                    )}
+                >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    필터
+                    {activeFilterLabels.length > 0 ? (
+                        <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-interactive-action px-1 text-[10px] font-bold text-interactive-action-foreground">
+                            {activeFilterLabels.length}
+                        </span>
+                    ) : null}
+                </button>
+            </PopoverTrigger>
 
-                <CollapsibleContent className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
-                    <div className="flex flex-col gap-2 border-t border-border/50 p-4">
-                        <FilterRow label="언어">
-                            {availableLanguages.map((language) => (
-                                <FilterPill
-                                    key={language}
-                                    label={language}
-                                    selected={filters.language === language}
-                                    onClickAction={() => toggle('language', language)}
-                                />
-                            ))}
-                        </FilterRow>
-                        <FilterRow label="난이도">
-                            {EXPERIENCE_LEVELS.map((level) => (
-                                <FilterPill
-                                    key={level.value}
-                                    label={level.label}
-                                    selected={filters.difficultyLevel === level.value}
-                                    onClickAction={() => toggle('difficultyLevel', level.value)}
-                                />
-                            ))}
-                        </FilterRow>
-                        <FilterRow label="기여 방식">
-                            {CONTRIBUTION_TYPES.map((type) => (
-                                <FilterPill
-                                    key={type.value}
-                                    label={type.label}
-                                    selected={filters.contributionTypes.includes(type.value)}
-                                    onClickAction={() => toggleContributionType(type.value)}
-                                />
-                            ))}
-                        </FilterRow>
-                        <FilterRow label="진행 상태">
-                            {COMPETITION_LEVEL_OPTIONS.map((option) => (
-                                <FilterPill
-                                    key={option.value}
-                                    label={option.label}
-                                    selected={filters.competitionLevels.includes(option.value)}
-                                    onClickAction={() => toggleCompetitionLevel(option.value)}
-                                />
-                            ))}
-                        </FilterRow>
-                        <FilterRow label="스타 수">
-                            {STAR_FILTER_THRESHOLDS.map((threshold) => (
-                                <FilterPill
-                                    key={threshold}
-                                    label={`${threshold.toLocaleString()}+`}
-                                    selected={filters.minStars === threshold}
-                                    onClickAction={() => toggle('minStars', threshold)}
-                                />
-                            ))}
-                        </FilterRow>
-                        <FilterRow label="추천 점수">
-                            {SCORE_FILTER_THRESHOLDS.map((threshold) => (
-                                <FilterPill
-                                    key={threshold}
-                                    label={`${threshold}+`}
-                                    selected={filters.minScore === threshold}
-                                    onClickAction={() => toggle('minScore', threshold)}
-                                />
-                            ))}
-                        </FilterRow>
-                    </div>
-                </CollapsibleContent>
-            </div>
-        </Collapsible>
+            <PopoverContent align="end" className="max-h-[70vh] w-80 overflow-y-auto">
+                <div className="mb-3 flex items-center justify-between">
+                    <span className="text-xs font-bold text-interactive-action">필터</span>
+                    {activeFilterLabels.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => onChangeAction(EMPTY_ISSUE_FILTERS)}
+                            className="cursor-pointer text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+                        >
+                            초기화
+                        </button>
+                    )}
+                </div>
+                <div className="flex flex-col gap-2">
+                    <FilterRow label="언어">
+                        {availableLanguages.map((language) => (
+                            <FilterPill
+                                key={language}
+                                label={language}
+                                selected={filters.language === language}
+                                onClickAction={() => toggle('language', language)}
+                            />
+                        ))}
+                    </FilterRow>
+                    <FilterRow label="난이도">
+                        {EXPERIENCE_LEVELS.map((level) => (
+                            <FilterPill
+                                key={level.value}
+                                label={level.label}
+                                selected={filters.difficultyLevel === level.value}
+                                onClickAction={() => toggle('difficultyLevel', level.value)}
+                            />
+                        ))}
+                    </FilterRow>
+                    <FilterRow label="기여 방식">
+                        {CONTRIBUTION_TYPES.map((type) => (
+                            <FilterPill
+                                key={type.value}
+                                label={type.label}
+                                selected={filters.contributionTypes.includes(type.value)}
+                                onClickAction={() => toggleContributionType(type.value)}
+                            />
+                        ))}
+                    </FilterRow>
+                    <FilterRow label="진행 상태">
+                        {COMPETITION_LEVEL_OPTIONS.map((option) => (
+                            <FilterPill
+                                key={option.value}
+                                label={option.label}
+                                selected={filters.competitionLevels.includes(option.value)}
+                                onClickAction={() => toggleCompetitionLevel(option.value)}
+                            />
+                        ))}
+                    </FilterRow>
+                    <FilterRow label="스타 수">
+                        {STAR_FILTER_THRESHOLDS.map((threshold) => (
+                            <FilterPill
+                                key={threshold}
+                                label={`${threshold.toLocaleString()}+`}
+                                selected={filters.minStars === threshold}
+                                onClickAction={() => toggle('minStars', threshold)}
+                            />
+                        ))}
+                    </FilterRow>
+                    <FilterRow label="추천 점수">
+                        {SCORE_FILTER_THRESHOLDS.map((threshold) => (
+                            <FilterPill
+                                key={threshold}
+                                label={`${threshold}+`}
+                                selected={filters.minScore === threshold}
+                                onClickAction={() => toggle('minScore', threshold)}
+                            />
+                        ))}
+                    </FilterRow>
+                </div>
+            </PopoverContent>
+        </Popover>
     )
 }

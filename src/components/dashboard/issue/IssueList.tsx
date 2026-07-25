@@ -78,15 +78,16 @@ export function IssueList({ isGuest, helpSlot }: IssueListProps) {
                     onChangeAction={setQuery}
                     resultCount={query ? filteredItems.length : undefined}
                     totalCount={query ? totalCount : undefined}
+                    filterSlot={
+                        <div id="tour-filter">
+                            <IssueListFilter
+                                filters={filters}
+                                availableLanguages={filterAvailableLanguages}
+                                onChangeAction={setFilters}
+                            />
+                        </div>
+                    }
                     helpSlot={helpSlot}
-                />
-            </div>
-
-            <div id="tour-filter">
-                <IssueListFilter
-                    filters={filters}
-                    availableLanguages={filterAvailableLanguages}
-                    onChangeAction={setFilters}
                 />
             </div>
 
