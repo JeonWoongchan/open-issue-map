@@ -1,8 +1,15 @@
 import { GoogleGenAI } from '@google/genai'
 import { z } from 'zod'
-import type { AiProvider, IssueAnalysis, IssueAnalysisParams } from './types'
+import type {
+    AiProvider,
+    IssueAnalysis,
+    IssueAnalysisParams,
+    OnboardingInsightParams,
+    OnboardingInsightResult,
+} from './types'
 import { cleanIssueBody } from './preprocess'
 import { ANALYSIS_SYSTEM_PROMPT, buildAnalysisPrompt } from './prompt'
+import { ONBOARDING_INSIGHT_SYSTEM_PROMPT, buildOnboardingInsightPrompt } from './onboarding-insight-prompt'
 
 const GEMINI_MODEL = 'gemini-3.1-flash-lite'
 
@@ -14,6 +21,11 @@ const issueAnalysisSchema = z.object({
     startingPoints: z.array(z.string()).min(2).max(3),
     cautions: z.array(z.string()).min(1).max(3),
     difficulty: z.enum(['쉬움', '보통', '어려움']),
+})
+
+// 배열 범위는 ONBOARDING_INSIGHT_SYSTEM_PROMPT의 작성 기준과 동일하게 유지한다
+const onboardingInsightSchema = z.object({
+    adviceItems: z.array(z.string()).min(2).max(4),
 })
 
 export class GeminiProvider implements AiProvider {
@@ -38,5 +50,21 @@ export class GeminiProvider implements AiProvider {
 
         const raw: unknown = JSON.parse(response.text ?? '')
         return issueAnalysisSchema.parse(raw)
+    }
+
+    async generateOnboardingInsight(params: OnboardingInsightParams): Promise<OnboardingInsightResult> {
+        const userPrompt = buildOnboardingInsightPrompt(params)
+
+        const response = await this.client.models.generateContent({
+            model: GEMINI_MODEL,
+            contents: userPrompt,
+            config: {
+                systemInstruction: ONBOARDING_INSIGHT_SYSTEM_PROMPT,
+                responseMimeType: 'application/json',
+            },
+        })
+
+        const raw: unknown = JSON.parse(response.text ?? '')
+        return onboardingInsightSchema.parse(raw)
     }
 }

@@ -1,7 +1,14 @@
 import { GeminiProvider } from './gemini'
 import type { AiProvider } from './types'
 
-export type { AiProvider, IssueAnalysis, IssueAnalysisParams, AnalysisDifficulty } from './types'
+export type {
+    AiProvider,
+    IssueAnalysis,
+    IssueAnalysisParams,
+    AnalysisDifficulty,
+    OnboardingInsightParams,
+    OnboardingInsightResult,
+} from './types'
 
 // 모듈 수준 싱글턴 — 같은 워커 인스턴스 내에서 GoogleGenAI 재생성을 방지한다
 let _provider: AiProvider | null = null

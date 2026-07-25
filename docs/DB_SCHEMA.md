@@ -4,6 +4,7 @@
 
 - `001_initial.sql`: users, user_profiles, bookmarks, repo_health_cache
 - `002_ai_guest_usage.sql`: ai_guest_usage
+- `003_onboarding_insight.sql`: onboarding_insights
 
 ## `users`
 
@@ -44,6 +45,31 @@ GitHub OAuth 사용자의 기본 계정 정보다.
 - 조회: `src/lib/user/profile.ts`, `src/lib/user/my-page.ts`
 - 메인 layout 보호: `getOnboardingStatus()`
 - 추천 이슈: `loadOnboardingProfile()`
+
+## `onboarding_insights`
+
+온보딩 프로필을 AI로 해석한 결과(대시보드 리포트 카드용)를 캐싱한다. 사용자당 최대 1행.
+
+| Column | Type | Constraint | 설명 |
+| --- | --- | --- | --- |
+| `id` | `UUID` | PK, default `gen_random_uuid()` | insight id |
+| `user_id` | `UUID` | FK -> `users(id)`, ON DELETE CASCADE, UNIQUE | 사용자 |
+| `status` | `TEXT` | NOT NULL, CHECK `success \| failed` | AI 생성 성공 여부 |
+| `advice_items` | `JSONB` | nullable | 조언 문자열 배열(2~4개). `failed`일 때는 null |
+| `created_at` | `TIMESTAMPTZ` | default `NOW()` | 최초 생성 시각 |
+| `updated_at` | `TIMESTAMPTZ` | default `NOW()` | 마지막 갱신 시각 |
+
+동작 방식:
+
+- 생성 시점은 온보딩 제출(`POST /api/onboarding`) 단 하나뿐이다 — 대시보드 진입 시점에 새로 생성하지 않는다(비용 통제).
+- 온보딩 제출 시 AI 호출 결과에 따라 `status='success'`(advice_items 채움) 또는 `status='failed'`(null)로 upsert한다. AI 호출 결과와 무관하게 온보딩 저장 자체는 항상 성공 처리한다.
+- 대시보드는 이 테이블을 읽기만 한다: `success`면 그대로 표시, `failed`면 그 자리에서 온보딩 프로필 기준으로 재요청(성공 시 `success`로 갱신) — 재시도 횟수 제한은 두지 않고, 대신 AI 프로바이더(OpenAI/Gemini) 계정 단위 사용량 상한으로 비용을 통제한다. 행 자체가 없으면(온보딩 미완료) 카드를 표시하지 않는다.
+- "이 조합을 선택한 사람이 많다" 같은 문구는 이 서비스의 실제 사용자 통계가 아니라 업계 일반론으로만 작성하도록 프롬프트에 명시한다 — 실사용자 집계 없이 통계처럼 말하지 않는다.
+
+사용 위치:
+
+- 저장: `src/app/api/onboarding/route.ts` (온보딩 제출 시 트리거)
+- 조회/재시도: 대시보드 진입 경로
 
 ## `bookmarks`
 
@@ -133,6 +159,7 @@ GitHub 저장소의 health score 캐시다.
 
 ```text
 users 1 ── 0..1 user_profiles
+users 1 ── 0..1 onboarding_insights
 users 1 ── 0..N bookmarks
 repo_health_cache는 GitHub repo_full_name 기준 독립 캐시
 ai_guest_usage는 비로그인 IP 기준 독립 임시 테이블 (users와 무관)
