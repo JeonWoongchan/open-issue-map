@@ -1,18 +1,18 @@
 import type { Step } from 'react-joyride'
 
 export const TOUR_IDS = {
-    dashboard: 'dashboard',
+    issueExplore: 'issue-explore',
 } as const
 
 export function getTourDoneKey(tourId: string): string {
     return `tour_done_${tourId}`
 }
 
-export const dashboardTourSteps: Step[] = [
+export const issueExploreTourSteps: Step[] = [
     {
         target: '#tour-search',
         title: '이슈 검색',
-        content: '추천 목록에서 이슈명/저장소명으로 검색할 수 있어요.',
+        content: '목록에서 이슈명/저장소명으로 검색할 수 있어요.',
         skipBeacon: true,
     },
     {
@@ -23,8 +23,8 @@ export const dashboardTourSteps: Step[] = [
     },
     {
         target: '#tour-issue-list',
-        title: '추천 이슈',
-        content: '사용자 온보딩 결과를 바탕으로 기여하기 좋은 이슈를 보여드려요. 카드를 클릭하면 자세한 내용을 확인할 수 있어요.',
+        title: '이슈 목록',
+        content: '사용자 온보딩 결과를 참고해 기여하기 좋은 순서로 이슈를 보여드려요. 카드를 클릭하면 자세한 내용을 확인할 수 있어요.',
         skipBeacon: true,
     },
     {

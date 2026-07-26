@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { MainHeader } from '@/components/layout/MainHeader'
-import { DashboardTour } from '@/components/tour/DashboardTour'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
@@ -15,16 +14,13 @@ export default async function DashboardLayout({
     if (session && !session.user.isOnboarded) redirect('/onboarding')
 
     return (
-        <>
-            <DashboardTour />
-            <div className="min-h-screen bg-dashboard-banner">
-                <MainHeader
-                    image={session?.user.image}
-                    name={session?.user.name}
-                    isGuest={!session}
-                />
-                <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
-            </div>
-        </>
+        <div className="min-h-screen bg-dashboard-banner">
+            <MainHeader
+                image={session?.user.image}
+                name={session?.user.name}
+                isGuest={!session}
+            />
+            <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
+        </div>
     )
 }

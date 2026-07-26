@@ -4,16 +4,16 @@ import { useState, useEffect } from 'react'
 import { Joyride, EVENTS } from 'react-joyride'
 import type { EventData } from 'react-joyride'
 import { TourTooltip } from './TourTooltip'
-import { dashboardTourSteps, getTourDoneKey, TOUR_IDS } from '@/constants/tour-steps'
+import { issueExploreTourSteps, getTourDoneKey, TOUR_IDS } from '@/constants/tour-steps'
 
 const TOUR_START_DELAY_MS = 800
-const DASHBOARD_TOUR_KEY = getTourDoneKey(TOUR_IDS.dashboard)
+const ISSUE_EXPLORE_TOUR_KEY = getTourDoneKey(TOUR_IDS.issueExplore)
 
-export function DashboardTour() {
+export function IssueExploreTour() {
     const [run, setRun] = useState(false)
 
     useEffect(() => {
-        if (localStorage.getItem(DASHBOARD_TOUR_KEY)) return
+        if (localStorage.getItem(ISSUE_EXPLORE_TOUR_KEY)) return
 
         const id = setTimeout(() => setRun(true), TOUR_START_DELAY_MS)
         return () => clearTimeout(id)
@@ -21,14 +21,14 @@ export function DashboardTour() {
 
     function handleEvent(data: EventData) {
         if (data.type === EVENTS.TOUR_END) {
-            localStorage.setItem(DASHBOARD_TOUR_KEY, '1')
+            localStorage.setItem(ISSUE_EXPLORE_TOUR_KEY, '1')
             setRun(false)
         }
     }
 
     return (
         <Joyride
-            steps={dashboardTourSteps}
+            steps={issueExploreTourSteps}
             run={run}
             continuous
             scrollToFirstStep={false}

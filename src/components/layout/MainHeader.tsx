@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { signInWithGitHub, signOutToHome } from '@/lib/auth-actions'
 import { SignInButton } from '@/components/shared/SignInButton'
+import { PrimaryNav } from './PrimaryNav'
 import { UserAvatar } from './UserAvatar'
 import { UserMenu } from './UserMenu'
 import { ThemeToggleTemp } from './ThemeToggleTemp'
@@ -19,12 +20,15 @@ export function MainHeader({ image, name, isGuest = false }: MainHeaderProps) {
             className="sticky top-0 z-10 border-b border-border bg-background/85 backdrop-blur-md"
         >
             <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-                <Link
-                    href="/dashboard"
-                    className="text-sm font-semibold tracking-tight text-interactive-action transition-colors hover:text-bookmark-action"
-                >
-                    {SITE_TITLE}
-                </Link>
+                <div className="flex items-center gap-5">
+                    <Link
+                        href="/dashboard"
+                        className="text-sm font-semibold tracking-tight text-interactive-action transition-colors hover:text-bookmark-action"
+                    >
+                        {SITE_TITLE}
+                    </Link>
+                    <PrimaryNav />
+                </div>
                 <div className="flex items-center gap-3">
                     <ThemeToggleTemp />
                     {isGuest ? (

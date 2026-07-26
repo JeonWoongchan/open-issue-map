@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { DashboardHelpDialogWrapper } from '@/components/dashboard/dashboard-help/DashboardHelpDialogWrapper'
-import { DashboardWorkspace } from '@/components/dashboard/DashboardWorkspace'
+import { DashboardReportCard } from '@/components/dashboard/DashboardReportCard'
 import { MainSectionShell } from '@/components/layout/MainSectionShell'
 import { auth } from '@/lib/auth'
 import { createPageMetadata } from '@/lib/metadata'
@@ -28,12 +27,7 @@ export default async function DashboardPage() {
             description="관심사와 현재 수준을 기준으로 시작하기 좋은 이슈를 모아봤습니다."
             actions={session ? <Link href="/onboarding">온보딩 다시하기</Link> : null}
         >
-            <DashboardWorkspace
-                isGuest={!session}
-                helpSlot={<DashboardHelpDialogWrapper />}
-                profile={profile}
-                insight={insight}
-            />
+            {profile && insight ? <DashboardReportCard profile={profile} insight={insight} /> : null}
         </MainSectionShell>
     )
 }

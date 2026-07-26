@@ -20,7 +20,7 @@ type IssueListProps = {
     isGuest: boolean
     // 정적 탭 content를 클라이언트 번들에서 제외하기 위해 Server Component에서 주입
     helpSlot: ReactNode
-    // 대시보드 상단 추천 필터 버튼과 같은 상태를 공유하기 위해 부모(DashboardWorkspace)가 소유·전달한다
+    // 상단 필터 버튼과 같은 상태를 공유하기 위해 부모(IssueExploreWorkspace)가 소유·전달한다
     filters: IssueFilters
     onFiltersChangeAction: (filters: IssueFilters) => void
 }
@@ -67,7 +67,7 @@ export function IssueList({ isGuest, helpSlot, filters, onFiltersChangeAction }:
                     <span>지금은 기본 추천 이슈를 보여드리고 있어요.</span>
                     <button
                         type="button"
-                        onClick={() => void signIn('github', { callbackUrl: '/dashboard' })}
+                        onClick={() => void signIn('github', { callbackUrl: '/issues' })}
                         className="font-medium text-interactive-action underline-offset-4 hover:underline"
                     >
                         로그인하고 나에게 맞는 이슈를 추천받아보세요.
@@ -103,7 +103,7 @@ export function IssueList({ isGuest, helpSlot, filters, onFiltersChangeAction }:
                     description: '온보딩 설정이나 GitHub 조회 결과에 따라 지금은 보여드릴 추천 이슈가 없습니다.',
                     detail: '온보딩 설정을 다시 확인하거나 잠시 후 다시 시도해 주세요.',
                     action: isGuest
-                        ? <button type="button" onClick={() => void signIn('github', { callbackUrl: '/dashboard' })}>로그인하여 맞춤 추천 받기</button>
+                        ? <button type="button" onClick={() => void signIn('github', { callbackUrl: '/issues' })}>로그인하여 맞춤 추천 받기</button>
                         : <Link href="/onboarding">온보딩 다시하기</Link>,
                 }}
                 isPending={isPending}
