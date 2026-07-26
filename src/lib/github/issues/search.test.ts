@@ -48,6 +48,24 @@ describe('fetchCandidateIssues', () => {
     expect(result.hasMoreOnGithub).toBe(true)
   })
 
+  it('sort 인자를 넘기면 쿼리의 sort qualifier가 바뀐다', async () => {
+    mockGraphQL.mockResolvedValueOnce(makeSearchPage([]))
+
+    await fetchCandidateIssues(['TypeScript'], 'token', null, 50, 'reactions-desc')
+
+    const [, variables] = mockGraphQL.mock.calls[0] as unknown as [string, { query: string }]
+    expect(variables.query).toBe('is:open is:issue label:"help wanted" language:TypeScript sort:reactions-desc')
+  })
+
+  it('sort 인자를 생략하면 기존과 동일하게 updated-desc를 쓴다', async () => {
+    mockGraphQL.mockResolvedValueOnce(makeSearchPage([]))
+
+    await fetchCandidateIssues(['TypeScript'], 'token', null, 30)
+
+    const [, variables] = mockGraphQL.mock.calls[0] as unknown as [string, { query: string }]
+    expect(variables.query).toContain('sort:updated-desc')
+  })
+
   it('after cursor를 그대로 전달한다', async () => {
     mockGraphQL.mockResolvedValueOnce(makeSearchPage([]))
 

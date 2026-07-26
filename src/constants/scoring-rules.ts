@@ -8,8 +8,14 @@ export const PAGE_SIZE = 10
 // AI 분석 요청 시 전송할 이슈 본문 최대 길이
 export const ISSUE_BODY_PREVIEW_LENGTH = 500
 export const MATCH_SCORE_MINIMUM = 0
-// 추천 목록에 노출할 최소 점수 — 미달 이슈는 랭킹 단계에서 제거
+// 이슈 목록에 노출할 최소 점수 — 미달 이슈는 랭킹 단계에서 제거
 export const RANK_SCORE_THRESHOLD = 50
+// 추천 이슈 페이지의 큐레이션 캐러셀에 노출할 최소 점수 — 탐색 목록보다 훨씬 엄격하게 잡아
+// 조건당 표본(RECOMMENDATION_FETCH_SIZE)이 적어도 상위권만 남긴다
+export const RECOMMENDATION_SCORE_THRESHOLD = 70
+// 추천 이슈 페이지가 조회 조건 1개당 GitHub에서 가져오는 표본 크기 — 캐싱 없이 매번 라이브 조회하므로
+// 응답 시간을 짧게 유지하기 위해 탐색 목록의 배치 크기보다 작게 잡는다
+export const RECOMMENDATION_FETCH_SIZE = 50
 // 이슈 데이터 캐시 TTL — 추천 목적상 실시간 반영보다 rate limit 절약과 재방문 UX를 우선해 30분으로 설정
 export const GITHUB_API_CACHE_TTL_SECONDS = 1800
 // 배치 시작 시 즉시 보여줄 분량 — 사용자가 직접 기다리는 유일한 요청이므로 작게 유지

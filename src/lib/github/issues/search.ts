@@ -65,9 +65,9 @@ export type IssueSearchResult = {
 // 여러 언어를 하나의 쿼리에 담는다 — GitHub search는 OR 키워드를 지원하지 않지만
 // 같은 qualifier(language:)를 여러 번 나열하면 자동으로 OR로 해석한다.
 // 언어 개수와 무관하게 항상 요청 1개로 고정되어 GitHub secondary rate limit 위험을 줄인다.
-function buildIssueQuery(languages: string[]): string {
+function buildIssueQuery(languages: string[], sort: string): string {
     const languageQualifiers = languages.map((lang) => `language:${lang}`).join(' ')
-    return `is:open is:issue label:"help wanted" ${languageQualifiers} sort:updated-desc`
+    return `is:open is:issue label:"help wanted" ${languageQualifiers} sort:${sort}`
 }
 
 // URL 기준 중복 이슈 제거
@@ -91,20 +91,21 @@ export async function fetchCandidateIssues(
     languages: string[],
     accessToken: string,
     after: string | null,
-    first: number
+    first: number,
+    sort = 'updated-desc'
 ): Promise<IssueSearchResult> {
     if (languages.length === 0) {
         return { issues: [], endCursor: null, hasMoreOnGithub: false }
     }
 
-    const query = buildIssueQuery(languages)
+    const query = buildIssueQuery(languages, sort)
 
     let result: SearchResult
     try {
         result = await searchIssues(query, first, after, accessToken)
     } catch (error) {
-        // sort:updated-desc는 실시간으로 바뀌는 결과셋이라 예전에 발급된 커서가 나중엔
-        // 무효화될 수 있다 — 이 경우 첫 페이지부터 다시 조회해 캐싱 목적을 유지한다.
+        // 정렬 기준이 실시간으로 바뀌는 결과셋(예: updated-desc)이면 예전에 발급된 커서가
+        // 나중엔 무효화될 수 있다 — 이 경우 첫 페이지부터 다시 조회해 캐싱 목적을 유지한다.
         if (error instanceof GitHubInvalidCursorError && after !== null) {
             result = await searchIssues(query, first, null, accessToken)
         } else {

@@ -100,6 +100,17 @@ describe('rankIssues — 최소 점수 필터', () => {
 
         expect(result).toHaveLength(0)
     })
+
+    it('minScore를 넘기면 기본 RANK_SCORE_THRESHOLD 대신 그 값으로 필터링한다', () => {
+        mockScore
+            .mockReturnValueOnce(makeScoredIssue({ number: 1, url: 'https://url/1', score: 69 }))
+            .mockReturnValueOnce(makeScoredIssue({ number: 2, url: 'https://url/2', score: 70 }))
+
+        const result = rankIssues([makeRawIssue({ number: 1 }), makeRawIssue({ number: 2 })], profile, 70)
+
+        expect(result).toHaveLength(1)
+        expect(result[0].number).toBe(2)
+    })
 })
 
 describe('rankIssues — contributionType 점수 반영', () => {

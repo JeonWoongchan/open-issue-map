@@ -7,8 +7,9 @@ import type { OnboardingProfile } from '@/lib/user/profile'
 export function rankIssues(
   rawIssues: RawIssue[],
   profile: OnboardingProfile,
+  minScore: number = RANK_SCORE_THRESHOLD,
 ): ScoredIssue[] {
   return rawIssues
     .map((rawIssue) => scoreIssue(rawIssue, profile))
-    .filter((issue) => issue.score >= RANK_SCORE_THRESHOLD)
+    .filter((issue) => issue.score >= minScore)
 }
