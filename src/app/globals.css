@@ -159,8 +159,14 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
 
   /* 그라데이션 토큰 */
   --gradient-dashboard-banner: radial-gradient(120% 60% at 50% 0%, color-mix(in oklab, var(--interactive-action) 14%, transparent), transparent 70%);
-  --gradient-report-card: linear-gradient(160deg, var(--brand-subtle), transparent 60%);
+  /* 압축형 인사이트 카드(짧고 넓은 가로 막대)에 맞춘 그라데이션 — 좌상단 모서리를
+     원점으로 잡아 우하단으로 옅어지게 한다 */
+  --gradient-report-card: radial-gradient(60% 200% at 0% 0%, var(--brand-subtle), transparent 70%);
   --gradient-card-spotlight: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), var(--brand-subtle), transparent 70%);
+
+  /* AiMascot 배색 — 액센트(--interactive-action)와 카드 배경을 섞어 테마별로 자동 파생 */
+  --mascot-body: color-mix(in oklch, var(--interactive-action) 14%, var(--card));
+  --mascot-screen: color-mix(in oklch, var(--interactive-action) 26%, var(--card));
 }
 
 .dark {
@@ -238,6 +244,18 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
   background: var(--gradient-report-card), var(--card);
 }
 
+/* 추천 필터 프리셋 버튼 배경 — --icon-color는 각 버튼이 인라인 스타일로 지정한다.
+   아이콘마다 색이 달라야 해서 고정 accent 대신 버튼별 CSS 변수를 우려낸 배경을 쓴다. */
+@utility filter-preset-btn {
+  position: relative;
+  &:hover {
+    background: color-mix(in oklch, var(--icon-color, var(--interactive-action)) 8%, transparent);
+  }
+  &[aria-pressed='true'] {
+    background: color-mix(in oklch, var(--icon-color, var(--interactive-action)) 14%, transparent);
+  }
+}
+
 /* 카드 위에서 마우스를 따라다니는 스포트라이트 글로우. --mx/--my는 CardShell이
    mousemove 핸들러로 직접 DOM에 기록한다(리렌더 없이 갱신하기 위함). */
 @utility card-spotlight {
@@ -254,6 +272,16 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
   &:hover::before {
     opacity: 1;
   }
+}
+
+@keyframes mascot-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes mascot-antenna-pulse {
+  0%, 100% { opacity: 0.55; r: 4.5; }
+  50% { opacity: 1; r: 5.5; }
 }
 
 @layer base {

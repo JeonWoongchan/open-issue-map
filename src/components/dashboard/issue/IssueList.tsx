@@ -9,7 +9,6 @@ import { InfiniteScrollTrigger } from '@/components/shared/InfiniteScrollTrigger
 import { useIssueListView } from '@/hooks/useIssueListView'
 import { useResponsiveColumnCount } from '@/hooks/useResponsiveColumnCount'
 import { useToast } from '@/hooks/use-toast'
-import { EMPTY_ISSUE_FILTERS } from '@/types/issue'
 import type { IssueFilters, IssueCardItem } from '@/types/issue'
 import { IssueCandidateLoadMoreNotice } from './IssueCandidateLoadMoreNotice'
 import { IssueListContent } from './IssueListContent'
@@ -21,10 +20,12 @@ type IssueListProps = {
     isGuest: boolean
     // 정적 탭 content를 클라이언트 번들에서 제외하기 위해 Server Component에서 주입
     helpSlot: ReactNode
+    // 대시보드 상단 추천 필터 버튼과 같은 상태를 공유하기 위해 부모(DashboardWorkspace)가 소유·전달한다
+    filters: IssueFilters
+    onFiltersChangeAction: (filters: IssueFilters) => void
 }
 
-export function IssueList({ isGuest, helpSlot }: IssueListProps) {
-    const [filters, setFilters] = useState<IssueFilters>(EMPTY_ISSUE_FILTERS)
+export function IssueList({ isGuest, helpSlot, filters, onFiltersChangeAction }: IssueListProps) {
     const [query, setQuery] = useState('')
     const { toast } = useToast()
     const columnCount = useResponsiveColumnCount()
@@ -85,7 +86,7 @@ export function IssueList({ isGuest, helpSlot }: IssueListProps) {
                             <IssueListFilter
                                 filters={filters}
                                 availableLanguages={filterAvailableLanguages}
-                                onChangeAction={setFilters}
+                                onChangeAction={onFiltersChangeAction}
                             />
                         </div>
                     }
