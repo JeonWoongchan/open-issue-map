@@ -1,36 +1,24 @@
 'use client'
 
-import { useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { RecommendationCondition } from '@/constants/recommendation'
-import { refreshRecommendations } from '@/lib/recommendation-actions'
 import { cn } from '@/lib/utils'
 
 type RecommendationRefreshButtonProps = {
-  condition: RecommendationCondition
+  isPending: boolean
+  onRefresh: () => void
 }
 
-export function RecommendationRefreshButton({ condition }: RecommendationRefreshButtonProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-
-  function handleClick() {
-    startTransition(async () => {
-      // 서버 캐시(unstable_cache) 태그를 먼저 무효화한 뒤 재실행해야 새로운 조합이 계산된다 —
-      // router.refresh()만 부르면 캐시가 안 무효화된 상태라 같은 결과가 그대로 다시 나온다.
-      await refreshRecommendations(condition)
-      router.refresh()
-    })
-  }
-
+// isPending/onRefresh를 상위(RecommendationRailShell)에서 받는 제어 컴포넌트로 유지한다 —
+// 카드 영역의 로딩 표시(RecommendationSearchingState)와 같은 isPending을 공유해야 해서
+// 이 버튼이 자체적으로 useTransition을 소유하면 두 상태가 어긋난다.
+export function RecommendationRefreshButton({ isPending, onRefresh }: RecommendationRefreshButtonProps) {
   return (
     <Button
       type="button"
       variant="ghost"
       size="icon-sm"
-      onClick={handleClick}
+      onClick={onRefresh}
       disabled={isPending}
       aria-label="이 레일 새로 추천받기"
     >

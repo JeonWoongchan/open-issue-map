@@ -1,7 +1,5 @@
 import { unstable_cache } from 'next/cache'
-import { Clock, Flame } from 'lucide-react'
-import { Separator } from '@/components/ui/separator'
-import { RECOMMENDATION_CONDITION_META, type RecommendationCondition } from '@/constants/recommendation'
+import type { RecommendationCondition } from '@/constants/recommendation'
 import {
   GITHUB_API_CACHE_TTL_SECONDS,
   RECOMMENDATION_PAGE_COUNT,
@@ -13,12 +11,7 @@ import { withSingleFlight } from '@/lib/singleflight'
 import type { OnboardingProfile } from '@/lib/user/profile'
 import type { IssueCardItem } from '@/types/issue'
 import { RecommendationCarousel } from './RecommendationCarousel'
-import { RecommendationRefreshButton } from './RecommendationRefreshButton'
-
-const CONDITION_ICONS: Record<RecommendationCondition, typeof Clock> = {
-  latest: Clock,
-  popular: Flame,
-}
+import { RecommendationRailShell } from './RecommendationRailShell'
 
 type RecommendationRailProps = {
   condition: RecommendationCondition
@@ -29,9 +22,6 @@ type RecommendationRailProps = {
 }
 
 export async function RecommendationRail({ condition, profile, accessToken, userId, isGuest }: RecommendationRailProps) {
-  const meta = RECOMMENDATION_CONDITION_META[condition]
-  const Icon = CONDITION_ICONS[condition]
-
   // 새로고침해도 유지되도록 서버 캐시(Next.js Data Cache)에 저장한다 — 조건당 후보 풀 조회가
   // 대용량이라 매 방문마다 다시 기다리게 할 수 없음. "새로 추천받기"를 눌러야만
   // recommendation-actions.ts의 Server Action이 태그를 revalidate해서 다시 계산된다.
@@ -70,19 +60,7 @@ export async function RecommendationRail({ condition, profile, accessToken, user
   }
 
   return (
-    <section className="flex flex-col gap-3.5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <span className="flex items-center gap-1.5 text-xs font-bold tracking-wide text-interactive-action uppercase">
-            <Icon className="size-3.5" />
-            {meta.eyebrow}
-          </span>
-          <h2 className="text-base font-bold">{meta.title}</h2>
-          <p className="text-xs text-muted-foreground">{meta.description}</p>
-        </div>
-        <RecommendationRefreshButton condition={condition} />
-      </div>
-      <Separator />
+    <RecommendationRailShell condition={condition}>
       {fetchFailed ? (
         <p className="w-fit rounded-lg border border-status-danger-border bg-status-danger px-3 py-2 text-xs text-status-danger-foreground">
           지금은 GitHub에서 이 조건을 불러오지 못했어요. 잠시 후 &quot;새로 추천받기&quot;로 다시 시도해 주세요.
@@ -94,6 +72,6 @@ export async function RecommendationRail({ condition, profile, accessToken, user
           이번 프로필 조건에는 이 카테고리가 잘 맞지 않아요 — 표본 {RECOMMENDATION_PAGE_SIZE * RECOMMENDATION_PAGE_COUNT}건 중 조건을 통과한 이슈가 없어요.
         </p>
       )}
-    </section>
+    </RecommendationRailShell>
   )
 }

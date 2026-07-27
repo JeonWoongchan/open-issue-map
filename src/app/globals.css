@@ -284,6 +284,70 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
   50% { opacity: 1; r: 5.5; }
 }
 
+/* 추천 레일 "새로 추천받기" 진행 중 상태 — 돋보기가 위아래로 통통 튀고, 바닥 그림자가
+   착지 타이밍에 맞춰 눌리며, 반짝임 2개가 튈 때마다 깜빡인다. */
+@keyframes recommendation-search-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes recommendation-search-shadow {
+  0%, 100% { transform: scaleX(1); opacity: 0.13; }
+  50% { transform: scaleX(0.5); opacity: 0.06; }
+}
+
+@keyframes recommendation-search-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  18% { opacity: 1; transform: scale(1) rotate(20deg); }
+  36% { opacity: 0; transform: scale(0.4) rotate(35deg); }
+}
+
+/* 앞 문구 4개는 각자 3초 동안 한 번만 나타났다 사라진다(반복 없음) — animation-delay를
+   0/3/6/9초로 줘서 순서대로 등장하고, iteration-count:1 + forwards라 다시 처음으로
+   안 돌아간다. 마지막 5번째("좀 오래 걸리고 있어요") 문구는 별도 애니메이션(-final)으로
+   12초 시점에 나타난 뒤 사라지지 않고 계속 떠 있는다. */
+@keyframes recommendation-search-copy-cycle {
+  0% { opacity: 0; transform: translateY(4px); }
+  12% { opacity: 1; transform: translateY(0); }
+  88% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes recommendation-search-copy-hold {
+  0% { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@utility recommendation-searching-icon {
+  transform-origin: 50% 100%;
+  animation: recommendation-search-bob 1.05s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@utility recommendation-searching-shadow {
+  animation: recommendation-search-shadow 1.05s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@utility recommendation-searching-sparkle {
+  animation: recommendation-search-twinkle 1.05s ease-in-out infinite;
+}
+
+@utility recommendation-searching-copy {
+  opacity: 0;
+  animation: recommendation-search-copy-cycle 3s ease-in-out 1 forwards;
+}
+
+/* 4번째(마지막 순환) 문구만 6초 동안 떠 있는다 — 9~15초를 채워서 마지막 문구("오래
+   걸리고 있어요")가 정확히 15초 시점부터 나오게 하고, 그사이 빈 문구 구간이 없게 한다. */
+@utility recommendation-searching-copy-slow {
+  opacity: 0;
+  animation: recommendation-search-copy-cycle 6s ease-in-out 1 forwards;
+}
+
+@utility recommendation-searching-copy-final {
+  opacity: 0;
+  animation: recommendation-search-copy-hold 0.6s ease-out 1 forwards;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
