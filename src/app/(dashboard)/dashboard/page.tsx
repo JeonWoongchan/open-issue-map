@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import { Suspense } from 'react'
 import { DashboardReportCard } from '@/components/dashboard/DashboardReportCard'
-import { RecommendationRails } from '@/components/dashboard/recommendation/RecommendationRails'
+import { RecommendationRail } from '@/components/dashboard/recommendation/RecommendationRail'
+import { RecommendationRailSkeleton } from '@/components/dashboard/recommendation/RecommendationRailSkeleton'
 import { MainSectionShell } from '@/components/layout/MainSectionShell'
 import { GUEST_ONBOARDING_PROFILE } from '@/constants/guest-profile'
+import { RECOMMENDATION_CONDITIONS } from '@/constants/recommendation'
 import { auth } from '@/lib/auth'
 import { getServerAccessToken } from '@/lib/auth-utils'
 import { createPageMetadata } from '@/lib/metadata'
@@ -30,15 +32,25 @@ export default async function DashboardPage() {
         <MainSectionShell
             title="추천 이슈"
             description="관심사와 현재 수준을 기준으로 시작하기 좋은 이슈를 모아봤습니다."
-            actions={session ? <Link href="/onboarding">온보딩 다시하기</Link> : null}
         >
             {profile && insight ? <DashboardReportCard profile={profile} insight={insight} /> : null}
-            <RecommendationRails
-                profile={profile ?? GUEST_ONBOARDING_PROFILE}
-                accessToken={accessToken}
-                userId={session?.user.id ?? null}
-                isGuest={!session}
-            />
+            {accessToken ? (
+                <div className="flex flex-col gap-8">
+                    {RECOMMENDATION_CONDITIONS.map((condition) => (
+                        <Suspense key={condition} fallback={<RecommendationRailSkeleton />}>
+                            <RecommendationRail
+                                condition={condition}
+                                profile={profile ?? GUEST_ONBOARDING_PROFILE}
+                                accessToken={accessToken}
+                                userId={session?.user.id ?? null}
+                                isGuest={!session}
+                            />
+                        </Suspense>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-sm text-muted-foreground">GitHub 연동에 문제가 있어 추천 이슈를 불러오지 못했어요.</p>
+            )}
         </MainSectionShell>
     )
 }

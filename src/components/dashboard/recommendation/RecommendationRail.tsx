@@ -1,12 +1,19 @@
+import { unstable_cache } from 'next/cache'
 import { Clock, Flame } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { RECOMMENDATION_CONDITION_META, type RecommendationCondition } from '@/constants/recommendation'
-import { RECOMMENDATION_PAGE_COUNT, RECOMMENDATION_PAGE_SIZE } from '@/constants/scoring-rules'
+import {
+  GITHUB_API_CACHE_TTL_SECONDS,
+  RECOMMENDATION_PAGE_COUNT,
+  RECOMMENDATION_PAGE_SIZE,
+} from '@/constants/scoring-rules'
 import { listUserBookmarkKeys } from '@/lib/bookmarks'
-import { fetchRecommendedIssues } from '@/lib/github/issues/recommendations'
+import { buildRecommendationCacheTag, fetchRecommendedIssues } from '@/lib/github/issues/recommendations'
+import { withSingleFlight } from '@/lib/singleflight'
 import type { OnboardingProfile } from '@/lib/user/profile'
 import type { IssueCardItem } from '@/types/issue'
 import { RecommendationCarousel } from './RecommendationCarousel'
+import { RecommendationRefreshButton } from './RecommendationRefreshButton'
 
 const CONDITION_ICONS: Record<RecommendationCondition, typeof Clock> = {
   latest: Clock,
@@ -25,6 +32,22 @@ export async function RecommendationRail({ condition, profile, accessToken, user
   const meta = RECOMMENDATION_CONDITION_META[condition]
   const Icon = CONDITION_ICONS[condition]
 
+  // 새로고침해도 유지되도록 서버 캐시(Next.js Data Cache)에 저장한다 — 조건당 후보 풀 조회가
+  // 대용량이라 매 방문마다 다시 기다리게 할 수 없음. "새로 추천받기"를 눌러야만
+  // recommendation-actions.ts의 Server Action이 태그를 revalidate해서 다시 계산된다.
+  const cacheUserId = userId ?? 'guest'
+  const sortedLanguages = profile.topLanguages.slice().sort()
+  const cacheKeyParts = ['recommendation-issues', cacheUserId, condition, ...sortedLanguages]
+
+  // accessToken은 클로저로만 캡처하고 캐시된 함수의 인자로는 넘기지 않는다 — 인자로 넘기면
+  // unstable_cache가 그 값을 캐시 키 계산에 자동으로 포함시켜, 같은 유저·조건이라도 토큰이
+  // 바뀔 때마다 캐시가 갈라진다(readme.ts의 getContributingGuide가 겪은 것과 같은 함정).
+  const getCachedIssues = unstable_cache(
+    () => fetchRecommendedIssues(condition, profile, accessToken),
+    cacheKeyParts,
+    { revalidate: GITHUB_API_CACHE_TTL_SECONDS, tags: [buildRecommendationCacheTag(cacheUserId, condition)] }
+  )
+
   // GitHub 쪽 일시적 오류(rate limit, resource limit, timeout 등)로 조건 하나가 실패해도
   // 페이지 전체가 죽지 않도록 이 레일만 격리해서 처리한다.
   let issues: IssueCardItem[] = []
@@ -32,7 +55,7 @@ export async function RecommendationRail({ condition, profile, accessToken, user
 
   try {
     const [scoredIssues, bookmarkKeys] = await Promise.all([
-      fetchRecommendedIssues(condition, profile, accessToken),
+      withSingleFlight(cacheKeyParts.join('::'), getCachedIssues),
       userId ? listUserBookmarkKeys(userId) : Promise.resolve([]),
     ])
 
@@ -48,13 +71,16 @@ export async function RecommendationRail({ condition, profile, accessToken, user
 
   return (
     <section className="flex flex-col gap-3.5">
-      <div className="flex flex-col gap-1">
-        <span className="flex items-center gap-1.5 text-xs font-bold tracking-wide text-interactive-action uppercase">
-          <Icon className="size-3.5" />
-          {meta.eyebrow}
-        </span>
-        <h2 className="text-base font-bold">{meta.title}</h2>
-        <p className="text-xs text-muted-foreground">{meta.description}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <span className="flex items-center gap-1.5 text-xs font-bold tracking-wide text-interactive-action uppercase">
+            <Icon className="size-3.5" />
+            {meta.eyebrow}
+          </span>
+          <h2 className="text-base font-bold">{meta.title}</h2>
+          <p className="text-xs text-muted-foreground">{meta.description}</p>
+        </div>
+        <RecommendationRefreshButton condition={condition} />
       </div>
       <Separator />
       {fetchFailed ? (

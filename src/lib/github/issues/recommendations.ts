@@ -90,7 +90,16 @@ async function fetchCandidatePool(
   return dedupeIssues(pool)
 }
 
-// 추천 이슈 페이지 전용 조회 — 캐싱 없이 매번 라이브로 조건당 표본을 가져와 채점하고,
+// 추천 이슈 캐시를 레일(조건) 단위로 무효화하기 위한 태그 — 레일별 새로고침 버튼이
+// 다른 레일까지 같이 무효화하지 않도록 condition을 키에 포함한다.
+// RecommendationRail의 unstable_cache와 "새로 추천받기" Server Action(revalidateTag)이
+// 같은 문자열을 써야 하므로 여기 한 곳에서만 만든다.
+export function buildRecommendationCacheTag(cacheUserId: string, condition: RecommendationCondition): string {
+  return `recommendations:${cacheUserId}:${condition}`
+}
+
+// 추천 이슈 페이지 전용 조회 — 이 함수 자체는 캐시를 모르는 순수 함수다.
+// 새로고침해도 결과가 유지되도록 하는 캐싱(unstable_cache)은 호출부인 RecommendationRail.tsx가 담당한다.
 export async function fetchRecommendedIssues(
   condition: RecommendationCondition,
   profile: OnboardingProfile,
