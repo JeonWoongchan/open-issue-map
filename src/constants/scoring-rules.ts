@@ -21,6 +21,8 @@ export const RECOMMENDATION_PAGE_COUNT = 3
 // 캐러셀 한 레일에서 같은 저장소가 노출되는 최대 개수 — 활발한 저장소 하나가 레일을 독점하는 것을 막는다.
 // 저장소당 후보가 이 값보다 많으면 그중 무작위로 골라, "새로 추천받기"를 눌렀을 때 같은 조합만 반복되지 않게 한다
 export const RECOMMENDATION_MAX_PER_REPO = 3
+// 추천 이슈 레일 하나에 최종 노출할 최대 개수
+export const RECOMMENDATION_DISPLAY_LIMIT = 15
 // 이슈 데이터 캐시 TTL — 추천 목적상 실시간 반영보다 rate limit 절약과 재방문 UX를 우선해 30분으로 설정
 export const GITHUB_API_CACHE_TTL_SECONDS = 1800
 // 배치 시작 시 즉시 보여줄 분량 — 사용자가 직접 기다리는 유일한 요청이므로 작게 유지

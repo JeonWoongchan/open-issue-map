@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { capIssuesPerRepo, fetchRecommendedIssues } from '@/lib/github/issues/recommendations'
 import {
+    RECOMMENDATION_DISPLAY_LIMIT,
     RECOMMENDATION_PAGE_COUNT,
     RECOMMENDATION_PAGE_SIZE,
     RECOMMENDATION_SCORE_THRESHOLD,
@@ -129,6 +130,36 @@ describe('fetchRecommendedIssues', () => {
 
         expect(mockRank).toHaveBeenCalledWith(rawIssues, profile, RECOMMENDATION_SCORE_THRESHOLD)
         expect(result).toEqual(scoredIssues)
+    })
+
+    it('저장소당 캡을 통과한 후보가 RECOMMENDATION_DISPLAY_LIMIT보다 많으면 무작위로 그 개수만큼만 남긴다', async () => {
+        // 저장소를 전부 다르게 둬서 capIssuesPerRepo(저장소당 캡)에는 안 걸리고
+        // 이 단계(전체 개수 제한)만 단독으로 검증한다.
+        const manyIssues = Array.from(
+            { length: RECOMMENDATION_DISPLAY_LIMIT + 5 },
+            (_, i) => ({ number: i, repoFullName: `owner/repo-${i}`, score: 80 }) as ScoredIssue,
+        )
+        mockFetch.mockResolvedValueOnce(makePage(rawIssues, false, null))
+        mockRank.mockReturnValueOnce(manyIssues)
+
+        const result = await fetchRecommendedIssues('latest', profile, 'token')
+
+        expect(result).toHaveLength(RECOMMENDATION_DISPLAY_LIMIT)
+        result.forEach((issue) => expect(manyIssues).toContainEqual(issue))
+    })
+
+    it('후보가 RECOMMENDATION_DISPLAY_LIMIT 이하면 전부 반환한다', async () => {
+        const fewIssues = Array.from(
+            { length: 3 },
+            (_, i) => ({ number: i, repoFullName: `owner/repo-${i}`, score: 80 }) as ScoredIssue,
+        )
+        mockFetch.mockResolvedValueOnce(makePage(rawIssues, false, null))
+        mockRank.mockReturnValueOnce(fewIssues)
+
+        const result = await fetchRecommendedIssues('latest', profile, 'token')
+
+        expect(result).toHaveLength(3)
+        expect(result).toEqual(expect.arrayContaining(fewIssues))
     })
 })
 

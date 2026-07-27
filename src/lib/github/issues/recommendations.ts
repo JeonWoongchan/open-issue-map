@@ -1,5 +1,6 @@
 import { RECOMMENDATION_CONDITION_META, type RecommendationCondition } from '@/constants/recommendation'
 import {
+  RECOMMENDATION_DISPLAY_LIMIT,
   RECOMMENDATION_MAX_PER_REPO,
   RECOMMENDATION_PAGE_COUNT,
   RECOMMENDATION_PAGE_SIZE,
@@ -113,5 +114,7 @@ export async function fetchRecommendedIssues(
   const issues = condition === 'popular' ? filterByMinStars(pool, POPULAR_MIN_STARS) : pool
 
   const rankedIssues = rankIssues(issues, profile, RECOMMENDATION_SCORE_THRESHOLD)
-  return capIssuesPerRepo(rankedIssues, RECOMMENDATION_MAX_PER_REPO)
+  const cappedIssues = capIssuesPerRepo(rankedIssues, RECOMMENDATION_MAX_PER_REPO)
+  // 저장소당 캡을 다 통과해도 후보가 DISPLAY_LIMIT보다 많으면 다시 무작위로 추려낸다 —
+  return sampleRandom(cappedIssues, RECOMMENDATION_DISPLAY_LIMIT)
 }
