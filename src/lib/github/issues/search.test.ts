@@ -66,6 +66,15 @@ describe('fetchCandidateIssues', () => {
     expect(variables.query).toContain('sort:updated-desc')
   })
 
+  it('extraQualifiers를 넘기면 쿼리에 그대로 추가된다', async () => {
+    mockGraphQL.mockResolvedValueOnce(makeSearchPage([]))
+
+    await fetchCandidateIssues(['TypeScript'], 'token', null, 50, 'reactions-desc', 'created:>=2024-01-01')
+
+    const [, variables] = mockGraphQL.mock.calls[0] as unknown as [string, { query: string }]
+    expect(variables.query).toBe('is:open is:issue label:"help wanted" language:TypeScript created:>=2024-01-01 sort:reactions-desc')
+  })
+
   it('after cursor를 그대로 전달한다', async () => {
     mockGraphQL.mockResolvedValueOnce(makeSearchPage([]))
 

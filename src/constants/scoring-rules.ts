@@ -10,12 +10,17 @@ export const ISSUE_BODY_PREVIEW_LENGTH = 500
 export const MATCH_SCORE_MINIMUM = 0
 // 이슈 목록에 노출할 최소 점수 — 미달 이슈는 랭킹 단계에서 제거
 export const RANK_SCORE_THRESHOLD = 50
-// 추천 이슈 페이지의 큐레이션 캐러셀에 노출할 최소 점수 — 탐색 목록보다 훨씬 엄격하게 잡아
-// 조건당 표본(RECOMMENDATION_FETCH_SIZE)이 적어도 상위권만 남긴다
+// 추천 이슈 페이지의 큐레이션 캐러셀에 노출할 최소 점수
 export const RECOMMENDATION_SCORE_THRESHOLD = 70
-// 추천 이슈 페이지가 조회 조건 1개당 GitHub에서 가져오는 표본 크기 — 캐싱 없이 매번 라이브 조회하므로
-// 응답 시간을 짧게 유지하기 위해 탐색 목록의 배치 크기보다 작게 잡는다
-export const RECOMMENDATION_FETCH_SIZE = 50
+// 추천 이슈 페이지가 조회 조건 1개당 GitHub에 요청하는 페이지 크기(GraphQL first)
+export const RECOMMENDATION_PAGE_SIZE = 100
+// 조건 1개당 순차로 가져올 페이지 수 — 커서 페이지네이션이라 병렬화가 안 돼 조건 수만큼 그대로 곱해진다.
+// 10으로 뒀을 때 조건 2개(latest+popular) 기준 최대 20회 순차 GraphQL 호출이 발생해
+// GitHub 2차(버스트) 레이트리밋에 걸리고 페이지 로드도 20~30초 이상 걸렸다 — 3으로 낮춰 최대 6회로 제한한다
+export const RECOMMENDATION_PAGE_COUNT = 3
+// 캐러셀 한 레일에서 같은 저장소가 노출되는 최대 개수 — 활발한 저장소 하나가 레일을 독점하는 것을 막는다.
+// 저장소당 후보가 이 값보다 많으면 그중 무작위로 골라, "새로 추천받기"를 눌렀을 때 같은 조합만 반복되지 않게 한다
+export const RECOMMENDATION_MAX_PER_REPO = 3
 // 이슈 데이터 캐시 TTL — 추천 목적상 실시간 반영보다 rate limit 절약과 재방문 UX를 우선해 30분으로 설정
 export const GITHUB_API_CACHE_TTL_SECONDS = 1800
 // 배치 시작 시 즉시 보여줄 분량 — 사용자가 직접 기다리는 유일한 요청이므로 작게 유지

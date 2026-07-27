@@ -65,13 +65,14 @@ export type IssueSearchResult = {
 // 여러 언어를 하나의 쿼리에 담는다 — GitHub search는 OR 키워드를 지원하지 않지만
 // 같은 qualifier(language:)를 여러 번 나열하면 자동으로 OR로 해석한다.
 // 언어 개수와 무관하게 항상 요청 1개로 고정되어 GitHub secondary rate limit 위험을 줄인다.
-function buildIssueQuery(languages: string[], sort: string): string {
+function buildIssueQuery(languages: string[], sort: string, extraQualifiers: string): string {
     const languageQualifiers = languages.map((lang) => `language:${lang}`).join(' ')
-    return `is:open is:issue label:"help wanted" ${languageQualifiers} sort:${sort}`
+    const extra = extraQualifiers ? `${extraQualifiers} ` : ''
+    return `is:open is:issue label:"help wanted" ${languageQualifiers} ${extra}sort:${sort}`.trim().replace(/\s+/g, ' ')
 }
 
 // URL 기준 중복 이슈 제거
-function dedupeIssues(issues: RawIssue[]): RawIssue[] {
+export function dedupeIssues(issues: RawIssue[]): RawIssue[] {
     const seen = new Set<string>()
     return issues.filter((issue) => {
         if (seen.has(issue.url)) return false
@@ -92,13 +93,14 @@ export async function fetchCandidateIssues(
     accessToken: string,
     after: string | null,
     first: number,
-    sort = 'updated-desc'
+    sort = 'updated-desc',
+    extraQualifiers = ''
 ): Promise<IssueSearchResult> {
     if (languages.length === 0) {
         return { issues: [], endCursor: null, hasMoreOnGithub: false }
     }
 
-    const query = buildIssueQuery(languages, sort)
+    const query = buildIssueQuery(languages, sort, extraQualifiers)
 
     let result: SearchResult
     try {
