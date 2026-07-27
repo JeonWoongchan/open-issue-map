@@ -1,9 +1,6 @@
-import { headers } from 'next/headers'
-import { getToken } from 'next-auth/jwt'
-
 import type { GitHubRepo } from '@/types/github'
 import { GITHUB_API_TIMEOUT_MS } from '@/constants/scoring-rules'
-import { env } from '@/lib/env'
+import { getServerAccessToken } from '@/lib/auth-utils'
 import { GitHubRateLimitError, GitHubUnauthorizedError } from '@/lib/github/client'
 
 const GITHUB_USER_REPOS_URL = 'https://api.github.com/user/repos?per_page=100&sort=updated'
@@ -56,21 +53,9 @@ export async function getTopLanguagesByAccessToken(accessToken: string): Promise
   return aggregateLanguages(repos)
 }
 
-async function getAccessToken(): Promise<string | null> {
-  // 프로덕션(HTTPS)에서는 __Secure- 접두사 쿠키를 읽기 위해 secureCookie: true 필요
-  const secureCookie = process.env.NODE_ENV === 'production'
-  const token = await getToken({
-    req: { headers: await headers() } as Request,
-    secret: env.AUTH_SECRET,
-    secureCookie,
-  })
-
-  return token?.accessToken ?? null
-}
-
 export async function getTopLanguagesFromGitHub(): Promise<string[]> {
   try {
-    const accessToken = await getAccessToken()
+    const accessToken = await getServerAccessToken()
     if (!accessToken) return []
 
     return await getTopLanguagesByAccessToken(accessToken)

@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import { getToken } from 'next-auth/jwt'
+import { headers } from 'next/headers'
 import type { NextRequest } from 'next/server'
 import { ErrorCode } from '@/lib/api-response'
 import { env } from '@/lib/env'
@@ -25,4 +26,17 @@ export async function requireGithubToken(req: NextRequest): Promise<AuthResult> 
   }
 
   return { ok: true, userId: session.user.id, accessToken: token.accessToken, githubLogin: token.githubLogin ?? '' }
+}
+
+// 서버 컴포넌트 전용 — NextRequest가 없어 next/headers의 헤더로 대체한다.
+// 로그인 세션의 액세스 토큰만 읽으며(게스트 폴백은 호출부 책임), 토큰이 없으면 null을 반환한다.
+export async function getServerAccessToken(): Promise<string | null> {
+  const secureCookie = process.env.NODE_ENV === 'production'
+  const token = await getToken({
+    req: { headers: await headers() } as Request,
+    secret: env.AUTH_SECRET,
+    secureCookie,
+  })
+
+  return token?.accessToken ?? null
 }

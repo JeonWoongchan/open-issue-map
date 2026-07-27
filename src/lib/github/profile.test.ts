@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { fetchUserRepos, GitHubProfileError } from '@/lib/github/profile'
 import { GitHubUnauthorizedError, GitHubRateLimitError } from '@/lib/github/client'
 
+vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
 vi.mock('@/lib/env', () => ({ env: { AUTH_SECRET: 'test' } }))
 vi.mock('next/headers', () => ({ headers: vi.fn() }))
 vi.mock('next-auth/jwt', () => ({ getToken: vi.fn() }))
