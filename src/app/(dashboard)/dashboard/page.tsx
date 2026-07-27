@@ -1,8 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { DashboardReportCard } from '@/components/dashboard/DashboardReportCard'
+import { RecommendationRails } from '@/components/dashboard/recommendation/RecommendationRails'
 import { MainSectionShell } from '@/components/layout/MainSectionShell'
+import { GUEST_ONBOARDING_PROFILE } from '@/constants/guest-profile'
 import { auth } from '@/lib/auth'
+import { getServerAccessToken } from '@/lib/auth-utils'
 import { createPageMetadata } from '@/lib/metadata'
 import { loadOnboardingProfile } from '@/lib/user/profile'
 import { loadOrRetryOnboardingInsight } from '@/lib/user/onboarding-insight'
@@ -20,6 +23,8 @@ export default async function DashboardPage() {
     const profilePromise = session ? loadOnboardingProfile(session.user.id) : Promise.resolve(null)
     const insight = session ? await loadOrRetryOnboardingInsight(session.user.id, profilePromise) : null
     const profile = await profilePromise
+    // 게스트는 서버 GitHub 토큰(/api/github/issues 라우트와 동일한 폴백)으로 조회한다.
+    const accessToken = session ? await getServerAccessToken() : (process.env.GITHUB_TOKEN ?? null)
 
     return (
         <MainSectionShell
@@ -28,6 +33,12 @@ export default async function DashboardPage() {
             actions={session ? <Link href="/onboarding">온보딩 다시하기</Link> : null}
         >
             {profile && insight ? <DashboardReportCard profile={profile} insight={insight} /> : null}
+            <RecommendationRails
+                profile={profile ?? GUEST_ONBOARDING_PROFILE}
+                accessToken={accessToken}
+                userId={session?.user.id ?? null}
+                isGuest={!session}
+            />
         </MainSectionShell>
     )
 }
