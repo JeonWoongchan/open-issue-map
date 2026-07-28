@@ -158,7 +158,7 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
   --sidebar-ring: oklch(0.708 0 0);
 
   /* 그라데이션 토큰 */
-  --gradient-dashboard-banner: radial-gradient(120% 60% at 50% 0%, color-mix(in oklab, var(--interactive-action) 14%, transparent), transparent 70%);
+  --gradient-dashboard-banner: radial-gradient(120% 60vh at 50% 0%, color-mix(in oklab, var(--interactive-action) 14%, transparent), transparent 70%);
   /* 압축형 인사이트 카드(짧고 넓은 가로 막대)에 맞춘 그라데이션 — 좌상단 모서리를
      원점으로 잡아 우하단으로 옅어지게 한다 */
   --gradient-report-card: radial-gradient(60% 200% at 0% 0%, var(--brand-subtle), transparent 70%);
@@ -360,6 +360,8 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
       color-mix(in oklch, var(--background), black 8%) 100%
     );
     background-attachment: fixed;
+    background-size: 100vw 100svh;
+    background-repeat: no-repeat;
   }
   html {
     @apply bg-background font-sans;
