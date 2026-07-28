@@ -8,8 +8,9 @@ import { GUEST_ONBOARDING_PROFILE } from '@/constants/guest-profile'
 import { RECOMMENDATION_CONDITIONS } from '@/constants/recommendation'
 import { auth } from '@/lib/auth'
 import { createPageMetadata } from '@/lib/metadata'
+import { pickRandom } from '@/lib/utils'
 import { loadOnboardingProfile } from '@/lib/user/profile'
-import { loadOrRetryOnboardingInsight } from '@/lib/user/onboarding-insight'
+import { getOnboardingAdvice } from '@/lib/user/onboarding-advice'
 
 export const metadata: Metadata = createPageMetadata({
     title: '추천 이슈',
@@ -19,18 +20,22 @@ export const metadata: Metadata = createPageMetadata({
 
 export default async function DashboardPage() {
     const session = await auth()
-    // profile은 await하지 않고 넘긴다 — insight 조회가 success/no-row로 끝나는 대부분의 경우
-    // profile이 아예 필요 없어서, 두 조회가 동시에 진행되고 재시도가 필요할 때만 profile을 기다린다.
-    const profilePromise = session ? loadOnboardingProfile(session.user.id) : Promise.resolve(null)
-    const insight = session ? await loadOrRetryOnboardingInsight(session.user.id, profilePromise) : null
-    const profile = await profilePromise
+    const profile = session ? await loadOnboardingProfile(session.user.id) : null
+    // 다중 선택된 기여방식 중 어떤 값으로 조언을 조회할지는 이 화면의 결정이라 여기서 무작위로 고른다 —
+    // getOnboardingAdvice는 (기여방식, 목적) 조합을 그대로 조회하는 순수 함수로 남겨둔다.
+    const adviceItems =
+        profile && profile.contributionTypes.length > 0 && profile.purpose
+            ? await getOnboardingAdvice(pickRandom(profile.contributionTypes), profile.purpose)
+            : null
 
     return (
         <MainSectionShell
             title="추천 이슈"
             description="관심사와 현재 수준을 기준으로 시작하기 좋은 이슈를 모아봤습니다."
         >
-            {profile && insight ? <DashboardReportCard profile={profile} insight={insight} /> : null}
+            {profile && adviceItems ? (
+                <DashboardReportCard profile={profile} adviceItems={adviceItems} />
+            ) : null}
             <div className="flex flex-col gap-8">
                 {RECOMMENDATION_CONDITIONS.map((condition) => (
                     <Suspense key={condition} fallback={<RecommendationRailSkeleton />}>

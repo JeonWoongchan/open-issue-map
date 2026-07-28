@@ -4,7 +4,9 @@
 
 - `001_initial.sql`: users, user_profiles, bookmarks, repo_health_cache
 - `002_ai_guest_usage.sql`: ai_guest_usage
-- `003_onboarding_insight.sql`: onboarding_insights
+- `003_onboarding_insight.sql`: onboarding_insights (`005`에서 제거됨)
+- `004_recommendation_candidate_pools.sql`: recommendation_candidate_pools
+- `005_onboarding_advice.sql`: onboarding_insights 제거, onboarding_advice 추가
 
 ## `users`
 
@@ -46,30 +48,49 @@ GitHub OAuth 사용자의 기본 계정 정보다.
 - 메인 layout 보호: `getOnboardingStatus()`
 - 추천 이슈: `loadOnboardingProfile()`
 
-## `onboarding_insights`
+## `onboarding_advice`
 
-온보딩 프로필을 AI로 해석한 결과(대시보드 리포트 카드용)를 캐싱한다. 사용자당 최대 1행.
+온보딩 조합(기여방식 × 목적)별로 미리 써둔 정적 조언 문장 풀이다. AI 호출 없이 대시보드 리포트 카드가 읽기만 한다.
 
 | Column | Type | Constraint | 설명 |
 | --- | --- | --- | --- |
-| `id` | `UUID` | PK, default `gen_random_uuid()` | insight id |
-| `user_id` | `UUID` | FK -> `users(id)`, ON DELETE CASCADE, UNIQUE | 사용자 |
-| `status` | `TEXT` | NOT NULL, CHECK `success \| failed` | AI 생성 성공 여부 |
-| `advice_items` | `JSONB` | nullable | 조언 문자열 배열(2~4개). `failed`일 때는 null |
-| `created_at` | `TIMESTAMPTZ` | default `NOW()` | 최초 생성 시각 |
-| `updated_at` | `TIMESTAMPTZ` | default `NOW()` | 마지막 갱신 시각 |
+| `contribution_type` | `TEXT` | PK(복합) | `doc \| bug \| feat \| test \| review` 중 하나 |
+| `purpose` | `TEXT` | PK(복합) | `portfolio \| growth \| community` 중 하나 |
+| `sentences` | `JSONB` | NOT NULL | 조언 문자열 배열(조합당 5개) |
 
 동작 방식:
 
-- 생성 시점은 온보딩 제출(`POST /api/onboarding`) 단 하나뿐이다 — 대시보드 진입 시점에 새로 생성하지 않는다(비용 통제).
-- 온보딩 제출 시 AI 호출 결과에 따라 `status='success'`(advice_items 채움) 또는 `status='failed'`(null)로 upsert한다. AI 호출 결과와 무관하게 온보딩 저장 자체는 항상 성공 처리한다.
-- 대시보드는 이 테이블을 읽기만 한다: `success`면 그대로 표시, `failed`면 그 자리에서 온보딩 프로필 기준으로 재요청(성공 시 `success`로 갱신) — 재시도 횟수 제한은 두지 않고, 대신 AI 프로바이더(OpenAI/Gemini) 계정 단위 사용량 상한으로 비용을 통제한다. 행 자체가 없으면(온보딩 미완료) 카드를 표시하지 않는다.
-- "이 조합을 선택한 사람이 많다" 같은 문구는 이 서비스의 실제 사용자 통계가 아니라 업계 일반론으로만 작성하도록 프롬프트에 명시한다 — 실사용자 집계 없이 통계처럼 말하지 않는다.
+- `contribution_type`은 다중 선택인 온보딩 응답 중 하나를 무작위로 골라 매칭한다(`getOnboardingAdvice`).
+- 대시보드는 매칭된 5개 문장 중 하나를 매 렌더마다 무작위로 골라 보여준다 — 새로고침할 때마다 다른 문구가 노출된다.
+- 문구 내용은 코드 배포 없이 DB 값만 갱신하면 바뀐다.
+- 이전에는 온보딩 제출 시 AI(Gemini)로 문구를 생성해 사용자당 캐싱하는 `onboarding_insights` 테이블을 썼으나, AI 비용·지연·실패 재시도 로직을 없애기 위해 정적 문구 풀로 교체했다(`005_onboarding_advice.sql`에서 `onboarding_insights` 삭제).
 
 사용 위치:
 
-- 저장: `src/app/api/onboarding/route.ts` (온보딩 제출 시 트리거)
-- 조회/재시도: 대시보드 진입 경로
+- 조회: `src/lib/user/onboarding-advice.ts`의 `getOnboardingAdvice()`
+- 표시: `src/app/(dashboard)/dashboard/page.tsx` → `DashboardReportCard`
+
+## `recommendation_candidate_pools`
+
+언어 × 조건(latest/popular)별로 GitHub Actions 스케줄러가 미리 적재해둔 추천 이슈 후보 풀이다. 대시보드 요청 경로는 GitHub를 직접 호출하지 않고 이 테이블만 읽는다.
+
+| Column | Type | Constraint | 설명 |
+| --- | --- | --- | --- |
+| `language` | `TEXT` | PK(복합) | `POPULAR_LANGUAGES` 중 하나 |
+| `condition` | `TEXT` | PK(복합) | `latest \| popular` |
+| `payload` | `JSONB` | NOT NULL | 후보 이슈(`RawIssue[]`) |
+| `updated_at` | `TIMESTAMPTZ` | NOT NULL, default `NOW()` | 마지막 갱신 시각 |
+
+동작 방식:
+
+- 갱신: `.github/workflows/refresh-recommendation-pool.yml`이 언어별로 `/api/cron/refresh-recommendation-pool`을 호출 → `refreshCandidatePool()`이 GitHub에서 가져와 통째로 upsert.
+- 조회: `fetchRecommendedIssues()`가 프로필의 언어들을 한 번의 쿼리(`getCandidatePools`, `WHERE language = ANY(...)`)로 읽어 합친 뒤 랭킹/캡/샘플링을 요청 시점에 수행한다.
+
+사용 위치:
+
+- `src/lib/github/issues/candidate-pool-store.ts`
+- `src/lib/github/issues/recommendations.ts`
+- `src/app/api/cron/refresh-recommendation-pool/route.ts`
 
 ## `bookmarks`
 
@@ -159,10 +180,11 @@ GitHub 저장소의 health score 캐시다.
 
 ```text
 users 1 ── 0..1 user_profiles
-users 1 ── 0..1 onboarding_insights
 users 1 ── 0..N bookmarks
 repo_health_cache는 GitHub repo_full_name 기준 독립 캐시
 ai_guest_usage는 비로그인 IP 기준 독립 임시 테이블 (users와 무관)
+onboarding_advice는 (기여방식, 목적) 조합 기준 독립 정적 콘텐츠 (users와 무관)
+recommendation_candidate_pools는 (언어, 조건) 조합 기준 독립 캐시 (users와 무관)
 ```
 
 ## 운영 메모

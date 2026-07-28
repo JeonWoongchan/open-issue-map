@@ -107,7 +107,6 @@ function guestExceeded() {
 function makeProvider(analyzeIssueImpl = vi.fn().mockResolvedValue(analysisResult)) {
     const provider = {
         analyzeIssue: analyzeIssueImpl,
-        generateOnboardingInsight: vi.fn(),
     }
     mockCreateProvider.mockReturnValue(provider)
     return provider

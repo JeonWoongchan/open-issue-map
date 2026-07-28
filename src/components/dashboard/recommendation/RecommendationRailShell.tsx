@@ -47,7 +47,7 @@ export function RecommendationRailShell({ condition, isGuest, initialData }: Rec
           <h2 className="text-base font-bold">{meta.title}</h2>
           <p className="text-xs text-muted-foreground">{meta.description}</p>
         </div>
-        <RecommendationRefreshButton isPending={isPending} onRefresh={handleRefresh} />
+        <RecommendationRefreshButton isPending={isPending} onRefreshAction={handleRefresh} />
       </div>
       <Separator />
       <div className={cn('relative', isPending && 'min-h-40')}>

@@ -2,7 +2,6 @@ import { auth } from '@/lib/auth'
 import { NextRequest } from 'next/server'
 import { ok, err, ErrorCode } from '@/lib/api-response'
 import { saveOnboardingSurvey } from '@/lib/user/onboarding'
-import { generateAndCacheOnboardingInsight } from '@/lib/user/onboarding-insight'
 import { onboardingSurveySchema } from '@/lib/validators/onboarding'
 
 /**
@@ -15,7 +14,6 @@ import { onboardingSurveySchema } from '@/lib/validators/onboarding'
  *    - 신규: INSERT (users 테이블에서 github_id로 user_id 조회해서 삽입)
  *    - 재진입: ON CONFLICT로 기존 행 UPDATE (온보딩 재시도 허용)
  * 4. onboarding_done = true 로 설정 → 이후 layout.tsx 가드에서 대시보드로 통과
- * 5. 온보딩 결과를 AI로 해석해 onboarding_insights에 캐싱 — 실패해도 온보딩 자체는 성공 처리
  */
 export async function POST(req: NextRequest) {
   const session = await auth()
@@ -30,7 +28,6 @@ export async function POST(req: NextRequest) {
       return err('Invalid onboarding payload', 400)
     }
     await saveOnboardingSurvey(session.user.id, result.data)
-    await generateAndCacheOnboardingInsight(session.user.id, result.data)
     return ok({ success: true })
   } catch (error) {
     console.error('Onboarding error:', error)
