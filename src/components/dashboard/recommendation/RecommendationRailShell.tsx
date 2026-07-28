@@ -1,12 +1,13 @@
 'use client'
 
-import { useTransition, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import { Clock, Flame } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { RECOMMENDATION_CONDITION_META, type RecommendationCondition } from '@/constants/recommendation'
+import type { RecommendationRailData } from '@/lib/github/issues/recommendations'
 import { refreshRecommendations } from '@/lib/recommendation-actions'
 import { cn } from '@/lib/utils'
+import { RecommendationCarousel } from './RecommendationCarousel'
 import { RecommendationRefreshButton } from './RecommendationRefreshButton'
 import { RecommendationSearchingState } from './RecommendationSearchingState'
 
@@ -17,25 +18,21 @@ const CONDITION_ICONS: Record<RecommendationCondition, typeof Clock> = {
 
 type RecommendationRailShellProps = {
   condition: RecommendationCondition
-  children: ReactNode
+  isGuest: boolean
+  initialData: RecommendationRailData
 }
 
-// 헤더의 새로고침 버튼과 카드 영역은 서로 다른 위치에 있지만 같은 isPending 상태를 공유해야
-// 로딩 중에 카드 자리를 RecommendationSearchingState로 바꿔치기할 수 있다 — 그래서 이 클라이언트
-// 컴포넌트가 둘 다 감싸며 useTransition을 한 곳에서만 소유한다. 실제 데이터 조회(캐싱 포함)는
-// 여전히 서버 컴포넌트인 RecommendationRail이 하고, 결과 JSX만 children으로 받는다.
-export function RecommendationRailShell({ condition, children }: RecommendationRailShellProps) {
-  const router = useRouter()
+// 새로고침 액션이 새 목록을 직접 반환하므로, 이 컴포넌트가 목록 상태를 직접 들고 있다가
+// 그 결과로 교체한다 — router.refresh()로 서버 컴포넌트를 다시 그리게 만드는 간접 경로를 거치지 않는다.
+export function RecommendationRailShell({ condition, isGuest, initialData }: RecommendationRailShellProps) {
   const [isPending, startTransition] = useTransition()
+  const [data, setData] = useState(initialData)
   const meta = RECOMMENDATION_CONDITION_META[condition]
   const Icon = CONDITION_ICONS[condition]
 
   function handleRefresh() {
     startTransition(async () => {
-      // 서버 캐시(unstable_cache) 태그를 먼저 무효화한 뒤 재실행해야 새로운 조합이 계산된다 —
-      // router.refresh()만 부르면 캐시가 안 무효화된 상태라 같은 결과가 그대로 다시 나온다.
-      await refreshRecommendations(condition)
-      router.refresh()
+      setData(await refreshRecommendations(condition))
     })
   }
 
@@ -58,8 +55,16 @@ export function RecommendationRailShell({ condition, children }: RecommendationR
           <div className="absolute inset-0 flex items-center justify-center">
             <RecommendationSearchingState />
           </div>
+        ) : data.fetchFailed ? (
+          <p className="w-fit rounded-lg border border-status-danger-border bg-status-danger px-3 py-2 text-xs text-status-danger-foreground">
+            지금은 이 조건을 불러오지 못했어요. 잠시 후 &quot;새로 추천받기&quot;로 다시 시도해 주세요.
+          </p>
+        ) : data.issues.length > 0 ? (
+          <RecommendationCarousel issues={data.issues} isGuest={isGuest} />
         ) : (
-          children
+          <p className="w-fit rounded-lg border border-status-warning-border bg-status-warning px-3 py-2 text-xs text-status-warning-foreground">
+            이번 프로필 조건에는 이 카테고리가 잘 맞지 않아요 — 조건을 통과한 이슈가 없어요.
+          </p>
         )}
       </div>
     </section>

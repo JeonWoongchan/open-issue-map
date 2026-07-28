@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { capIssuesPerRepo, fetchRecommendedIssues } from '@/lib/github/issues/recommendations'
+import { capIssuesPerRepo, fetchRecommendedIssues, refreshCandidatePool } from '@/lib/github/issues/recommendations'
 import {
     RECOMMENDATION_DISPLAY_LIMIT,
     RECOMMENDATION_PAGE_COUNT,
@@ -16,12 +16,20 @@ vi.mock('@/lib/github/issues/search', () => ({
     dedupeIssues: vi.fn((issues: RawIssue[]) => issues),
 }))
 vi.mock('@/lib/github/issues/ranking', () => ({ rankIssues: vi.fn() }))
+vi.mock('./candidate-pool-store', () => ({
+    getCandidatePools: vi.fn(),
+    upsertCandidatePool: vi.fn(),
+}))
+vi.mock('@/lib/bookmarks', () => ({ listUserBookmarkKeys: vi.fn(() => Promise.resolve([])) }))
 
 import { fetchCandidateIssues } from '@/lib/github/issues/search'
 import { rankIssues } from '@/lib/github/issues/ranking'
+import { getCandidatePools, upsertCandidatePool } from './candidate-pool-store'
 
 const mockFetch = vi.mocked(fetchCandidateIssues)
 const mockRank = vi.mocked(rankIssues)
+const mockGetPools = vi.mocked(getCandidatePools)
+const mockUpsertPool = vi.mocked(upsertCandidatePool)
 
 afterEach(() => vi.clearAllMocks())
 
@@ -40,15 +48,14 @@ function makePage(issues: RawIssue[], hasMoreOnGithub: boolean, endCursor: strin
 const rawIssues = [{ number: 1 } as RawIssue]
 const scoredIssues = [{ number: 1, score: 80 } as ScoredIssue]
 
-describe('fetchRecommendedIssues', () => {
-    it('latest 조건은 created-desc로, 별도 qualifier 없이 조회한다(시간 창 제한도 없음)', async () => {
+describe('refreshCandidatePool', () => {
+    it('latest 조건은 created-desc로, 별도 qualifier 없이 언어 하나만 조회한다(시간 창 제한도 없음)', async () => {
         mockFetch.mockResolvedValueOnce(makePage(rawIssues, false, null))
-        mockRank.mockReturnValueOnce(scoredIssues)
 
-        await fetchRecommendedIssues('latest', profile, 'token')
+        await refreshCandidatePool('TypeScript', 'latest', 'token')
 
         expect(mockFetch).toHaveBeenCalledWith(
-            profile.topLanguages,
+            ['TypeScript'],
             'token',
             null,
             RECOMMENDATION_PAGE_SIZE,
@@ -59,43 +66,39 @@ describe('fetchRecommendedIssues', () => {
 
     it('popular 조건은 reactions-desc + 최근 90일 created 창으로 조회한다(스타 수는 쿼리가 아니라 후처리로 거른다)', async () => {
         mockFetch.mockResolvedValueOnce(makePage([], false, null))
-        mockRank.mockReturnValueOnce([])
 
-        await fetchRecommendedIssues('popular', profile, 'token')
+        await refreshCandidatePool('TypeScript', 'popular', 'token')
 
         const [, , , , sort, extraQualifiers] = mockFetch.mock.calls[0]
         expect(sort).toBe('reactions-desc')
         expect(extraQualifiers).toMatch(/^created:>=\d{4}-\d{2}-\d{2}$/)
     })
 
-    it('popular 조건은 채점 전에 스타 30 미만 저장소의 이슈를 후처리로 제외한다', async () => {
+    it('popular 조건은 저장하기 전에 스타 30 미만 저장소의 이슈를 후처리로 제외한다', async () => {
         const lowStar = { number: 1, repository: { stargazerCount: 1 } } as RawIssue
         const highStar = { number: 2, repository: { stargazerCount: 30 } } as RawIssue
         mockFetch.mockResolvedValueOnce(makePage([lowStar, highStar], false, null))
-        mockRank.mockReturnValueOnce([])
 
-        await fetchRecommendedIssues('popular', profile, 'token')
+        await refreshCandidatePool('TypeScript', 'popular', 'token')
 
-        expect(mockRank).toHaveBeenCalledWith([highStar], profile, RECOMMENDATION_SCORE_THRESHOLD)
+        expect(mockUpsertPool).toHaveBeenCalledWith('TypeScript', 'popular', [highStar])
     })
 
-    it('latest 조건은 스타 수와 무관하게 후처리 없이 그대로 채점으로 넘긴다', async () => {
+    it('latest 조건은 스타 수와 무관하게 후처리 없이 그대로 저장한다', async () => {
         const lowStar = { number: 1, repository: { stargazerCount: 0 } } as RawIssue
         mockFetch.mockResolvedValueOnce(makePage([lowStar], false, null))
-        mockRank.mockReturnValueOnce([])
 
-        await fetchRecommendedIssues('latest', profile, 'token')
+        await refreshCandidatePool('TypeScript', 'latest', 'token')
 
-        expect(mockRank).toHaveBeenCalledWith([lowStar], profile, RECOMMENDATION_SCORE_THRESHOLD)
+        expect(mockUpsertPool).toHaveBeenCalledWith('TypeScript', 'latest', [lowStar])
     })
 
     it('hasMoreOnGithub가 true인 동안 최대 RECOMMENDATION_PAGE_COUNT번까지 커서를 이어가며 페이지를 조회한다', async () => {
         for (let i = 0; i < RECOMMENDATION_PAGE_COUNT; i++) {
             mockFetch.mockResolvedValueOnce(makePage([{ number: i } as RawIssue], true, `cursor-${i}`))
         }
-        mockRank.mockReturnValueOnce([])
 
-        await fetchRecommendedIssues('latest', profile, 'token')
+        await refreshCandidatePool('TypeScript', 'latest', 'token')
 
         expect(mockFetch).toHaveBeenCalledTimes(RECOMMENDATION_PAGE_COUNT)
         // 각 호출은 직전 페이지가 돌려준 endCursor를 그대로 이어받아야 한다
@@ -103,11 +106,11 @@ describe('fetchRecommendedIssues', () => {
         for (let i = 1; i < RECOMMENDATION_PAGE_COUNT; i++) {
             expect(mockFetch.mock.calls[i][2]).toBe(`cursor-${i - 1}`)
         }
-        // 채점 단계에는 모든 페이지의 이슈가 합쳐져 전달돼야 한다
-        expect(mockRank).toHaveBeenCalledWith(
+        // 저장 단계에는 모든 페이지의 이슈가 합쳐져 전달돼야 한다
+        expect(mockUpsertPool).toHaveBeenCalledWith(
+            'TypeScript',
+            'latest',
             Array.from({ length: RECOMMENDATION_PAGE_COUNT }, (_, i) => ({ number: i })),
-            profile,
-            RECOMMENDATION_SCORE_THRESHOLD,
         )
     })
 
@@ -115,18 +118,49 @@ describe('fetchRecommendedIssues', () => {
         mockFetch
             .mockResolvedValueOnce(makePage([{ number: 1 } as RawIssue], true, 'cursor-0'))
             .mockResolvedValueOnce(makePage([{ number: 2 } as RawIssue], false, null))
-        mockRank.mockReturnValueOnce([])
 
-        await fetchRecommendedIssues('latest', profile, 'token')
+        await refreshCandidatePool('TypeScript', 'latest', 'token')
 
         expect(mockFetch).toHaveBeenCalledTimes(2)
     })
+})
+
+describe('fetchRecommendedIssues', () => {
+    it('GitHub를 직접 부르지 않고, 프로필의 언어들을 한 번의 쿼리로 DB 후보 풀에서 읽는다', async () => {
+        mockGetPools.mockResolvedValue([])
+        mockRank.mockReturnValueOnce([])
+
+        await fetchRecommendedIssues('popular', { ...profile, topLanguages: ['TypeScript', 'Python'] })
+
+        expect(mockFetch).not.toHaveBeenCalled()
+        expect(mockGetPools).toHaveBeenCalledWith(['TypeScript', 'Python'], 'popular')
+    })
+
+    it('언어별 후보 풀을 하나로 합쳐서 채점으로 넘긴다', async () => {
+        const tsIssue = { number: 1 } as RawIssue
+        const pyIssue = { number: 2 } as RawIssue
+        mockGetPools.mockResolvedValueOnce([[tsIssue], [pyIssue]])
+        mockRank.mockReturnValueOnce([])
+
+        await fetchRecommendedIssues('latest', { ...profile, topLanguages: ['TypeScript', 'Python'] })
+
+        expect(mockRank).toHaveBeenCalledWith([tsIssue, pyIssue], expect.anything(), RECOMMENDATION_SCORE_THRESHOLD)
+    })
+
+    it('저장된 풀이 없으면(빈 배열) 빈 배열로 취급한다', async () => {
+        mockGetPools.mockResolvedValueOnce([])
+        mockRank.mockReturnValueOnce([])
+
+        await fetchRecommendedIssues('latest', profile)
+
+        expect(mockRank).toHaveBeenCalledWith([], profile, RECOMMENDATION_SCORE_THRESHOLD)
+    })
 
     it('RECOMMENDATION_SCORE_THRESHOLD를 임계값으로 채점한다', async () => {
-        mockFetch.mockResolvedValueOnce(makePage(rawIssues, false, null))
+        mockGetPools.mockResolvedValueOnce([rawIssues])
         mockRank.mockReturnValueOnce(scoredIssues)
 
-        const result = await fetchRecommendedIssues('latest', profile, 'token')
+        const result = await fetchRecommendedIssues('latest', profile)
 
         expect(mockRank).toHaveBeenCalledWith(rawIssues, profile, RECOMMENDATION_SCORE_THRESHOLD)
         expect(result).toEqual(scoredIssues)
@@ -139,10 +173,10 @@ describe('fetchRecommendedIssues', () => {
             { length: RECOMMENDATION_DISPLAY_LIMIT + 5 },
             (_, i) => ({ number: i, repoFullName: `owner/repo-${i}`, score: 80 }) as ScoredIssue,
         )
-        mockFetch.mockResolvedValueOnce(makePage(rawIssues, false, null))
+        mockGetPools.mockResolvedValueOnce([rawIssues])
         mockRank.mockReturnValueOnce(manyIssues)
 
-        const result = await fetchRecommendedIssues('latest', profile, 'token')
+        const result = await fetchRecommendedIssues('latest', profile)
 
         expect(result).toHaveLength(RECOMMENDATION_DISPLAY_LIMIT)
         result.forEach((issue) => expect(manyIssues).toContainEqual(issue))
@@ -153,10 +187,10 @@ describe('fetchRecommendedIssues', () => {
             { length: 3 },
             (_, i) => ({ number: i, repoFullName: `owner/repo-${i}`, score: 80 }) as ScoredIssue,
         )
-        mockFetch.mockResolvedValueOnce(makePage(rawIssues, false, null))
+        mockGetPools.mockResolvedValueOnce([rawIssues])
         mockRank.mockReturnValueOnce(fewIssues)
 
-        const result = await fetchRecommendedIssues('latest', profile, 'token')
+        const result = await fetchRecommendedIssues('latest', profile)
 
         expect(result).toHaveLength(3)
         expect(result).toEqual(expect.arrayContaining(fewIssues))

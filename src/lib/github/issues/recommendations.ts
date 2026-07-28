@@ -6,8 +6,10 @@ import {
   RECOMMENDATION_PAGE_SIZE,
   RECOMMENDATION_SCORE_THRESHOLD,
 } from '@/constants/scoring-rules'
+import { listUserBookmarkKeys } from '@/lib/bookmarks'
 import type { OnboardingProfile } from '@/lib/user/profile'
-import type { RawIssue, ScoredIssue } from '@/types/issue'
+import type { IssueCardItem, RawIssue, ScoredIssue } from '@/types/issue'
+import { getCandidatePools, upsertCandidatePool } from './candidate-pool-store'
 import { rankIssues } from './ranking'
 import { dedupeIssues, fetchCandidateIssues } from './search'
 
@@ -91,30 +93,69 @@ async function fetchCandidatePool(
   return dedupeIssues(pool)
 }
 
-// 추천 이슈 캐시를 레일(조건) 단위로 무효화하기 위한 태그 — 레일별 새로고침 버튼이
-// 다른 레일까지 같이 무효화하지 않도록 condition을 키에 포함한다.
-// RecommendationRail의 unstable_cache와 "새로 추천받기" Server Action(revalidateTag)이
-// 같은 문자열을 써야 하므로 여기 한 곳에서만 만든다.
-export function buildRecommendationCacheTag(cacheUserId: string, condition: RecommendationCondition): string {
-  return `recommendations:${cacheUserId}:${condition}`
-}
-
-// 추천 이슈 페이지 전용 조회 — 이 함수 자체는 캐시를 모르는 순수 함수다.
-// 새로고침해도 결과가 유지되도록 하는 캐싱(unstable_cache)은 호출부인 RecommendationRail.tsx가 담당한다.
-export async function fetchRecommendedIssues(
+// 스케줄러 전용 — 언어 하나 + 조건 하나의 후보 풀을 GitHub에서 새로 가져와 DB에 통째로 교체 저장한다.
+// 요청 경로(대시보드 렌더링)는 이 함수를 절대 호출하지 않는다 — GitHub 호출은 이 함수를 통해서만,
+// 크론이 정한 주기에만 일어난다.
+export async function refreshCandidatePool(
+  language: string,
   condition: RecommendationCondition,
-  profile: OnboardingProfile,
   accessToken: string,
-): Promise<ScoredIssue[]> {
+): Promise<void> {
   const { sort } = RECOMMENDATION_CONDITION_META[condition]
   const windowDays = RECENT_WINDOW_DAYS[condition]
   const extraQualifiers = windowDays ? buildRecentWindowQualifier(windowDays) : ''
 
-  const pool = await fetchCandidatePool(profile.topLanguages, accessToken, sort, extraQualifiers)
+  const pool = await fetchCandidatePool([language], accessToken, sort, extraQualifiers)
   const issues = condition === 'popular' ? filterByMinStars(pool, POPULAR_MIN_STARS) : pool
 
-  const rankedIssues = rankIssues(issues, profile, RECOMMENDATION_SCORE_THRESHOLD)
+  await upsertCandidatePool(language, condition, issues)
+}
+
+// 추천 이슈 페이지 전용 조회 — GitHub를 직접 부르지 않는다. 스케줄러(refreshCandidatePool)가
+// 미리 언어별로 적재해둔 후보 풀을 DB에서 읽어와, 이 요청의 프로필 기준으로 그 자리에서
+// 개인화(랭킹/저장소당 캡/샘플링)만 한다. 네트워크 I/O가 DB 조회뿐이라 항상 빠르고, 그래서
+// "새로 추천받기"도 별도 캐시 무효화 없이 이 함수를 한 번 더 부르는 것으로 충분하다 —
+// capIssuesPerRepo/sampleRandom의 무작위성 덕에 호출할 때마다 자연히 다른 조합이 나온다.
+export async function fetchRecommendedIssues(
+  condition: RecommendationCondition,
+  profile: OnboardingProfile,
+): Promise<ScoredIssue[]> {
+  const pools = await getCandidatePools(profile.topLanguages, condition)
+  const pool = dedupeIssues(pools.flat())
+
+  const rankedIssues = rankIssues(pool, profile, RECOMMENDATION_SCORE_THRESHOLD)
   const cappedIssues = capIssuesPerRepo(rankedIssues, RECOMMENDATION_MAX_PER_REPO)
   // 저장소당 캡을 다 통과해도 후보가 DISPLAY_LIMIT보다 많으면 다시 무작위로 추려낸다 —
   return sampleRandom(cappedIssues, RECOMMENDATION_DISPLAY_LIMIT)
+}
+
+// ScoredIssue[]에 북마크 여부를 합쳐 카드 렌더링용 IssueCardItem[]으로 변환한다.
+function mergeBookmarkStatus(scoredIssues: ScoredIssue[], bookmarkKeys: string[]): IssueCardItem[] {
+  const bookmarkKeySet = new Set(bookmarkKeys)
+  return scoredIssues.map((issue) => ({
+    ...issue,
+    isBookmarked: bookmarkKeySet.has(`${issue.repoFullName}#${issue.number}`),
+  }))
+}
+
+export type RecommendationRailData = { issues: IssueCardItem[]; fetchFailed: boolean }
+
+// 대시보드 최초 렌더(RecommendationRail)와 "새로 추천받기"(refreshRecommendations)가
+// 공유하는 조회 파이프라인 — 이슈 조회 + 북마크 병합 + 실패 격리를 한 곳에서만 구현한다.
+export async function loadRecommendationRailData(
+  condition: RecommendationCondition,
+  profile: OnboardingProfile,
+  userId: string | null,
+): Promise<RecommendationRailData> {
+  try {
+    const [scoredIssues, bookmarkKeys] = await Promise.all([
+      fetchRecommendedIssues(condition, profile),
+      userId ? listUserBookmarkKeys(userId) : Promise.resolve([]),
+    ])
+
+    return { issues: mergeBookmarkStatus(scoredIssues, bookmarkKeys), fetchFailed: false }
+  } catch (error) {
+    console.error(`[loadRecommendationRailData] ${condition} 조회 실패:`, error)
+    return { issues: [], fetchFailed: true }
+  }
 }

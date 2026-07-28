@@ -1,15 +1,19 @@
 'use server'
 
-import { revalidateTag } from 'next/cache'
+import { GUEST_ONBOARDING_PROFILE } from '@/constants/guest-profile'
 import type { RecommendationCondition } from '@/constants/recommendation'
 import { auth } from '@/lib/auth'
-import { buildRecommendationCacheTag } from '@/lib/github/issues/recommendations'
+import { loadRecommendationRailData, type RecommendationRailData } from '@/lib/github/issues/recommendations'
+import { loadOnboardingProfile } from '@/lib/user/profile'
 
-// 레일별 새로고침 버튼용 — 이 유저(게스트는 공유 캐시)의 이 조건(condition)에 해당하는
-// 추천 이슈 서버 캐시만 무효화한다. 다른 레일의 캐시는 그대로 유지된다.
-// 클라이언트가 준 userId를 믿지 않고 서버에서 직접 세션을 확인한다.
-export async function refreshRecommendations(condition: RecommendationCondition) {
+// 레일별 새로고침 버튼용 — fetchRecommendedIssues가 이제 DB 후보 풀만 읽는 빠른 연산이라
+// 캐시 무효화 개념이 없다. 이 액션은 그 파이프라인을 한 번 더 돌려서 결과를 클라이언트에
+// 직접 반환하기만 하면 된다(랭킹/저장소당 캡/샘플링의 무작위성 덕에 자연히 다른 조합이 나온다).
+// 클라이언트가 준 값을 믿지 않고 서버에서 직접 세션·프로필을 구한다(page.tsx와 동일한 방식).
+export async function refreshRecommendations(condition: RecommendationCondition): Promise<RecommendationRailData> {
   const session = await auth()
-  const cacheUserId = session?.user.id ?? 'guest'
-  revalidateTag(buildRecommendationCacheTag(cacheUserId, condition))
+  const userId = session?.user.id ?? null
+  const profile = userId ? await loadOnboardingProfile(userId) : null
+
+  return loadRecommendationRailData(condition, profile ?? GUEST_ONBOARDING_PROFILE, userId)
 }
