@@ -22,25 +22,38 @@ function SparkleIcon({ className }: IconProps) {
   )
 }
 
+export type SearchingPhrase = { text: string; animationClass: string }
+export type SearchingFinalPhrase = { text: string; delayClass: string }
+
 // 실제 조회는 서버 컴포넌트 안에서 한 번에 끝나는 요청이라 클라이언트가 몇 % 왔는지 알 방법이
 // 없다 — 그래서 진행률 대신 순서 무관한 문구를 차례로 보여준다. 앞 3개는 3초씩, 4번째는
 // 6초간(9~15초) 늘려 붙여서 마지막 문구("오래 걸리고 있어요")가 정확히 15초부터 나오게
 // 하고 그 사이 빈 문구 구간이 없게 한다. 앞 4개는 한 번씩만 등장하고(반복 없음), 마지막
 // 문구는 15초 시점에 나타난 뒤 응답이 올 때까지 계속 떠 있는다.
-const SEARCHING_PHRASES: { text: string; animationClass: string }[] = [
+const RECOMMENDATION_SEARCHING_PHRASES: SearchingPhrase[] = [
   { text: '관심 언어로 이슈를 찾고 있어요', animationClass: 'recommendation-searching-copy [animation-delay:0s]' },
   { text: '저장소 활동을 살펴보고 있어요', animationClass: 'recommendation-searching-copy [animation-delay:3s]' },
   { text: '난이도와 적합도를 확인하고 있어요', animationClass: 'recommendation-searching-copy [animation-delay:6s]' },
   { text: '마지막으로 다듬는 중이에요', animationClass: 'recommendation-searching-copy-slow [animation-delay:9s]' },
 ]
 
-const SEARCHING_FINAL_PHRASE = {
+const RECOMMENDATION_SEARCHING_FINAL_PHRASE: SearchingFinalPhrase = {
   text: '거의 다 됐어요, 잠시만 기다려 주세요',
   delayClass: '[animation-delay:15s]',
 }
 
+type RecommendationSearchingStateProps = {
+  phrases?: SearchingPhrase[]
+  finalPhrase?: SearchingFinalPhrase
+}
+
 // "새로 추천받기" 진행 중 카드 자리에 대신 표출하는 상태. 캐러셀 영역 안에서 가로 가운데 정렬.
-export function RecommendationSearchingState() {
+// phrases/finalPhrase를 넘기면 같은 아이콘·타이밍 연출을 다른 로딩 문맥(예: 이슈 상세의 AI 가이드
+// 분석 중 상태)에서도 그대로 재사용할 수 있다 — 기본값은 추천 이슈 문구 그대로다.
+export function RecommendationSearchingState({
+  phrases = RECOMMENDATION_SEARCHING_PHRASES,
+  finalPhrase = RECOMMENDATION_SEARCHING_FINAL_PHRASE,
+}: RecommendationSearchingStateProps = {}) {
   return (
     <div className="flex flex-col items-center gap-3 py-6">
       <div className="relative flex h-14 w-14 items-end justify-center pb-2">
@@ -50,7 +63,7 @@ export function RecommendationSearchingState() {
         <div className="recommendation-searching-shadow absolute bottom-1 left-1/2 h-1.5 w-6 -translate-x-1/2 rounded-full bg-foreground/[0.13]" />
       </div>
       <div className="relative h-4 w-72">
-        {SEARCHING_PHRASES.map(({ text, animationClass }) => (
+        {phrases.map(({ text, animationClass }) => (
           <p
             key={text}
             className={`${animationClass} absolute inset-0 flex items-center justify-center whitespace-nowrap text-center text-xs font-medium text-muted-foreground`}
@@ -59,9 +72,9 @@ export function RecommendationSearchingState() {
           </p>
         ))}
         <p
-          className={`recommendation-searching-copy-final ${SEARCHING_FINAL_PHRASE.delayClass} absolute inset-0 flex items-center justify-center whitespace-nowrap text-center text-xs font-medium text-muted-foreground`}
+          className={`recommendation-searching-copy-final ${finalPhrase.delayClass} absolute inset-0 flex items-center justify-center whitespace-nowrap text-center text-xs font-medium text-muted-foreground`}
         >
-          {SEARCHING_FINAL_PHRASE.text}
+          {finalPhrase.text}
         </p>
       </div>
     </div>

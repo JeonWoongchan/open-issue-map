@@ -274,6 +274,50 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
   }
 }
 
+/* 이슈 상세 페이지 2단 레이아웃 — 사이드바 폭을 minmax(0, 1fr)로 잡지 않으면 본문 컬럼 안의
+   줄바꿈 안 되는 콘텐츠(파일 경로 등) 때문에 grid 전체가 넘쳐 사이드바가 잘리는 문제가 있었다.
+   lg 미만에서는 사이드바(점수 분석 + 액션)가 페이지 맨 아래가 아니라 "왜 나에게 맞는지" 콜아웃
+   바로 아래로 오도록 grid-template-areas 자체를 바꾼다(DOM 순서만으로는 안 되는 배치라 named area 사용).
+   lg 이상에서는 콜아웃이 header처럼 전체 폭을 차지하고, 사이드바는 "main"과 같은 행에서 시작해
+   저장소 개요(main의 첫 패널)와 상단이 맞도록 한다. */
+@layer components {
+  .issue-detail-grid {
+    display: grid;
+    gap: 1.75rem 2rem;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "header" "callout" "sidebar" "main";
+  }
+  @media (min-width: 1024px) {
+    .issue-detail-grid {
+      grid-template-columns: minmax(0, 1fr) 300px;
+      grid-template-areas: "header header" "callout callout" "main sidebar";
+    }
+    /* 탭 워크스페이스로 본문이 묶이면서 사이드바(점수 분석 + 액션)를 스크롤해도 항상 보이는
+       고정 레일로 승격한다 — MainHeader(h-14, sticky top-0)와 겹치지 않도록 여유를 둔다. */
+    .issue-detail-grid__sidebar {
+      position: sticky;
+      top: 5rem;
+      align-self: start;
+    }
+  }
+  .issue-detail-grid__header { grid-area: header; }
+  .issue-detail-grid__callout { grid-area: callout; }
+  .issue-detail-grid__sidebar {
+    grid-area: sidebar;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    min-width: 0;
+  }
+  .issue-detail-grid__main {
+    grid-area: main;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+  }
+}
+
 @keyframes mascot-float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }

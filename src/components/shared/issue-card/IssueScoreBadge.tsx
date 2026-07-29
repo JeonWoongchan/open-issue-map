@@ -1,32 +1,8 @@
 import { useId } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { DIMENSION_LABELS, DIMENSION_ORDER, formatScore } from '@/lib/github/issues/score-breakdown-meta'
 import { cn } from '@/lib/utils'
-import type { ScoreBreakdown, ScoreBreakdownKey } from '@/types/issue'
-
-// 점수 표시 순서 — SCORING_DIMENSIONS key 순서와 동일하게 유지
-const DIMENSION_ORDER: ScoreBreakdownKey[] = [
-  'language',
-  'difficulty',
-  'contributionType',
-  'competition',
-  'timeBudget',
-  'purpose',
-  'stars',
-]
-
-const DIMENSION_LABELS: Record<ScoreBreakdownKey, string> = {
-  language: '언어 일치',
-  difficulty: '난이도 적합도',
-  contributionType: '기여 유형',
-  competition: '경쟁도',
-  timeBudget: '시간 예산',
-  purpose: '목적 적합도',
-  stars: '저장소 인지도',
-}
-
-function formatScore(score: number): string {
-  return score > 0 ? `+${score}` : String(score)
-}
+import type { ScoreBreakdown } from '@/types/issue'
 
 // 카드에서는 소형, 상세 페이지 헤더에서는 대형 — 링 지름과 스트로크는 같은 비율(약 8%)로 유지
 const RING_SIZE = { sm: 36, lg: 60 } as const
