@@ -36,7 +36,7 @@ export function IssueDetailWorkspace({ overview, aiGuide, related }: IssueDetail
             aria-selected={active === tab.key}
             onClick={() => setActive(tab.key)}
             className={cn(
-              '-mb-px border-b-2 px-1 py-2.5 text-sm font-semibold transition-colors',
+              '-mb-px cursor-pointer border-b-2 px-1 py-2.5 text-sm font-semibold transition-colors',
               active === tab.key
                 ? 'border-interactive-action text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground',
