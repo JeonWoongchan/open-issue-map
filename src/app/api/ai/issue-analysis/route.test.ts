@@ -9,8 +9,9 @@ import { ErrorCode } from '@/lib/api-response'
 vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
 vi.mock('@/lib/ai', () => ({ createAiProvider: vi.fn() }))
 vi.mock('@/lib/ai/guest-usage', () => ({ checkAndIncrementGuestUsage: vi.fn() }))
+vi.mock('@/lib/ai/issue-guide-cache', () => ({ getCachedIssueGuide: vi.fn(), saveIssueGuideCache: vi.fn() }))
 vi.mock('@/lib/user/profile', () => ({ loadOnboardingProfile: vi.fn() }))
-vi.mock('@/lib/github/readme', () => ({ getContributingGuide: vi.fn() }))
+vi.mock('@/lib/github/readme', () => ({ getRepoReadme: vi.fn() }))
 vi.mock('next-auth/jwt', () => ({ getToken: vi.fn() }))
 vi.mock('@/lib/env', () => ({ env: { AUTH_SECRET: 'secret' } }))
 
@@ -19,20 +20,25 @@ import { auth } from '@/lib/auth'
 import { getToken } from 'next-auth/jwt'
 import { createAiProvider } from '@/lib/ai'
 import { checkAndIncrementGuestUsage } from '@/lib/ai/guest-usage'
+import { getCachedIssueGuide, saveIssueGuideCache } from '@/lib/ai/issue-guide-cache'
 import { loadOnboardingProfile } from '@/lib/user/profile'
-import { getContributingGuide } from '@/lib/github/readme'
+import { getRepoReadme } from '@/lib/github/readme'
 
 const mockAuth = auth as unknown as Mock<() => Promise<Session | null>>
 const mockGetToken = getToken as unknown as Mock<() => Promise<JWT | null>>
 const mockCreateProvider = vi.mocked(createAiProvider)
 const mockGuestUsage = vi.mocked(checkAndIncrementGuestUsage)
+const mockGetCache = vi.mocked(getCachedIssueGuide)
+const mockSaveCache = vi.mocked(saveIssueGuideCache)
 const mockLoadProfile = vi.mocked(loadOnboardingProfile)
-const mockContributing = vi.mocked(getContributingGuide)
+const mockContributing = vi.mocked(getRepoReadme)
 
 const originalGithubToken = process.env.GITHUB_TOKEN
 
 beforeEach(() => {
     delete process.env.GITHUB_TOKEN
+    // 기본값은 캐시 미스 — 캐시 히트를 검증하는 테스트만 개별적으로 override한다.
+    mockGetCache.mockResolvedValue(null)
 })
 
 afterEach(() => {
@@ -59,6 +65,8 @@ const validBody = {
     labels: ['bug', 'mobile'],
     language: 'TypeScript',
     repoFullName: 'owner/repo',
+    issueNumber: 42,
+    issueUpdatedAt: '2026-01-01T00:00:00Z',
 }
 
 const analysisResult: IssueAnalysis = {
@@ -67,6 +75,7 @@ const analysisResult: IssueAnalysis = {
     startingPoints: ['src/components/LoginButton.tsx', 'src/lib/auth.ts'],
     cautions: ['모바일 터치 이벤트와 클릭 이벤트 차이 확인 필요'],
     difficulty: '쉬움',
+    expectedBenefit: 'React 이벤트 처리와 OAuth 인증 흐름을 익힐 수 있고, 모바일 사용자의 로그인 실패를 줄여줍니다.',
 }
 
 const userProfile = {
@@ -321,6 +330,51 @@ describe('POST /api/ai/issue-analysis', () => {
                 userWeeklyHours: userProfile.weeklyHours,
                 contributingGuide: null,
             })
+        })
+    })
+
+    describe('DB 캐시', () => {
+        it('캐시 히트 시 게스트 한도를 소모하지 않고 캐시된 결과를 바로 반환한다', async () => {
+            authGuest()
+            apiKeyOk()
+            mockGetCache.mockResolvedValueOnce(analysisResult)
+
+            const res = await POST(makeReq(validBody, { forwardedFor: '1.2.3.4' }))
+            const json = await res.json()
+
+            expect(res.status).toBe(200)
+            expect(json.data).toEqual(analysisResult)
+            expect(mockGuestUsage).not.toHaveBeenCalled()
+            expect(mockCreateProvider).not.toHaveBeenCalled()
+        })
+
+        it('캐시 미스 시 정상 생성 후 결과를 캐시에 저장한다', async () => {
+            authOk()
+            apiKeyOk()
+            makeProvider()
+
+            const res = await POST(makeReq(validBody))
+
+            expect(res.status).toBe(200)
+            expect(mockSaveCache).toHaveBeenCalledWith(
+                { cacheUserId: session.user.id, repoFullName: validBody.repoFullName, issueNumber: validBody.issueNumber },
+                validBody.issueUpdatedAt,
+                analysisResult,
+            )
+        })
+
+        it('게스트는 cacheUserId로 \'guest\'를 공유한다', async () => {
+            authGuest()
+            guestAllowed()
+            apiKeyOk()
+            makeProvider()
+
+            await POST(makeReq(validBody, { forwardedFor: '1.2.3.4' }))
+
+            expect(mockGetCache).toHaveBeenCalledWith(
+                { cacheUserId: 'guest', repoFullName: validBody.repoFullName, issueNumber: validBody.issueNumber },
+                validBody.issueUpdatedAt,
+            )
         })
     })
 

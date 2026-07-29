@@ -21,13 +21,12 @@ function cleanReadme(raw: string): string {
         .slice(0, MAX_README_LENGTH)
 }
 
-async function fetchRepoReadme(
-    owner: string,
-    repo: string,
-    accessToken: string,
-): Promise<string | null> {
+export async function fetchRepoFile(owner: string, repo: string, path: string): Promise<string | null> {
+    const accessToken = process.env.GITHUB_TOKEN
+    if (!accessToken) return null
+
     const res = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/contents/README.md`,
+        `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
         {
             headers: {
                 Accept: 'application/vnd.github+json',
@@ -40,11 +39,15 @@ async function fetchRepoReadme(
     const data = (await res.json()) as { encoding?: string; content?: string }
     if (data.encoding !== 'base64' || !data.content) return null
 
-    const raw = Buffer.from(data.content.replace(/\n/g, ''), 'base64').toString('utf-8')
-    return cleanReadme(raw)
+    return Buffer.from(data.content.replace(/\n/g, ''), 'base64').toString('utf-8')
 }
 
-export const getContributingGuide = unstable_cache(
+async function fetchRepoReadme(owner: string, repo: string): Promise<string | null> {
+    const raw = await fetchRepoFile(owner, repo, 'README.md')
+    return raw ? cleanReadme(raw) : null
+}
+
+export const getRepoReadme = unstable_cache(
     fetchRepoReadme,
     ['github-readme'],
     { revalidate: README_CACHE_TTL },

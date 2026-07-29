@@ -8,6 +8,7 @@ export interface IssueAnalysis {
     startingPoints: string[]
     cautions: string[]
     difficulty: AnalysisDifficulty
+    expectedBenefit: string
 }
 
 export interface IssueAnalysisParams {

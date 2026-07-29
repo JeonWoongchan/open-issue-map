@@ -11,4 +11,7 @@ export const issueAnalysisRequestSchema = z.object({
     repoFullName: z.string().regex(/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/, {
         message: 'repoFullName must be in owner/repo format',
     }),
+    // DB 캐시 키(issue_ai_guides)용 — 이슈 번호 + 조회 시점 GitHub updatedAt(신선도 판별 기준)
+    issueNumber: z.number().int().positive(),
+    issueUpdatedAt: z.string().min(1),
 })
