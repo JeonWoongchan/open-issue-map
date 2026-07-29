@@ -125,3 +125,16 @@ export async function fetchCandidateIssues(
         hasMoreOnGithub: result.search.pageInfo.hasNextPage,
     }
 }
+
+// 이슈 상세 페이지의 "이 저장소의 다른 이슈" 패널 전용
+// 언어 기반 다중 저장소 검색과 달리 repo: qualifier로 저장소 하나만 좁혀서 조회한다.
+export async function fetchRepoIssues(
+    repoFullName: string,
+    accessToken: string,
+    first: number,
+    excludeNumber?: number,
+): Promise<RawIssue[]> {
+    const query = `repo:${repoFullName} is:open is:issue label:"help wanted" sort:updated-desc`
+    const result = await searchIssues(query, first, null, accessToken)
+    return dedupeIssues(result.search.nodes ?? []).filter((issue) => issue.number !== excludeNumber)
+}
