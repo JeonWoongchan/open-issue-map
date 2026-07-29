@@ -5,12 +5,14 @@ import { auth } from '@/lib/auth'
 import { env } from '@/lib/env'
 import { err, ErrorCode, ok } from '@/lib/api-response'
 import { createAiProvider } from '@/lib/ai'
+import type { IssueAnalysis } from '@/lib/ai'
 import { issueAnalysisRequestSchema } from '@/lib/validators/ai'
 import { checkAndIncrementGuestUsage } from '@/lib/ai/guest-usage'
 import { getCachedIssueGuide, saveIssueGuideCache } from '@/lib/ai/issue-guide-cache'
 import { loadOnboardingProfile } from '@/lib/user/profile'
 import { GUEST_ONBOARDING_PROFILE } from '@/constants/guest-profile'
 import { getRepoReadme } from '@/lib/github/readme'
+import { getContributionRules } from '@/lib/github/contribution-rules'
 
 // x-real-ip 우선 — Vercel 주입값이며 x-forwarded-for와 달리 클라이언트가 조작할 수 없다
 function extractClientIp(req: NextRequest): string {
@@ -71,23 +73,34 @@ export async function POST(req: NextRequest) {
 
     const [owner, repo] = repoFullName.split('/')
 
-    // DB 프로필 조회와 README fetch는 독립적이므로 병렬 실행
-    const [profile, contributingGuide] = await Promise.all([
+    // DB 프로필 조회·README·기여 규칙 조회는 서로 독립적이므로 병렬 실행
+    const [profile, readme, contributionRules] = await Promise.all([
         session
             ? loadOnboardingProfile(session.user.id).then((p) => p ?? GUEST_ONBOARDING_PROFILE)
             : Promise.resolve(GUEST_ONBOARDING_PROFILE),
         getRepoReadme(owner, repo),
+        getContributionRules(owner, repo),
     ])
 
     try {
         const provider = createAiProvider()
-        const analysis = await provider.analyzeIssue({
+        const aiResult = await provider.analyzeIssue({
             ...parsed.data,
             userExperienceLevel: profile.experienceLevel ?? 'beginner',
             userPurpose: profile.purpose ?? 'portfolio',
             userWeeklyHours: profile.weeklyHours ?? 5,
-            contributingGuide,
+            readme,
+            contributingGuideText: contributionRules.contributingGuideText,
         })
+        // 파일 경로는 AI 판단이 아니라 우리 코드가 결정론적으로 확인한 값이라, AI 응답과
+        // 분리해서 여기서 병합한다 — AI가 잘못된 경로를 지어낼 위험을 원천 차단한다.
+        const analysis: IssueAnalysis = {
+            ...aiResult,
+            contributionRules: {
+                contributingGuidePath: contributionRules.contributingGuidePath,
+                pullRequestTemplatePath: contributionRules.pullRequestTemplatePath,
+            },
+        }
         await saveIssueGuideCache(cacheKey, issueUpdatedAt, analysis)
         return ok(analysis)
     } catch (error) {

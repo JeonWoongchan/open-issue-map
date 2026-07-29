@@ -12,7 +12,8 @@ function makeParams(overrides: Partial<IssueAnalysisParams> = {}): IssueAnalysis
         userExperienceLevel: 'junior',
         userPurpose: 'portfolio',
         userWeeklyHours: 5,
-        contributingGuide: null,
+        readme: null,
+        contributingGuideText: null,
         ...overrides,
     }
 }
@@ -102,15 +103,28 @@ describe('buildAnalysisPrompt', () => {
     })
 
     describe('README 섹션', () => {
-        it('contributingGuide가 있으면 프로젝트 개요 섹션을 포함한다', () => {
-            const result = buildAnalysisPrompt(makeParams({ contributingGuide: '# Setup\nnpm install' }))
-            expect(result).toContain('[프로젝트 개요 (README)]')
+        it('readme가 있으면 README 섹션을 포함한다', () => {
+            const result = buildAnalysisPrompt(makeParams({ readme: '# Setup\nnpm install' }))
+            expect(result).toContain('[README]')
             expect(result).toContain('npm install')
         })
 
-        it('contributingGuide가 null이면 README 섹션을 생략한다', () => {
-            const result = buildAnalysisPrompt(makeParams({ contributingGuide: null }))
-            expect(result).not.toContain('[프로젝트 개요')
+        it('readme가 null이면 README 섹션을 생략한다', () => {
+            const result = buildAnalysisPrompt(makeParams({ readme: null }))
+            expect(result).not.toContain('[README]')
+        })
+    })
+
+    describe('CONTRIBUTING 섹션', () => {
+        it('contributingGuideText가 있으면 CONTRIBUTING 원문 섹션을 포함한다', () => {
+            const result = buildAnalysisPrompt(makeParams({ contributingGuideText: '커밋은 feat:/fix: 형식을 따라주세요.' }))
+            expect(result).toContain('[CONTRIBUTING 원문]')
+            expect(result).toContain('feat:/fix:')
+        })
+
+        it('contributingGuideText가 null이면 CONTRIBUTING 원문 섹션을 생략한다', () => {
+            const result = buildAnalysisPrompt(makeParams({ contributingGuideText: null }))
+            expect(result).not.toContain('[CONTRIBUTING 원문]')
         })
     })
 
@@ -121,8 +135,8 @@ describe('buildAnalysisPrompt', () => {
         })
 
         it('이슈 정보가 README보다 앞에 온다', () => {
-            const result = buildAnalysisPrompt(makeParams({ contributingGuide: '# Readme' }))
-            expect(result.indexOf('[이슈 정보]')).toBeLessThan(result.indexOf('[프로젝트 개요'))
+            const result = buildAnalysisPrompt(makeParams({ readme: '# Readme' }))
+            expect(result.indexOf('[이슈 정보]')).toBeLessThan(result.indexOf('[README]'))
         })
     })
 })

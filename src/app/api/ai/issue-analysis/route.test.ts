@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 import type { Mock } from 'vitest'
 import type { Session } from 'next-auth'
 import type { JWT } from 'next-auth/jwt'
-import type { IssueAnalysis } from '@/lib/ai/types'
+import type { AiGuideOutput, IssueAnalysis } from '@/lib/ai/types'
 import { ErrorCode } from '@/lib/api-response'
 
 vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
@@ -12,6 +12,7 @@ vi.mock('@/lib/ai/guest-usage', () => ({ checkAndIncrementGuestUsage: vi.fn() })
 vi.mock('@/lib/ai/issue-guide-cache', () => ({ getCachedIssueGuide: vi.fn(), saveIssueGuideCache: vi.fn() }))
 vi.mock('@/lib/user/profile', () => ({ loadOnboardingProfile: vi.fn() }))
 vi.mock('@/lib/github/readme', () => ({ getRepoReadme: vi.fn() }))
+vi.mock('@/lib/github/contribution-rules', () => ({ getContributionRules: vi.fn() }))
 vi.mock('next-auth/jwt', () => ({ getToken: vi.fn() }))
 vi.mock('@/lib/env', () => ({ env: { AUTH_SECRET: 'secret' } }))
 
@@ -23,6 +24,7 @@ import { checkAndIncrementGuestUsage } from '@/lib/ai/guest-usage'
 import { getCachedIssueGuide, saveIssueGuideCache } from '@/lib/ai/issue-guide-cache'
 import { loadOnboardingProfile } from '@/lib/user/profile'
 import { getRepoReadme } from '@/lib/github/readme'
+import { getContributionRules } from '@/lib/github/contribution-rules'
 
 const mockAuth = auth as unknown as Mock<() => Promise<Session | null>>
 const mockGetToken = getToken as unknown as Mock<() => Promise<JWT | null>>
@@ -31,7 +33,8 @@ const mockGuestUsage = vi.mocked(checkAndIncrementGuestUsage)
 const mockGetCache = vi.mocked(getCachedIssueGuide)
 const mockSaveCache = vi.mocked(saveIssueGuideCache)
 const mockLoadProfile = vi.mocked(loadOnboardingProfile)
-const mockContributing = vi.mocked(getRepoReadme)
+const mockReadme = vi.mocked(getRepoReadme)
+const mockContributionRules = vi.mocked(getContributionRules)
 
 const originalGithubToken = process.env.GITHUB_TOKEN
 
@@ -69,13 +72,40 @@ const validBody = {
     issueUpdatedAt: '2026-01-01T00:00:00Z',
 }
 
-const analysisResult: IssueAnalysis = {
+// provider.analyzeIssue가 실제로 반환하는 원본 — contributionRules(파일 경로)는 포함하지 않는다.
+const aiGuideOutputResult: AiGuideOutput = {
     concepts: ['React 이벤트 핸들링', 'OAuth 플로우'],
     scope: '로그인 버튼 클릭 핸들러 수정, 약 20줄 변경 예상',
     startingPoints: ['src/components/LoginButton.tsx', 'src/lib/auth.ts'],
     cautions: ['모바일 터치 이벤트와 클릭 이벤트 차이 확인 필요'],
     difficulty: '쉬움',
     expectedBenefit: 'React 이벤트 처리와 OAuth 인증 흐름을 익힐 수 있고, 모바일 사용자의 로그인 실패를 줄여줍니다.',
+    issueOverview: {
+        summary: '모바일에서 로그인 버튼이 동작하지 않는다는 버그 리포트입니다.',
+        analysis: '작성자는 모바일 화면에서 로그인 버튼을 눌러도 아무 반응이 없다고 보고하며, 터치 이벤트 처리 수정을 원하고 있습니다.',
+        summarySections: [
+            { heading: '본문', items: ['모바일에서 로그인 버튼이 동작하지 않습니다.'] },
+        ],
+    },
+    contributionGuideInsight: {
+        commitConventionNote: '특별히 정해진 커밋 컨벤션은 확인되지 않았어요.',
+        claNote: '확인할 문서가 없어 CLA 요구 여부를 알 수 없어요.',
+    },
+}
+
+const emptyContributionRules = {
+    contributingGuidePath: null,
+    pullRequestTemplatePath: null,
+    contributingGuideText: null,
+}
+
+// route.ts가 aiGuideOutputResult + contributionRules(결정론적 판별값)를 병합해 캐싱·반환하는 최종 형태.
+const analysisResult: IssueAnalysis = {
+    ...aiGuideOutputResult,
+    contributionRules: {
+        contributingGuidePath: null,
+        pullRequestTemplatePath: null,
+    },
 }
 
 const userProfile = {
@@ -92,13 +122,15 @@ function authOk() {
     mockAuth.mockResolvedValueOnce(session)
     mockGetToken.mockResolvedValueOnce({ accessToken: 'user-token' } as JWT)
     mockLoadProfile.mockResolvedValueOnce(userProfile)
-    mockContributing.mockResolvedValueOnce(null)
+    mockReadme.mockResolvedValueOnce(null)
+    mockContributionRules.mockResolvedValueOnce(emptyContributionRules)
 }
 
 function authGuest() {
     mockAuth.mockResolvedValueOnce(null)
     process.env.GITHUB_TOKEN = 'server-token'
-    mockContributing.mockResolvedValueOnce(null)
+    mockReadme.mockResolvedValueOnce(null)
+    mockContributionRules.mockResolvedValueOnce(emptyContributionRules)
 }
 
 function apiKeyOk() {
@@ -113,7 +145,7 @@ function guestExceeded() {
     mockGuestUsage.mockResolvedValueOnce({ allowed: false, remaining: 0 })
 }
 
-function makeProvider(analyzeIssueImpl = vi.fn().mockResolvedValue(analysisResult)) {
+function makeProvider(analyzeIssueImpl = vi.fn().mockResolvedValue(aiGuideOutputResult)) {
     const provider = {
         analyzeIssue: analyzeIssueImpl,
     }
@@ -328,7 +360,8 @@ describe('POST /api/ai/issue-analysis', () => {
                 userExperienceLevel: userProfile.experienceLevel,
                 userPurpose: userProfile.purpose,
                 userWeeklyHours: userProfile.weeklyHours,
-                contributingGuide: null,
+                readme: null,
+                contributingGuideText: null,
             })
         })
     })

@@ -1,13 +1,8 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { BookOpen, FolderTree } from 'lucide-react'
-import { AiGuideSection } from '@/components/issue-detail/AiGuideSection'
-import { ComingSoonNotice } from '@/components/issue-detail/ComingSoonNotice'
-import { ContributionRulesPanel } from '@/components/issue-detail/ContributionRulesPanel'
-import { DetailPanel } from '@/components/issue-detail/DetailPanel'
 import { IssueDetailActions } from '@/components/issue-detail/IssueDetailActions'
 import { IssueDetailHeader } from '@/components/issue-detail/IssueDetailHeader'
-import { IssueDetailWorkspace } from '@/components/issue-detail/IssueDetailWorkspace'
+import { IssueGuideWorkspace } from '@/components/issue-detail/IssueGuideWorkspace'
 import { RelatedIssuesPanel } from '@/components/issue-detail/RelatedIssuesPanel'
 import { ScoreBreakdownPanel } from '@/components/issue-detail/ScoreBreakdownPanel'
 import { WhyItFitsCallout } from '@/components/issue-detail/WhyItFitsCallout'
@@ -16,7 +11,6 @@ import { auth } from '@/lib/auth'
 import { getServerAccessToken } from '@/lib/auth-utils'
 import { getCachedIssueGuide } from '@/lib/ai/issue-guide-cache'
 import { listUserBookmarkKeys } from '@/lib/bookmarks'
-import { getContributionRules } from '@/lib/github/contribution-rules'
 import { fetchIssueDetail } from '@/lib/github/issues/detail'
 import { fetchRepoIssues } from '@/lib/github/issues/search'
 import { scoreIssue } from '@/lib/github/issues/scorer'
@@ -59,13 +53,14 @@ export default async function IssueDetailPage({ params }: IssueDetailPageProps) 
   const repoFullName = `${owner}/${repo}`
 
   // fetchRepoIssues는 rawIssue 등 아래 결과에 의존하지 않으므로 나머지와 함께 병렬로 묶는다.
-  const [rawIssue, profile, bookmarkKeys, contributionRules, relatedIssues] = await Promise.all([
+  // 이슈 개요·기여 규칙(README/CONTRIBUTING 조회 포함)은 AI 가이드 응답에 함께 실려 오므로
+  // 여기서는 따로 fetch하지 않는다 — /api/ai/issue-analysis가 캐시 미스 시 내부에서 처리한다.
+  const [rawIssue, profile, bookmarkKeys, relatedIssues] = await Promise.all([
     fetchIssueDetail(owner, repo, number, accessToken),
     session
       ? loadOnboardingProfile(session.user.id).then((p) => p ?? GUEST_ONBOARDING_PROFILE)
       : Promise.resolve(GUEST_ONBOARDING_PROFILE),
     session ? listUserBookmarkKeys(session.user.id) : Promise.resolve<string[]>([]),
-    getContributionRules(owner, repo),
     fetchRepoIssues(repoFullName, accessToken, RELATED_ISSUES_LIMIT, number),
   ])
 
@@ -79,7 +74,7 @@ export default async function IssueDetailPage({ params }: IssueDetailPageProps) 
     isBookmarked: bookmarkKeys.includes(`${scored.repoFullName}#${scored.number}`),
   }
 
-  // AiGuideSection에 넘겨 캐시가 이미 있으면 클라이언트가 다시 요청하지 않고 바로 렌더링하게 한다 —
+  // IssueGuideWorkspace에 넘겨 캐시가 이미 있으면 클라이언트가 다시 요청하지 않고 바로 렌더링하게 한다 —
   // rawIssue.updatedAt이 있어야 캐시 키를 만들 수 있어 위 Promise.all에는 넣을 수 없다.
   const initialAnalysis = await getCachedIssueGuide(
     { cacheUserId: session?.user.id ?? 'guest', repoFullName, issueNumber: issue.number },
@@ -104,32 +99,17 @@ export default async function IssueDetailPage({ params }: IssueDetailPageProps) 
       </div>
 
       <div className="issue-detail-grid__main">
-        <IssueDetailWorkspace
-          overview={
-            <>
-              <DetailPanel icon={BookOpen} label="저장소 개요">
-                <ComingSoonNotice description="README 요약" />
-              </DetailPanel>
-
-              <DetailPanel icon={FolderTree} label="코드 구조 · 스택">
-                <ComingSoonNotice description="파일 구조와 기술 스택 분석" />
-              </DetailPanel>
-
-              <ContributionRulesPanel rules={contributionRules} />
-            </>
-          }
-          aiGuide={
-            <AiGuideSection
-              title={issue.title}
-              body={issue.body ?? null}
-              labels={issue.labels}
-              language={issue.language}
-              repoFullName={issue.repoFullName}
-              issueNumber={issue.number}
-              issueUpdatedAt={rawIssue.updatedAt}
-              initialAnalysis={initialAnalysis}
-            />
-          }
+        <IssueGuideWorkspace
+          title={issue.title}
+          // issue.body는 scoreIssue()가 카드 미리보기용으로 500자로 잘라둔 값(ISSUE_BODY_PREVIEW_LENGTH)이라
+          // 상세 페이지·AI 분석에는 쓸 수 없다 — GraphQL로 받아온 잘리지 않은 원본을 그대로 쓴다.
+          body={rawIssue.body ?? null}
+          labels={issue.labels}
+          language={issue.language}
+          repoFullName={issue.repoFullName}
+          issueNumber={issue.number}
+          issueUpdatedAt={rawIssue.updatedAt}
+          initialAnalysis={initialAnalysis}
           related={<RelatedIssuesPanel issues={relatedIssues} />}
         />
       </div>

@@ -54,6 +54,38 @@ describe('cleanIssueBody', () => {
         })
     })
 
+    describe('HTML 주석 제거', () => {
+        it('HTML 주석(템플릿 안내 문구)을 제거한다', () => {
+            const input = '<!-- 재현 방법을 적어주세요 -->\n실제 내용'
+            expect(cleanIssueBody(input)).toBe('실제 내용')
+        })
+    })
+
+    describe('체크박스 줄 제거', () => {
+        it('체크되지 않은 체크박스 줄을 제거한다', () => {
+            const input = '- [ ] 기존 이슈를 검색했습니다\n실제 내용'
+            expect(cleanIssueBody(input)).toBe('실제 내용')
+        })
+
+        it('체크된 체크박스 줄도 제거한다', () => {
+            const input = '- [x] 확인함\n실제 내용'
+            expect(cleanIssueBody(input)).toBe('실제 내용')
+        })
+    })
+
+    describe('인용 마커 제거', () => {
+        it('인용 마커만 제거하고 내용은 유지한다', () => {
+            expect(cleanIssueBody('> 인용된 내용')).toBe('인용된 내용')
+        })
+    })
+
+    describe('구분선 제거', () => {
+        it('구분선 줄을 제거한다', () => {
+            const input = '첫 문단\n\n---\n\n둘째 문단'
+            expect(cleanIssueBody(input)).toBe('첫 문단\n\n둘째 문단')
+        })
+    })
+
     describe('연속 개행 정규화', () => {
         it('3개 이상 연속 개행을 2개로 줄인다', () => {
             expect(cleanIssueBody('first\n\n\n\nfourth')).toBe('first\n\nfourth')
@@ -65,12 +97,12 @@ describe('cleanIssueBody', () => {
     })
 
     describe('길이 제한', () => {
-        it('2000자 초과 입력을 2000자로 자른다', () => {
-            const longText = 'a'.repeat(3000)
-            expect(cleanIssueBody(longText).length).toBe(2000)
+        it('8000자 초과 입력을 8000자로 자른다', () => {
+            const longText = 'a'.repeat(9_000)
+            expect(cleanIssueBody(longText).length).toBe(8_000)
         })
 
-        it('2000자 이하 입력은 자르지 않는다', () => {
+        it('8000자 이하 입력은 자르지 않는다', () => {
             const shortText = 'a'.repeat(500)
             expect(cleanIssueBody(shortText).length).toBe(500)
         })

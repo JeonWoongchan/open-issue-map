@@ -1,5 +1,6 @@
 import sql from '@/lib/db'
 import type { IssueAnalysis } from './types'
+import { issueAnalysisSchema } from './schema'
 
 export type IssueGuideCacheKey = {
   cacheUserId: string
@@ -27,7 +28,13 @@ export async function getCachedIssueGuide(
       AND created_at > NOW() - ${CACHE_MAX_AGE_DAYS} * INTERVAL '1 day'
   `
 
-  return rows.length > 0 ? (rows[0].analysis as IssueAnalysis) : null
+  if (rows.length === 0) return null
+
+  // 응답 스키마가 바뀐 뒤에도 이전 스키마로 저장된 행이 남아있을 수 있다 — 검증 없이 그대로
+  // 반환하면 클라이언트가 새로 추가된 필드를 undefined로 렌더링하다 크래시한다. 검증에 실패하면
+  // 캐시 미스로 취급해 새로 생성하게 한다(별도 무효화 마이그레이션 없이 자연스럽게 갱신됨).
+  const parsed = issueAnalysisSchema.safeParse(rows[0].analysis)
+  return parsed.success ? (parsed.data as IssueAnalysis) : null
 }
 
 export async function saveIssueGuideCache(
