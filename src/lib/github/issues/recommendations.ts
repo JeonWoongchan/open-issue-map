@@ -1,5 +1,6 @@
 import { RECOMMENDATION_CONDITION_META, type RecommendationCondition } from '@/constants/recommendation'
 import {
+  POPULAR_SORT_WINDOW_DAYS,
   RECOMMENDATION_DISPLAY_LIMIT,
   RECOMMENDATION_MAX_PER_REPO,
   RECOMMENDATION_PAGE_COUNT,
@@ -11,7 +12,7 @@ import type { OnboardingProfile } from '@/lib/user/profile'
 import type { IssueCardItem, RawIssue, ScoredIssue } from '@/types/issue'
 import { getCandidatePools, upsertCandidatePool } from './candidate-pool-store'
 import { rankIssues } from './ranking'
-import { dedupeIssues, fetchCandidateIssues } from './search'
+import { buildRecentWindowQualifier, dedupeIssues, fetchCandidateIssues } from './search'
 
 // 무작위로 count개를 뽑는다(Fisher–Yates) — 원본 배열은 건드리지 않는다.
 function sampleRandom<T>(items: T[], count: number): T[] {
@@ -50,13 +51,9 @@ export function capIssuesPerRepo(issues: ScoredIssue[], maxPerRepo: number): Sco
 // language qualifier만으로는 후보 풀이 너무 커 "Resource limits for this query exceeded"로
 // 거부되기 쉽다. 최근 N일로 후보 풀을 좁혀 GitHub이 감당 가능한 비용으로 낮춘다.
 // created-desc(최신순)·updated-desc(최근 활동)는 집계가 아니라 단순 시간순 정렬이라 이 제약이 필요 없다.
+// 이슈 탐색 페이지(search.ts)와 같은 이유로 같은 창을 쓰므로 POPULAR_SORT_WINDOW_DAYS를 공유한다.
 const RECENT_WINDOW_DAYS: Partial<Record<RecommendationCondition, number>> = {
-  popular: 90,
-}
-
-function buildRecentWindowQualifier(days: number): string {
-  const sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
-  return `created:>=${sinceDate.toISOString().slice(0, 10)}`
+  popular: POPULAR_SORT_WINDOW_DAYS,
 }
 
 // '인기' 조건은 reactions 수만으로 정렬하므로, 스타 1개짜리 신생 저장소 이슈도 우연히 반응이

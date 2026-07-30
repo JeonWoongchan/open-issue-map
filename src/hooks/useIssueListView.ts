@@ -1,74 +1,47 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useIssueBookmarks } from './useIssueBookmarks'
-import { useIssueCandidateLoadMoreFeedback } from './useIssueCandidateLoadMoreFeedback'
 import { useIssueList } from './useIssueList'
-import { useSearchFilter } from './useSearchFilter'
 import { useInfiniteScrollDisplay } from './useScrollSentinel'
-import type { IssueFilters } from '@/types/issue'
+import type { IssueFilters, IssueSearchState } from '@/types/issue'
 
-export function useIssueListView(filters: IssueFilters, query: string, columnCount: number) {
+// 검색은 이제 서버가 GitHub 전체를 대상으로 수행한다(제출된 검색어가 요청 자체에 실려간다) —
+// 그래서 예전처럼 "이미 로드된 목록 안에서" 다시 거르는 클라이언트 텍스트 필터가 필요 없다.
+//
+// 난이도/진행상태/기여방식/추천점수/최소스타 같은 후처리 필터는 GitHub 쿼리로 보낼 수 없어
+// 응답을 받은 뒤(service.ts) 걸러지는데, 그 때문에 어떤 페이지가 적게(또는 0개) 나와도
+// 별도 "더 찾아보기" 버튼을 두지 않는다 — 기본 목록과 동일하게 무한스크롤이 같은 조건으로
+// 다음 페이지를 자동으로 계속 가져와 다시 필터링한다(useInfiniteScrollDisplay가 그대로 담당).
+export function useIssueListView(search: IssueSearchState, filters: IssueFilters, columnCount: number) {
     const {
         issues,
         hasNextPage,
         fetchNextPageAction,
-        fetchMoreCandidatesAction,
         isFetchingNextPage,
-        canLoadMoreCandidates,
         isPending,
         isError,
         errorMessage,
         refetch,
-        availableLanguages,
-    } = useIssueList(filters)
-
-    // 로딩 중에도 언어 필터 옵션이 사라지지 않도록 마지막 성공값을 유지
-    const [lastAvailableLanguages, setLastAvailableLanguages] = useState<string[]>([])
-
-    useEffect(() => {
-        if (!isPending && !isError) {
-            setLastAvailableLanguages(availableLanguages)
-        }
-    }, [availableLanguages, isError, isPending])
-
-    const filterAvailableLanguages =
-        isPending && lastAvailableLanguages.length > 0 ? lastAvailableLanguages : availableLanguages
+    } = useIssueList(search, filters)
 
     const { optimisticIssues, toggleBookmark } = useIssueBookmarks({
         sourceIssues: issues,
         isSourceIssuesReady: !isPending && !isError,
     })
 
-    const filteredItems = useSearchFilter(optimisticIssues, query)
     // 이미 목록이 있는 상태에서 다음 페이지만 실패한 경우 — 기존 목록은 유지하고 하단에만 에러 표시
     const isNextPageError = isError && optimisticIssues.length > 0
     const { displayItems, effectiveHasNextPage, sentinelRef } = useInfiniteScrollDisplay({
-        items: filteredItems,
+        items: optimisticIssues,
         hasNextPage,
         fetchNextPageAction,
         isFetchingNextPage,
         isError: isNextPageError,
-        isSearchActive: !!query,
         columnCount,
     })
 
-    const {
-        emptyCandidateFetchCount,
-        shouldShowCandidateLoadMoreNotice,
-        loadMoreCandidatesAction,
-    } = useIssueCandidateLoadMoreFeedback({
-        filters,
-        issueCount: issues.length,
-        isFetchingNextPage,
-        canLoadMoreCandidates,
-        fetchMoreCandidatesAction,
-    })
-
     return {
-        filterAvailableLanguages,
-        filteredItems,
-        totalCount: optimisticIssues.length,
+        items: optimisticIssues,
         isPending,
         isError,
         errorMessage,
@@ -80,9 +53,5 @@ export function useIssueListView(filters: IssueFilters, query: string, columnCou
         isNextPageError,
         retryNextPageAction: fetchNextPageAction,
         sentinelRef,
-        shouldShowCandidateLoadMoreNotice,
-        emptyCandidateFetchCount,
-        canLoadMoreCandidates,
-        loadMoreCandidatesAction,
     }
 }

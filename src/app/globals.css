@@ -148,6 +148,12 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
   --status-danger: oklch(0.965 0.03 18);
   --status-danger-foreground: oklch(0.58 0.2 27.3);
   --status-danger-border: oklch(0.72 0.12 26 / 40%);
+  /* 이슈 탐색 프리셋 아이콘 전용 색 — status-*-foreground는 배지 배경 위 텍스트용이라
+     다크 모드에서 채도가 거의 0으로 떨어져(near-white) 배경 없이 아이콘 단독으로 쓰면
+     색이 안 보인다. 아이콘 단독 사용에 맞게 채도를 유지한 채 라이트/다크를 따로 튜닝한다. */
+  --preset-icon-success: oklch(0.5 0.14 152);
+  --preset-icon-danger: oklch(0.55 0.19 25);
+  --preset-icon-doc: oklch(0.58 0.09 300);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -220,6 +226,9 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
   --status-danger: oklch(0.3 0.07 24);
   --status-danger-foreground: oklch(0.92 0.03 24);
   --status-danger-border: oklch(0.55 0.1 24 / 55%);
+  --preset-icon-success: oklch(0.72 0.15 155);
+  --preset-icon-danger: oklch(0.72 0.18 25);
+  --preset-icon-doc: oklch(0.76 0.09 297);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.78 0.16 55);
@@ -243,18 +252,6 @@ body[data-help-dialog-locked] [data-scroll-lock-offset] {
 
 @utility bg-report-card {
   background: var(--gradient-report-card), var(--card);
-}
-
-/* 추천 필터 프리셋 버튼 배경 — --icon-color는 각 버튼이 인라인 스타일로 지정한다.
-   아이콘마다 색이 달라야 해서 고정 accent 대신 버튼별 CSS 변수를 우려낸 배경을 쓴다. */
-@utility filter-preset-btn {
-  position: relative;
-  &:hover {
-    background: color-mix(in oklch, var(--icon-color, var(--interactive-action)) 8%, transparent);
-  }
-  &[aria-pressed='true'] {
-    background: color-mix(in oklch, var(--icon-color, var(--interactive-action)) 14%, transparent);
-  }
 }
 
 /* 카드 위에서 마우스를 따라다니는 스포트라이트 글로우. --mx/--my는 CardShell이

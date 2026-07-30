@@ -25,10 +25,6 @@ export const RECOMMENDATION_MAX_PER_REPO = 3
 export const RECOMMENDATION_DISPLAY_LIMIT = 15
 // 이슈 데이터 캐시 TTL — 추천 목적상 실시간 반영보다 rate limit 절약과 재방문 UX를 우선해 30분으로 설정
 export const GITHUB_API_CACHE_TTL_SECONDS = 1800
-// 배치 시작 시 즉시 보여줄 분량 — 사용자가 직접 기다리는 유일한 요청이므로 작게 유지
-export const FOREGROUND_FETCH_SIZE = 30
-// 배치 시작과 동시에 백그라운드로 미리 채워두는 분량 — 사용자는 기다리지 않으므로 크게 잡아도 됨
-export const BACKGROUND_FETCH_SIZE = 100
 // GitHub API 응답 대기 상한 — 초과 시 AbortError로 함수 조기 종료
 export const GITHUB_API_TIMEOUT_MS = 8_000
 // 이슈 목록 클라이언트 stale 시간 — 서버 캐시 TTL과 맞춰 재방문 시 즉시 표시
@@ -277,3 +273,18 @@ export type ScoreThreshold = typeof SCORE_FILTER_THRESHOLDS[number]
 
 export const STAR_FILTER_THRESHOLDS = [100, 300, 1000, 3000] as const
 export type StarThreshold = typeof STAR_FILTER_THRESHOLDS[number]
+
+// 이슈 탐색 페이지 — 배치가 열리자마자(offset=0) 보여줄 분량. 사용자가 직접 기다리는
+// 유일한 요청이므로 작게 유지한다.
+export const EXPLORE_FOREGROUND_FETCH_SIZE = 30
+// 배치 시작과 동시에 background로 미리 채워두는 분량 — 사용자는 기다리지 않으므로 크게 잡는다.
+// foreground와 같은 커서에서 fetch하므로(0..89) foreground(0..29)를 그대로 포함한다.
+export const EXPLORE_BACKGROUND_FETCH_SIZE = 90
+// 첫 배치를 나타내는 sentinel — 커서 없이 GitHub 첫 페이지를 요청한다.
+export const EXPLORE_INITIAL_BATCH = 'initial' as const
+
+// "인기순" 정렬(reactions-desc)의 리소스 리밋 회피용 창 — reactions 기준 정렬은 GitHub이
+// 전체 이력을 집계해야 해서 비용이 커 "Resource limits for this query exceeded"로 거부되기
+// 쉽다. 최근 N일로 후보 풀을 좁혀 비용을 낮춘다. 이슈 탐색 페이지(search.ts)와 추천 이슈
+// 페이지(recommendations.ts) 둘 다 reactions-desc를 쓰므로 이 상수를 공유한다.
+export const POPULAR_SORT_WINDOW_DAYS = 90

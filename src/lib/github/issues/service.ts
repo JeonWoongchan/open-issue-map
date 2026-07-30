@@ -2,96 +2,101 @@ import { unstable_cache } from 'next/cache'
 import { after } from 'next/server'
 
 import { listUserBookmarkKeys } from '@/lib/bookmarks'
-import { parseBatchParam } from '@/lib/github/batch'
 import { GitHubRateLimitError, GitHubUnauthorizedError } from '@/lib/github/client'
 import { withSingleFlight } from '@/lib/singleflight'
 import {
-    BACKGROUND_FETCH_SIZE,
-    FOREGROUND_FETCH_SIZE,
+    EXPLORE_BACKGROUND_FETCH_SIZE,
+    EXPLORE_FOREGROUND_FETCH_SIZE,
+    EXPLORE_INITIAL_BATCH,
     GITHUB_API_CACHE_TTL_SECONDS,
-    PAGE_SIZE,
 } from '@/constants/scoring-rules'
-import type { IssueFilters } from '@/types/issue'
+import { LANGUAGE_GROUP_PRESETS } from '@/constants/explore-presets'
+import type { IssueFilters, IssueSort } from '@/types/issue'
 import type { IssueListPage } from '@/types/api'
 import type { OnboardingProfile } from '@/lib/user/profile'
-import { applyFilters, hasActiveFilters } from './filters'
+import { applyFilters } from './filters'
 import { rankIssues } from './ranking'
-import { fetchCandidateIssues, type IssueSearchResult } from './search'
+import { buildExploreQuery, fetchExploreIssues, type IssueSearchResult } from './search'
 
 export type IssuePageData = IssueListPage
 
 export type IssuePageError =
-    | { error: 'invalid_batch' }
     | { error: 'rate_limited' }
     | { error: 'unauthorized' }
     | { error: 'fetch_failed' }
 
-type FetchIssueListPageParams = {
-    userId: string | null  // null = 게스트. 북마크 조회를 생략하고 공유 캐시를 사용한다.
+type FetchIssueExplorePageParams = {
+    userId: string | null  // null = 게스트. 북마크 조회를 생략한다.
     accessToken: string
     profile: OnboardingProfile
     filters: IssueFilters
+    query: string
+    sort: IssueSort
+    githubLabel: string | null
+    languageGroup: string | null
     offset: number
-    batchParam: string
+    batch: string  // EXPLORE_INITIAL_BATCH 또는 이전 응답의 nextBatch
 }
 
-export async function fetchIssueListPage({
+export async function fetchIssueExplorePage({
     userId,
     accessToken,
     profile,
     filters,
+    query,
+    sort,
+    githubLabel,
+    languageGroup,
     offset,
-    batchParam,
-}: FetchIssueListPageParams): Promise<IssuePageData | IssuePageError> {
-    const parsedBatch = parseBatchParam(batchParam)
-    if (!parsedBatch.ok) {
-        return { error: 'invalid_batch' }
-    }
+    batch,
+}: FetchIssueExplorePageParams): Promise<IssuePageData | IssuePageError> {
+    const languages = languageGroup
+        ? LANGUAGE_GROUP_PRESETS.find((group) => group.key === languageGroup)?.languages ?? []
+        : []
 
-    const cursor = parsedBatch.cursor
-    const cacheUserId = userId ?? 'guest'
-    const sortedLanguages = profile.topLanguages.slice().sort()
-    const cacheKeyBase = ['github-issues', cacheUserId, ...sortedLanguages, batchParam]
+    const searchQuery = buildExploreQuery({ text: query, languages, githubLabel, sort })
+    const cursor = batch === EXPLORE_INITIAL_BATCH ? null : batch
 
+    // 검색 쿼리 자체가 사용자와 무관한 공개 GitHub 데이터라, 캐시 키에 사용자 식별자를 넣지
+    // 않는다 — README 캐시 키 버그(사용자 토큰까지 키에 섞여 같은 공개 저장소인데도 캐시가
+    // 갈라지던 문제, src/lib/github/readme.ts 참고)와 같은 종류의 실수를 여기서는 피한다.
+    const cacheKeyBase = ['github-issues-explore', searchQuery, batch]
 
-    // 배치 티어별 unstable_cache 래퍼 + singleflight key를 한 번에 만든다 —
+    // 배치 티어(foreground/background)별 unstable_cache 래퍼 + singleflight key를 한 번에 만든다 —
     // 키 배열을 두 번 따로 만들면 한쪽만 고쳤을 때 캐시 key와 singleflight key가 어긋날 수 있다.
-    function makeCachedFetch(size: number, tier: 'foreground' | 'full') {
+    function makeCachedFetch(size: number, tier: 'foreground' | 'background') {
         const keyParts = [...cacheKeyBase, tier]
         return {
             key: keyParts.join('::'),
             fetch: unstable_cache(
-                () => fetchCandidateIssues(profile.topLanguages, accessToken, cursor, size),
+                () => fetchExploreIssues(searchQuery, accessToken, cursor, size),
                 keyParts,
-                { revalidate: GITHUB_API_CACHE_TTL_SECONDS }
+                { revalidate: GITHUB_API_CACHE_TTL_SECONDS },
             ),
         }
     }
 
-    // 이 요청에 실제로 필요한 티어만 만든다 — foreground 구간 요청에서 안 쓰일 background 래퍼(또는 그 반대)까지
-    // 매번 등록하는 건 낭비다. offset=0만 예외로 둘 다 필요하다(응답은 foreground, background는 미리 준비).
-    const isWithinForegroundRange = offset < FOREGROUND_FETCH_SIZE
-    const foreground = isWithinForegroundRange ? makeCachedFetch(FOREGROUND_FETCH_SIZE, 'foreground') : null
-    const fullBatch = (!isWithinForegroundRange || offset === 0) ? makeCachedFetch(BACKGROUND_FETCH_SIZE, 'full') : null
-    const primary = foreground ?? fullBatch!
+    const isWithinForegroundRange = offset < EXPLORE_FOREGROUND_FETCH_SIZE
+    const primary = isWithinForegroundRange
+        ? makeCachedFetch(EXPLORE_FOREGROUND_FETCH_SIZE, 'foreground')
+        : makeCachedFetch(EXPLORE_BACKGROUND_FETCH_SIZE, 'background')
 
-    // 배치의 첫 요청(offset=0) 시점에 background 버퍼 준비를 바로 시작한다.
-    // 사용자가 foreground 분량(첫 몇 페이지)을 보는 동안 준비가 끝나도록, 최대한 이르게 트리거한다.
+    // 배치의 첫 요청(offset=0)에서 foreground와 background를 동시에 시작한다 — background
+    // 호출을 await 뒤(또는 after() 콜백 안)로 미루면 그만큼 완료 시점이 늦어지므로, 여기서
+    // 바로 호출해 foreground와 병렬로 진행되게 한다. after()는 시작을 늦추는 용도가 아니라,
+    // 응답 전송 후 서버리스 함수가 종료되며 이 promise가 중간에 끊기지 않도록 끝까지
+    // 붙잡아두는 용도로만 쓴다.
     if (offset === 0) {
-        // 실패해도(rate limit 등) foreground 응답에는 영향 없으므로 조용히 무시한다 —
-        // catch 없이 두면 unhandled rejection이 된다.
-        after(() => { withSingleFlight(fullBatch!.key, fullBatch!.fetch).catch(() => {}) })
+        const background = makeCachedFetch(EXPLORE_BACKGROUND_FETCH_SIZE, 'background')
+        const backgroundPromise = withSingleFlight(background.key, background.fetch).catch(() => {})
+        after(() => backgroundPromise)
     }
 
     const bookmarkPromise = userId ? listUserBookmarkKeys(userId) : Promise.resolve([])
 
-    // foreground 범위 안에서는 대기 없이 빠른 소량 캐시를, 그 이후는 background 대량 캐시를 사용한다.
-    // background가 아직 준비 안 된 상태에서 여기 도달하면 그 자리에서 계산되어 기다리게 될 수 있으나,
-    // foreground가 미리 확보해준 시간만큼 그 빈도는 크게 줄어든다.
-    //
-    // unstable_cache는 "이미 끝난 계산"만 캐싱하고 아직 응답이 안 온 동시 요청끼리는 중복 계산해버리므로
-    // (예: 빠른 스크롤로 같은 배치에 대한 요청이 겹치는 경우), withSingleFlight로 감싸서
-    // 같은 key로 진행 중인 요청이 있으면 그 결과를 공유하도록 한다.
+    // unstable_cache는 "이미 끝난 계산"만 캐싱하고 아직 응답이 안 온 동시 요청끼리는 중복
+    // 계산해버리므로(cache stampede), withSingleFlight로 감싸 같은 key로 진행 중인 요청이
+    // 있으면 그 결과를 공유하도록 한다.
     let searchResult: IssueSearchResult
     try {
         searchResult = await withSingleFlight(primary.key, primary.fetch)
@@ -107,40 +112,38 @@ export async function fetchIssueListPage({
         isBookmarked: bookmarkKeys.has(`${issue.repoFullName}#${issue.number}`),
     }))
 
-    const availableLanguages = [...new Set(
-        rankedIssues.flatMap((issue) => issue.language !== null ? [issue.language] : [])
-    )]
+    // 난이도/진행상태/기여방식/최소점수/최소스타는 GitHub 쿼리로 보낼 수 없어 여기서만 거른다.
+    // 배치 진행 여부(hasMore/nextBatch)는 이 필터링과 무관하게 raw fetch 결과 기준으로만
+    // 판단한다 — 그래야 필터 때문에 이번 페이지가 적게(또는 0개) 나와도 별도 신호 없이
+    // 무한스크롤이 같은 조건으로 다음 페이지를 자동으로 계속 가져온다.
+    const pageIssues = applyFilters(rankedIssues, filters)
+        .slice(offset, offset + EXPLORE_FOREGROUND_FETCH_SIZE)
 
-    const allIssues = applyFilters(rankedIssues, filters)
-    const pageIssues = allIssues.slice(offset, offset + PAGE_SIZE)
-    const isActiveFilterResultUnderfilled = hasActiveFilters(filters) && pageIssues.length < PAGE_SIZE
-    const canAutoRequestNextBatch = searchResult.hasMoreOnGithub && !isActiveFilterResultUnderfilled
+    let hasMore: boolean
+    let nextBatch: string | null
 
-    // foreground(30개)는 GitHub에 더 있어도 raw fetch 크기 자체가 작아 total이 실제보다 작게 나온다.
-    // 이걸 그대로 배치 종료 신호로 쓰면, background(100개) 구간(offset>=FOREGROUND_FETCH_SIZE)에
-    // 도달하기도 전에 매번 새 배치로 넘어가버려 background 캐시가 영영 쓰이지 못한다.
-    // GitHub에 더 있는 한(hasMoreOnGithub) foreground 구간에서는 total을 그 경계 너머로 보정해
-    // 같은 배치 안에서 offset이 자연스럽게 background 구간까지 이어지도록 한다.
-    // 단, 활성 필터로 인한 underfill은 이 보정과 무관하게 별도로(canLoadMoreCandidates) 처리해야 하므로 제외한다.
-    const shouldInflateTotal = isWithinForegroundRange && canAutoRequestNextBatch
-    const reportedTotal = shouldInflateTotal
-        ? Math.max(allIssues.length, FOREGROUND_FETCH_SIZE + 1)
-        : allIssues.length
-
-    const isLastPage = offset + PAGE_SIZE >= reportedTotal
-
-    const candidateNextBatch = isLastPage && searchResult.hasMoreOnGithub
-        ? searchResult.endCursor
-        : null
+    if (isWithinForegroundRange) {
+        // foreground(30개)만 본 상태 — 이 배치에 더 있는지는 아직 모르지만, GraphQL의
+        // hasNextPage가 "이 first 개수 이후에 더 있는지"를 정확히 알려주므로 background
+        // 결과를 기다리지 않고도 안전하게 판단할 수 있다. 다음 배치로 넘어갈지는 아직
+        // 결정하지 않는다(항상 background 구간을 실제로 거친 뒤에만 결정한다) — 그렇지
+        // 않으면 foreground 자체의(30개 지점) 커서로 nextBatch를 잘못 확정해버려서
+        // background에 미리 채워둔 90개를 건너뛰게 된다.
+        hasMore = searchResult.hasMoreOnGithub
+        nextBatch = null
+    } else {
+        // background(90개)까지 실제로 본 상태 — 이 배치의 진짜 한도에 도달했는지 여기서
+        // 처음 확정된다.
+        const isBatchExhausted = offset + EXPLORE_FOREGROUND_FETCH_SIZE >= searchResult.issues.length
+        hasMore = !isBatchExhausted || searchResult.hasMoreOnGithub
+        nextBatch = isBatchExhausted && searchResult.hasMoreOnGithub ? searchResult.endCursor : null
+    }
 
     return {
         issues: pageIssues,
-        total: reportedTotal,
-        hasMore: !isLastPage || canAutoRequestNextBatch,
+        hasMore,
         offset,
-        batch: batchParam,
-        nextBatch: candidateNextBatch,
-        canLoadMoreCandidates: candidateNextBatch !== null && !canAutoRequestNextBatch,
-        availableLanguages,
+        batch,
+        nextBatch,
     }
 }

@@ -1,18 +1,19 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
-import { SearchBarRow } from '@/components/shared/SearchBarRow'
 import { SearchDataListState } from '@/components/shared/SearchDataListState'
 import { InfiniteScrollTrigger } from '@/components/shared/InfiniteScrollTrigger'
+import { EXPLORE_PRESETS, type ExplorePreset } from '@/constants/explore-presets'
 import { useIssueListView } from '@/hooks/useIssueListView'
 import { useResponsiveColumnCount } from '@/hooks/useResponsiveColumnCount'
 import { useToast } from '@/hooks/use-toast'
-import type { IssueFilters, IssueCardItem } from '@/types/issue'
-import { IssueCandidateLoadMoreNotice } from './IssueCandidateLoadMoreNotice'
+import type { IssueFilters, IssueSearchState, IssueCardItem } from '@/types/issue'
 import { IssueListContent } from './IssueListContent'
-import { IssueListFilter } from './IssueListFilter'
+import { IssueSearchFilter } from './IssueSearchFilter'
+import { IssueSearchForm } from './IssueSearchForm'
+import { IssueSearchPresets } from './IssueSearchPresets'
+import { IssueSortToggle } from './IssueSortToggle'
 import { type ReactNode } from 'react'
 
 type IssueListProps = {
@@ -20,20 +21,36 @@ type IssueListProps = {
     isGuest: boolean
     // 정적 탭 content를 클라이언트 번들에서 제외하기 위해 Server Component에서 주입
     helpSlot: ReactNode
-    // 상단 필터 버튼과 같은 상태를 공유하기 위해 부모(IssueExploreWorkspace)가 소유·전달한다
+    // 검색창·프리셋·정렬과 필터 팝오버가 같은 상태를 공유하기 위해 부모(IssueExploreWorkspace)가 소유·전달한다
+    search: IssueSearchState
+    onSearchChangeAction: (search: IssueSearchState) => void
     filters: IssueFilters
     onFiltersChangeAction: (filters: IssueFilters) => void
 }
 
-export function IssueList({ isGuest, helpSlot, filters, onFiltersChangeAction }: IssueListProps) {
-    const [query, setQuery] = useState('')
+// 현재 search/filters 상태와 정확히 일치하는 프리셋을 찾는다
+function findActivePresetKey(search: IssueSearchState, filters: IssueFilters): string | null {
+    const matched = EXPLORE_PRESETS.find((preset) => {
+        if (preset.githubLabel) return search.githubLabel === preset.githubLabel
+        if (preset.minStars) return filters.minStars === preset.minStars
+        return false
+    })
+    return matched?.key ?? null
+}
+
+export function IssueList({
+    isGuest,
+    helpSlot,
+    search,
+    onSearchChangeAction,
+    filters,
+    onFiltersChangeAction,
+}: IssueListProps) {
     const { toast } = useToast()
     const columnCount = useResponsiveColumnCount()
 
     const {
-        filterAvailableLanguages,
-        filteredItems,
-        totalCount,
+        items,
         isPending,
         isError,
         errorMessage,
@@ -45,11 +62,10 @@ export function IssueList({ isGuest, helpSlot, filters, onFiltersChangeAction }:
         isNextPageError,
         retryNextPageAction,
         sentinelRef,
-        shouldShowCandidateLoadMoreNotice,
-        emptyCandidateFetchCount,
-        canLoadMoreCandidates,
-        loadMoreCandidatesAction,
-    } = useIssueListView(filters, query, columnCount)
+    } = useIssueListView(search, filters, columnCount)
+
+    // 프리셋 활성 상태(아이콘 행 + 클릭 시 토글 판단)가 같은 값을 공유하므로 한 번만 계산한다.
+    const activePresetKey = findActivePresetKey(search, filters)
 
     // 게스트 북마크 클릭 시 토스트 안내 후 차단
     async function handleToggleBookmark(issue: IssueCardItem) {
@@ -58,6 +74,16 @@ export function IssueList({ isGuest, helpSlot, filters, onFiltersChangeAction }:
             return
         }
         await toggleBookmark(issue)
+    }
+
+    function handleSelectPreset(preset: ExplorePreset) {
+        const isActive = activePresetKey === preset.key
+        if (preset.githubLabel) {
+            onSearchChangeAction({ ...search, githubLabel: isActive ? null : preset.githubLabel })
+        }
+        if (preset.minStars) {
+            onFiltersChangeAction({ ...filters, minStars: isActive ? null : preset.minStars })
+        }
     }
 
     return (
@@ -75,28 +101,29 @@ export function IssueList({ isGuest, helpSlot, filters, onFiltersChangeAction }:
                 </div>
             )}
 
-            <div id="tour-search">
-                <SearchBarRow
-                    value={query}
-                    onChangeAction={setQuery}
-                    resultCount={query ? filteredItems.length : undefined}
-                    totalCount={query ? totalCount : undefined}
-                    filterSlot={
-                        <div id="tour-filter">
-                            <IssueListFilter
-                                filters={filters}
-                                availableLanguages={filterAvailableLanguages}
-                                onChangeAction={onFiltersChangeAction}
-                            />
-                        </div>
-                    }
-                    helpSlot={helpSlot}
+            <IssueSearchPresets activeKey={activePresetKey} onSelectAction={handleSelectPreset} />
+
+            <div id="tour-search" className="flex flex-wrap items-center gap-2">
+                <IssueSearchForm
+                    value={search.query}
+                    onSubmitAction={(query) => onSearchChangeAction({ ...search, query })}
+                    className="min-w-0 flex-1"
                 />
+                <IssueSortToggle value={search.sort} onChangeAction={(sort) => onSearchChangeAction({ ...search, sort })} />
+                <div id="tour-filter">
+                    <IssueSearchFilter
+                        search={search}
+                        onSearchChangeAction={onSearchChangeAction}
+                        filters={filters}
+                        onChangeAction={onFiltersChangeAction}
+                    />
+                </div>
+                {helpSlot}
             </div>
 
             <div id="tour-issue-list">
             <SearchDataListState
-                query={query}
+                query={search.query}
                 entityLabel="이슈"
                 fallback={{
                     title: '추천할 이슈가 없습니다',
@@ -108,7 +135,7 @@ export function IssueList({ isGuest, helpSlot, filters, onFiltersChangeAction }:
                 }}
                 isPending={isPending}
                 isError={isError}
-                items={filteredItems}
+                items={items}
                 errorMessage={errorMessage}
                 onRetry={refetch}
                 skeletonCount={12}
@@ -130,15 +157,6 @@ export function IssueList({ isGuest, helpSlot, filters, onFiltersChangeAction }:
                 sentinelRefAction={sentinelRef}
                 columnCount={columnCount}
             />
-
-            {shouldShowCandidateLoadMoreNotice ? (
-                <IssueCandidateLoadMoreNotice
-                    isLoading={isFetchingNextPage}
-                    canLoadMore={canLoadMoreCandidates}
-                    emptyFetchCount={emptyCandidateFetchCount}
-                    onLoadMoreAction={loadMoreCandidatesAction}
-                />
-            ) : null}
         </div>
     )
 }

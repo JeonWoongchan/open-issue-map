@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { fetchCandidateIssues } from '@/lib/github/issues/search'
+import { buildExploreQuery, fetchCandidateIssues, fetchExploreIssues } from '@/lib/github/issues/search'
 import { GitHubInvalidCursorError, GitHubRateLimitError, GitHubUnauthorizedError } from '@/lib/github/client'
 
 vi.mock('@/lib/github/client', async (importOriginal) => {
@@ -144,5 +144,59 @@ describe('fetchCandidateIssues', () => {
 
     await expect(fetchCandidateIssues(['TypeScript'], 'token', null, 30))
       .rejects.toBeInstanceOf(GitHubUnauthorizedError)
+  })
+})
+
+describe('buildExploreQuery', () => {
+  it('검색어·언어·라벨이 모두 없으면 기본값으로 help wanted 라벨과 updated-desc 정렬을 쓴다', () => {
+    const query = buildExploreQuery({ text: '', languages: [], githubLabel: null, sort: 'latest' })
+    expect(query).toBe('is:open is:issue label:"help wanted" sort:updated-desc')
+  })
+
+  it('검색어가 있으면 기본 help wanted 라벨 제약을 걷어낸다', () => {
+    const query = buildExploreQuery({ text: 'kubectl bug', languages: [], githubLabel: null, sort: 'latest' })
+    expect(query).toBe('is:open is:issue kubectl bug sort:updated-desc')
+  })
+
+  it('githubLabel이 있으면 검색어가 있어도 그 라벨을 그대로 쓴다', () => {
+    const query = buildExploreQuery({ text: 'foo', languages: [], githubLabel: 'bug', sort: 'latest' })
+    expect(query).toBe('is:open is:issue label:"bug" foo sort:updated-desc')
+  })
+
+  it('언어 여러 개는 반복되는 language: qualifier로 들어간다(OR로 해석됨)', () => {
+    const query = buildExploreQuery({ text: '', languages: ['TypeScript', 'JavaScript'], githubLabel: null, sort: 'latest' })
+    expect(query).toBe('is:open is:issue label:"help wanted" language:TypeScript language:JavaScript sort:updated-desc')
+  })
+
+  it('sort가 popular이면 reactions-desc 정렬과 최근 N일 윈도우 qualifier가 붙는다', () => {
+    const query = buildExploreQuery({ text: '', languages: [], githubLabel: null, sort: 'popular' })
+    expect(query).toContain('sort:reactions-desc')
+    expect(query).toMatch(/created:>=\d{4}-\d{2}-\d{2}/)
+  })
+})
+
+describe('fetchExploreIssues', () => {
+  it('주어진 쿼리·커서·개수 그대로 GitHub에 요청한다', async () => {
+    mockGraphQL.mockResolvedValueOnce(makeSearchPage(['https://github.com/a/b/issues/1'], true, 'cursor-2'))
+
+    const result = await fetchExploreIssues('is:open is:issue label:"help wanted" sort:updated-desc', 'token', 'cursor-1', 24)
+
+    const [, variables] = mockGraphQL.mock.calls[0] as unknown as [string, { query: string; first: number; after: string | null }]
+    expect(variables.query).toBe('is:open is:issue label:"help wanted" sort:updated-desc')
+    expect(variables.after).toBe('cursor-1')
+    expect(variables.first).toBe(24)
+    expect(result.endCursor).toBe('cursor-2')
+    expect(result.hasMoreOnGithub).toBe(true)
+  })
+
+  it('INVALID_CURSOR_ARGUMENTS면 첫 페이지로 한 번 더 재시도한다', async () => {
+    mockGraphQL
+      .mockRejectedValueOnce(new GitHubInvalidCursorError('bad cursor'))
+      .mockResolvedValueOnce(makeSearchPage([]))
+
+    await fetchExploreIssues('is:open is:issue', 'token', 'cursor:100', 24)
+
+    expect(mockGraphQL).toHaveBeenCalledTimes(2)
+    expect(mockGraphQL.mock.calls[1][1]).toMatchObject({ after: null })
   })
 })

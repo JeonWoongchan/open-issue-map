@@ -41,12 +41,11 @@ function makeScoredIssue(overrides: Partial<ScoredIssue> = {}): ScoredIssue {
 // new URLSearchParams('language=TypeScript') → language 파라미터를 'TypeScript'로 갖는 객체
 describe('parseIssueFilters', () => {
 
-    it('파라미터가 없으면 language·difficultyLevel·minScore·minStars는 null, contributionTypes·competitionLevels는 빈 배열이다', () => {
+    it('파라미터가 없으면 difficultyLevel·minScore·minStars는 null, contributionTypes·competitionLevels는 빈 배열이다', () => {
         const params = new URLSearchParams()
         const filters = parseIssueFilters(params)
 
         // 빈 파라미터는 "필터 없음" 상태여야 한다
-        expect(filters.language).toBeNull()
         expect(filters.difficultyLevel).toBeNull()
         expect(filters.contributionTypes).toEqual([])
         expect(filters.competitionLevels).toEqual([])
@@ -79,11 +78,6 @@ describe('parseIssueFilters', () => {
         params.append('contributionTypes', 'bug')
         params.append('contributionTypes', 'hack')
         expect(parseIssueFilters(params).contributionTypes).toEqual(['bug'])
-    })
-
-    it('language 파라미터는 그대로 반환된다', () => {
-        const params = new URLSearchParams('language=TypeScript')
-        expect(parseIssueFilters(params).language).toBe('TypeScript')
     })
 
     it('허용된 difficultyLevel("junior")은 그대로 반환된다', () => {
@@ -137,7 +131,6 @@ describe('parseIssueFilters', () => {
 describe('applyFilters', () => {
     // 모든 필터가 비어있는 "필터 없음" 상태를 편하게 만드는 상수
     const noFilters: IssueFilters = {
-        language: null,
         difficultyLevel: null,
         contributionTypes: [],
         competitionLevels: [],
@@ -149,16 +142,6 @@ describe('applyFilters', () => {
         const issues = [makeScoredIssue(), makeScoredIssue({ number: 2 })]
         // toHaveLength: 배열·문자열의 길이를 검사
         expect(applyFilters(issues, noFilters)).toHaveLength(2)
-    })
-
-    it('language 필터는 해당 언어의 이슈만 통과시킨다', () => {
-        const issues = [
-            makeScoredIssue({ language: 'TypeScript' }),
-            makeScoredIssue({ number: 2, language: 'Python' }),
-        ]
-        const result = applyFilters(issues, { ...noFilters, language: 'TypeScript' })
-        expect(result).toHaveLength(1)
-        expect(result[0].language).toBe('TypeScript')
     })
 
     it('minScore 필터는 기준 점수 이상인 이슈만 통과시킨다', () => {
@@ -179,13 +162,13 @@ describe('applyFilters', () => {
     })
 
     it('복합 필터는 AND 조건으로 적용된다', () => {
-        // 조건: language=TypeScript AND minScore>=70
+        // 조건: difficultyLevel=junior AND minScore>=70
         const issues = [
-            makeScoredIssue({ number: 1, language: 'TypeScript', score: 80 }), // 통과
-            makeScoredIssue({ number: 2, language: 'TypeScript', score: 50 }), // score 미달
-            makeScoredIssue({ number: 3, language: 'Python',     score: 90 }), // language 불일치
+            makeScoredIssue({ number: 1, difficultyLevel: 'junior', score: 80 }), // 통과
+            makeScoredIssue({ number: 2, difficultyLevel: 'junior', score: 50 }), // score 미달
+            makeScoredIssue({ number: 3, difficultyLevel: 'senior', score: 90 }), // 난이도 불일치
         ]
-        const result = applyFilters(issues, { ...noFilters, language: 'TypeScript', minScore: 70 })
+        const result = applyFilters(issues, { ...noFilters, difficultyLevel: 'junior', minScore: 70 })
         expect(result).toHaveLength(1)
         expect(result[0].number).toBe(1)
     })
@@ -220,7 +203,7 @@ describe('applyFilters', () => {
     })
 
     it('빈 이슈 배열은 빈 배열을 반환한다', () => {
-        expect(applyFilters([], { ...noFilters, language: 'TypeScript' })).toHaveLength(0)
+        expect(applyFilters([], { ...noFilters, minScore: 70 })).toHaveLength(0)
     })
 
     it('minScore 기준값보다 1점 낮은 이슈는 통과하지 못한다', () => {
@@ -228,17 +211,6 @@ describe('applyFilters', () => {
         const issue = makeScoredIssue({ score: 69 })
         const result = applyFilters([issue], { ...noFilters, minScore: 70 })
         expect(result).toHaveLength(0)
-    })
-
-    it('language가 null인 이슈는 language 필터에서 제외된다', () => {
-        // GitHub primaryLanguage가 없는 이슈는 language 필터 적용 시 탈락해야 한다
-        const issues = [
-            makeScoredIssue({ language: 'TypeScript' }),
-            makeScoredIssue({ number: 2, language: null }),
-        ]
-        const result = applyFilters(issues, { ...noFilters, language: 'TypeScript' })
-        expect(result).toHaveLength(1)
-        expect(result[0].language).toBe('TypeScript')
     })
 
     it('높은 threshold(90)를 통과한 이슈는 낮은 threshold(50)에서도 통과한다', () => {

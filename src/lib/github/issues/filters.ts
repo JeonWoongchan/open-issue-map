@@ -25,6 +25,7 @@ const VALID_CONTRIBUTION_TYPES = new Set<string>(['doc', 'bug', 'feat', 'test', 
 // 경쟁도 허용 목록 — 목록 외 값은 파싱 시 제거된다.
 const VALID_COMPETITION_LEVELS = new Set<string>(['OPEN', 'ACTIVE', 'HAS_PR'])
 
+// 깃헙 GraphQL 요청 시 사용하지 못하는 필터만 다룬다.
 export function parseIssueFilters(searchParams: URLSearchParams): IssueFilters {
     const contributionTypes = searchParams
         .getAll('contributionTypes')
@@ -35,7 +36,6 @@ export function parseIssueFilters(searchParams: URLSearchParams): IssueFilters {
         .filter((v): v is CompetitionLevel => VALID_COMPETITION_LEVELS.has(v))
 
     return {
-        language: searchParams.get('language'),
         difficultyLevel: difficultyLevelSchema.parse(searchParams.get('difficultyLevel')),
         contributionTypes,
         competitionLevels,
@@ -44,20 +44,10 @@ export function parseIssueFilters(searchParams: URLSearchParams): IssueFilters {
     }
 }
 
-export function hasActiveFilters(filters: IssueFilters): boolean {
-    return Boolean(
-        filters.language ||
-        filters.difficultyLevel ||
-        filters.contributionTypes.length > 0 ||
-        filters.competitionLevels.length > 0 ||
-        filters.minScore !== null ||
-        filters.minStars !== null
-    )
-}
-
+// GitHub 쿼리로 보낼 수 없는 조건(난이도/진행상태/기여방식/추천점수/최소스타)만 후처리로 거른다.
+// 언어는 검색 쿼리 단계(language: qualifier)에서 이미 좁혀졌으므로 여기서 다시 거르지 않는다.
 export function applyFilters(issues: ScoredIssue[], filters: IssueFilters): ScoredIssue[] {
     return issues.filter((issue) => {
-        if (filters.language && issue.language !== filters.language) return false
         if (filters.difficultyLevel && issue.difficultyLevel !== filters.difficultyLevel) return false
         // 기여 방식은 복수 선택 — 선택된 타입 중 하나라도 일치하면 통과, contributionType이 null인 이슈는 제외
         if (filters.contributionTypes.length > 0 &&

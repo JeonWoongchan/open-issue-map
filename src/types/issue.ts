@@ -18,8 +18,8 @@ export type CompetitionLevel = 'OPEN' | 'ACTIVE' | 'HAS_PR'
 export type DifficultyLevel = ExperienceLevel
 export type RepoActivityLevel = 'active' | 'moderate' | 'quiet'
 
+// GitHub 검색 쿼리로 보낼 수 없어 받아온 뒤 후처리로만 거를 수 있는 필터들.
 export type IssueFilters = {
-  language: string | null
   difficultyLevel: DifficultyLevel | null
   contributionTypes: ContributionType[]
   competitionLevels: CompetitionLevel[]
@@ -28,12 +28,28 @@ export type IssueFilters = {
 }
 
 export const EMPTY_ISSUE_FILTERS: IssueFilters = {
-  language: null,
   difficultyLevel: null,
   contributionTypes: [],
   competitionLevels: [],
   minScore: null,
   minStars: null,
+}
+
+export type IssueSort = 'popular' | 'latest'
+
+// 검색어/정렬/언어묶음/프리셋 라벨
+export type IssueSearchState = {
+  query: string
+  sort: IssueSort
+  githubLabel: string | null
+  languageGroup: string | null
+}
+
+export const DEFAULT_ISSUE_SEARCH_STATE: IssueSearchState = {
+  query: '',
+  sort: 'latest',
+  githubLabel: null,
+  languageGroup: null,
 }
 
 export interface RawIssue {

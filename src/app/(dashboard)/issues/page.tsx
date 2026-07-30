@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { DashboardHelpDialogWrapper } from '@/components/dashboard/dashboard-help/DashboardHelpDialogWrapper'
 import { IssueExploreWorkspace } from '@/components/dashboard/issue/IssueExploreWorkspace'
 import { IssueExploreTour } from '@/components/tour/IssueExploreTour'
@@ -22,7 +21,6 @@ export default async function IssuesPage() {
             <MainSectionShell
                 title="이슈 탐색"
                 description="언어·난이도·기여 방식으로 조건을 좁혀 원하는 이슈를 직접 찾아보세요."
-                actions={session ? <Link href="/onboarding">온보딩 다시하기</Link> : null}
             >
                 <IssueExploreWorkspace isGuest={!session} helpSlot={<DashboardHelpDialogWrapper />} />
             </MainSectionShell>

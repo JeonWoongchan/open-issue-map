@@ -10,11 +10,16 @@ import type { OnboardingProfile } from '@/lib/user/profile'
 import type { IssueSearchResult } from '@/lib/github/issues/search'
 import type { RawIssue, ScoredIssue } from '@/types/issue'
 
-vi.mock('@/lib/github/issues/search', () => ({
-    fetchCandidateIssues: vi.fn(),
-    // 실제 dedupe 로직은 search.test.ts에서 별도로 검증 — 여기선 통과만 시킨다
-    dedupeIssues: vi.fn((issues: RawIssue[]) => issues),
-}))
+vi.mock('@/lib/github/issues/search', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@/lib/github/issues/search')>()
+    return {
+        ...actual,
+        fetchCandidateIssues: vi.fn(),
+        // 실제 dedupe 로직은 search.test.ts에서 별도로 검증 — 여기선 통과만 시킨다
+        dedupeIssues: vi.fn((issues: RawIssue[]) => issues),
+        // buildRecentWindowQualifier는 실제 구현(actual) 그대로 둔다 — 이 파일의 날짜 포맷 검증이 이걸 확인한다
+    }
+})
 vi.mock('@/lib/github/issues/ranking', () => ({ rankIssues: vi.fn() }))
 vi.mock('./candidate-pool-store', () => ({
     getCandidatePools: vi.fn(),
