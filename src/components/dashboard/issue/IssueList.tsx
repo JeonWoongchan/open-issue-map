@@ -9,6 +9,7 @@ import { useIssueListView } from '@/hooks/useIssueListView'
 import { useResponsiveColumnCount } from '@/hooks/useResponsiveColumnCount'
 import { useToast } from '@/hooks/use-toast'
 import type { IssueFilters, IssueSearchState, IssueCardItem } from '@/types/issue'
+import type { ContributionType } from '@/types/user'
 import { IssueListContent } from './IssueListContent'
 import { IssueSearchFilter } from './IssueSearchFilter'
 import { IssueSearchForm } from './IssueSearchForm'
@@ -28,10 +29,18 @@ type IssueListProps = {
     onFiltersChangeAction: (filters: IssueFilters) => void
 }
 
-// 현재 search/filters 상태와 정확히 일치하는 프리셋을 찾는다
-function findActivePresetKey(search: IssueSearchState, filters: IssueFilters): string | null {
+// 프리셋 아이콘 중 contributionType을 쓰는 것들 — 프리셋을 고를 때는 이 중 하나만
+// 남기고 서로 배타적으로 동작해야 하므로, 팝오버에서 별도로 고른 나머지 타입(test/review)과
+// 구분해서 다뤄야 한다.
+const PRESET_CONTRIBUTION_TYPES: ContributionType[] = ['doc', 'bug', 'feat']
+
+// 현재 filters 상태와 일치하는 프리셋을 찾는다 — 프리셋 아이콘은 한 번에 하나만
+// 활성화되도록 handleSelectPreset이 항상 나머지 프리셋 필드를 같이 초기화해주므로,
+// 여러 개가 동시에 일치할 일은 없다.
+function findActivePresetKey(filters: IssueFilters): string | null {
     const matched = EXPLORE_PRESETS.find((preset) => {
-        if (preset.githubLabel) return search.githubLabel === preset.githubLabel
+        if (preset.difficultyLevel) return filters.difficultyLevel === preset.difficultyLevel
+        if (preset.contributionType) return filters.contributionTypes.includes(preset.contributionType)
         if (preset.minStars) return filters.minStars === preset.minStars
         return false
     })
@@ -65,7 +74,7 @@ export function IssueList({
     } = useIssueListView(search, filters, columnCount)
 
     // 프리셋 활성 상태(아이콘 행 + 클릭 시 토글 판단)가 같은 값을 공유하므로 한 번만 계산한다.
-    const activePresetKey = findActivePresetKey(search, filters)
+    const activePresetKey = findActivePresetKey(filters)
 
     // 게스트 북마크 클릭 시 토스트 안내 후 차단
     async function handleToggleBookmark(issue: IssueCardItem) {
@@ -76,14 +85,31 @@ export function IssueList({
         await toggleBookmark(issue)
     }
 
+    // 프리셋 아이콘은 한 번에 하나만 선택되게 한다 — 새 프리셋을 고르면 이전에 프리셋으로
+    // 설정된 값(난이도/프리셋 기여방식/스타 수)은 전부 초기화하고 새 프리셋 값만 남긴다.
+    // 팝오버에서 별도로 고른 기여방식(test/review 등)은 프리셋과 무관하므로 건드리지 않는다.
     function handleSelectPreset(preset: ExplorePreset) {
         const isActive = activePresetKey === preset.key
-        if (preset.githubLabel) {
-            onSearchChangeAction({ ...search, githubLabel: isActive ? null : preset.githubLabel })
+        const resetFilters: IssueFilters = {
+            ...filters,
+            difficultyLevel: null,
+            contributionTypes: filters.contributionTypes.filter((t) => !PRESET_CONTRIBUTION_TYPES.includes(t)),
+            minStars: null,
         }
-        if (preset.minStars) {
-            onFiltersChangeAction({ ...filters, minStars: isActive ? null : preset.minStars })
+
+        if (isActive) {
+            onFiltersChangeAction(resetFilters)
+            return
         }
+
+        onFiltersChangeAction({
+            ...resetFilters,
+            difficultyLevel: preset.difficultyLevel ?? null,
+            contributionTypes: preset.contributionType
+                ? [...resetFilters.contributionTypes, preset.contributionType]
+                : resetFilters.contributionTypes,
+            minStars: preset.minStars ?? null,
+        })
     }
 
     return (

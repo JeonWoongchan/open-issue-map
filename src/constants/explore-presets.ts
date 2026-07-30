@@ -1,26 +1,28 @@
 import { LANGUAGE_GROUPS } from './scoring-rules'
 import type { StarThreshold } from './scoring-rules'
+import type { ContributionType, ExperienceLevel } from '@/types/user'
 
 // 이슈 탐색 페이지 검색창 위에 노출하는 아이콘 프리셋 — 아이콘 키는 public/icons/filters/의
 // SVG 파일명과 1:1 대응하며, IssueSearchPresets.tsx가 그 경로를 그대로 <img>로 참조한다.
 export type ExplorePresetIcon = 'sprout' | 'doc' | 'bug' | 'feat' | 'star'
 
+// 프리셋은 항상 "검색 필터" 팝오버(IssueSearchFilter)가 추적하는 IssueFilters 필드
+// 하나를 세팅한다 — 그래야 프리셋을 눌렀을 때 팝오버 배지에도 같이 반영된다. 필드 셋 중
+// 정확히 하나만 채운다(동시에 여러 개를 채우지 않는다).
 export type ExplorePreset = {
   key: string
   icon: ExplorePresetIcon
   label: string
-  // 설정되면 검색 쿼리에 label:"..."로 실려간다. minStars와는 동시에 설정하지 않는다.
-  githubLabel?: string
-  // 설정되면 GitHub 쿼리가 아니라 후처리 필터(IssueFilters.minStars)로 적용된다 —
-  // stars: qualifier가 이슈 검색에서 동작하지 않기 때문(search.ts 참고).
+  difficultyLevel?: ExperienceLevel
+  contributionType?: ContributionType
   minStars?: StarThreshold
 }
 
 export const EXPLORE_PRESETS: ExplorePreset[] = [
-  { key: 'good-first-issue', icon: 'sprout', label: '초보 환영', githubLabel: 'good first issue' },
-  { key: 'documentation', icon: 'doc', label: '문서 이슈', githubLabel: 'documentation' },
-  { key: 'bug', icon: 'bug', label: '버그 수정', githubLabel: 'bug' },
-  { key: 'enhancement', icon: 'feat', label: '새 기능 제안', githubLabel: 'enhancement' },
+  { key: 'good-first-issue', icon: 'sprout', label: '초보 환영', difficultyLevel: 'beginner' },
+  { key: 'documentation', icon: 'doc', label: '문서 이슈', contributionType: 'doc' },
+  { key: 'bug', icon: 'bug', label: '버그 수정', contributionType: 'bug' },
+  { key: 'enhancement', icon: 'feat', label: '새 기능 제안', contributionType: 'feat' },
   { key: 'popular', icon: 'star', label: '인기 저장소', minStars: 1000 },
 ]
 

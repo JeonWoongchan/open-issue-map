@@ -59,8 +59,8 @@ function FilterPill({
 
 function FilterRow({ label, children }: { label: string; children: ReactNode }) {
     return (
-        <div className="flex items-center gap-2">
-            <span className="w-14 shrink-0 text-xs font-medium text-muted-foreground">{label}</span>
+        <div className="flex items-start gap-2">
+            <span className="w-14 shrink-0 pt-0.5 text-xs font-medium text-muted-foreground">{label}</span>
             <div className="flex flex-wrap gap-1.5">{children}</div>
         </div>
     )

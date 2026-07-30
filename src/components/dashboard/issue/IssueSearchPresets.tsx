@@ -14,6 +14,7 @@ const PRESET_ICON_COLORS: Record<string, string> = {
 }
 
 type IssueSearchPresetsProps = {
+  // 프리셋 아이콘은 한 번에 하나만 활성화된다(라디오 버튼처럼 배타적으로 동작).
   activeKey: string | null
   // 이미 활성인 프리셋을 다시 클릭하는 것(끄기)도 그대로 이 프리셋으로 전달한다 —
   // 어떤 필드를 되돌려야 할지는 프리셋마다 다르므로 토글 판단은 호출부(IssueList)가 한다.
