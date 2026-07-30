@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { MainHeader } from '@/components/layout/MainHeader'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
@@ -20,7 +21,7 @@ export default async function DashboardLayout({
                 name={session?.user.name}
                 isGuest={!session}
             />
-            <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
+            <PageContainer>{children}</PageContainer>
         </div>
     )
 }
