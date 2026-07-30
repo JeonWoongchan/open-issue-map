@@ -66,8 +66,7 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    // 다크 모드만 지원한다 — 라이트 모드 전환 UI는 없다.
-    <html lang="ko" className={cn("dark font-sans", inter.variable)}>
+    <html lang="ko" className={cn("dark scroll-smooth font-sans", inter.variable)}>
       <body
         className={`${geistMono.variable} antialiased`}
       >
