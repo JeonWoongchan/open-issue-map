@@ -7,6 +7,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Analytics } from "@vercel/analytics/next";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { HelpFloatingProvider } from "@/components/providers/HelpFloatingProvider";
+import { HelpFloatingButton } from "@/components/help/HelpFloatingButton";
 import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_TITLE, SITE_URL } from "@/lib/seo";
 
 const inter = Inter({
@@ -71,7 +73,10 @@ export default function RootLayout({
       >
         <SessionProvider>
           <QueryProvider>
-            {children}
+            <HelpFloatingProvider>
+              {children}
+              <HelpFloatingButton />
+            </HelpFloatingProvider>
           </QueryProvider>
         </SessionProvider>
         <Toaster />

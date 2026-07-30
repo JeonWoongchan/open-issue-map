@@ -129,25 +129,22 @@ export function IssueList({
 
             <IssueSearchPresets activeKey={activePresetKey} onSelectAction={handleSelectPreset} />
 
-            <div id="tour-search" className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
                 <IssueSearchForm
                     value={search.query}
                     onSubmitAction={(query) => onSearchChangeAction({ ...search, query })}
                     className="min-w-0 flex-1"
                 />
                 <IssueSortToggle value={search.sort} onChangeAction={(sort) => onSearchChangeAction({ ...search, sort })} />
-                <div id="tour-filter">
-                    <IssueSearchFilter
-                        search={search}
-                        onSearchChangeAction={onSearchChangeAction}
-                        filters={filters}
-                        onChangeAction={onFiltersChangeAction}
-                    />
-                </div>
+                <IssueSearchFilter
+                    search={search}
+                    onSearchChangeAction={onSearchChangeAction}
+                    filters={filters}
+                    onChangeAction={onFiltersChangeAction}
+                />
                 {helpSlot}
             </div>
 
-            <div id="tour-issue-list">
             <SearchDataListState
                 query={search.query}
                 entityLabel="이슈"
@@ -172,7 +169,6 @@ export function IssueList({
                     />
                 )}
             />
-            </div>
 
             <InfiniteScrollTrigger
                 hasNextPage={effectiveHasNextPage}
