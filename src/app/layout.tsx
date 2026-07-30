@@ -66,7 +66,7 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    // 임시: 디자인 리뉴얼 비교를 위해 다크 모드를 기본값으로 설정. ThemeToggleTemp와 함께 나중에 제거.
+    // 다크 모드만 지원한다 — 라이트 모드 전환 UI는 없다.
     <html lang="ko" className={cn("dark font-sans", inter.variable)}>
       <body
         className={`${geistMono.variable} antialiased`}

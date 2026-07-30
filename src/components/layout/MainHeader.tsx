@@ -4,7 +4,6 @@ import { SignInButton } from '@/components/shared/SignInButton'
 import { PrimaryNav } from './PrimaryNav'
 import { UserAvatar } from './UserAvatar'
 import { UserMenu } from './UserMenu'
-import { ThemeToggleTemp } from './ThemeToggleTemp'
 import { SITE_TITLE } from '@/lib/seo'
 
 type MainHeaderProps = {
@@ -30,7 +29,6 @@ export function MainHeader({ image, name, isGuest = false }: MainHeaderProps) {
                     <PrimaryNav />
                 </div>
                 <div className="flex items-center gap-3">
-                    <ThemeToggleTemp />
                     {isGuest ? (
                         <form action={signInWithGitHub}>
                             <SignInButton size="sm" />
