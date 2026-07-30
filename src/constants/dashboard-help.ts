@@ -16,9 +16,9 @@ export const DASHBOARD_HELP_GUIDE_ITEMS = [
   },
   {
     id: 'metrics',
-    title: '반응과 규모',
+    title: '반응과 규모, 북마크',
     description:
-      '저장소의 스타 수와 댓글 수를 함께 보여줘요. 진입 전에 프로젝트의 관심도와 논의 흐름을 가늠하는 데 도움이 돼요.',
+      '저장소의 스타 수와 댓글 수를 함께 보여줘요. 진입 전에 프로젝트의 관심도와 논의 흐름을 가늠하는 데 도움이 돼요. 오른쪽 북마크 아이콘으로 관심 있는 이슈를 저장해두고 나중에 다시 찾아볼 수 있어요.',
   },
 ] as const satisfies readonly HelpGuideItem<string>[]
 
@@ -36,10 +36,12 @@ export const DASHBOARD_HELP_DEMO_ISSUE: Omit<ScoredIssue, 'createdAt' | 'updated
   stargazerCount: 129000,
   labels: ['good first issue'],
   commentCount: 3,
+  body: 'The starter example in docs/getting-started.md skips over how the config file is resolved, which has confused a few new contributors. We should add a short paragraph explaining the resolution order.',
   score: 82,
   difficultyLevel: 'beginner',
   contributionType: 'doc',
   competitionLevel: 'HAS_PR',
   hasPR: true,
   repoActivityLevel: 'active',
+  isBookmarked: true,
 }

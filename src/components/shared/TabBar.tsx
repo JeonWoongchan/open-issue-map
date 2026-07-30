@@ -5,14 +5,15 @@ import { cn } from '@/lib/utils'
 type TabBarProps<T extends string> = {
   tabs: { key: T; label: string }[]
   active: T
-  onChange: (key: T) => void
+  onChangeAction: (key: T) => void
   // underline: 상위 탭(개요/AI가이드/관련 이슈)처럼 밑줄로 표시. pill: 패널 내부 하위 탭처럼 알약 배경으로 표시.
   variant?: 'underline' | 'pill'
 }
 
-// IssueDetailWorkspace(상위 탭)와 IssueOverviewPanel(본문 하위 탭)이 각각 따로 구현하던
+// 여러 화면(이슈 상세, 도움말 다이얼로그 등)이 각각 따로 구현하던
 // "state + {key,label}[] + role=tablist + map" 탭 전환 로직을 하나로 합친 것.
-export function TabBar<T extends string>({ tabs, active, onChange, variant = 'underline' }: TabBarProps<T>) {
+// cursor-pointer도 여기서만 관리한다 — 쓰는 쪽에서 따로 지정할 필요 없다.
+export function TabBar<T extends string>({ tabs, active, onChangeAction, variant = 'underline' }: TabBarProps<T>) {
   return (
     <div role="tablist" className={cn('flex', variant === 'underline' ? 'gap-5 border-b border-border' : 'gap-1')}>
       {tabs.map((tab) => (
@@ -21,7 +22,7 @@ export function TabBar<T extends string>({ tabs, active, onChange, variant = 'un
           type="button"
           role="tab"
           aria-selected={active === tab.key}
-          onClick={() => onChange(tab.key)}
+          onClick={() => onChangeAction(tab.key)}
           className={cn(
             'cursor-pointer font-semibold transition-colors',
             variant === 'underline'

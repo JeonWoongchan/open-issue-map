@@ -2,11 +2,14 @@
 
 import { useState, useEffect, type ReactNode } from 'react'
 import { useHelpDialog } from '@/hooks/useHelpDialog'
+import { TabBar } from '@/components/shared/TabBar'
 import type { HelpGuideItem } from '@/types/help'
-import { cn } from '@/lib/utils'
 import { HelpGuideList } from './HelpGuideList'
 import { HelpHeader } from './HelpHeader'
 import { HelpTrigger } from './HelpTrigger'
+
+// 상위 탭 목록의 첫 번째(주 탭)를 가리키는 고정 key — extraTabs의 id와 겹치지 않아야 한다.
+const PRIMARY_TAB_KEY = 'primary'
 
 export type ExtraTab = {
     id: string
@@ -63,11 +66,11 @@ export function HelpDialogFrame<TGuideId extends string>({
     clearActiveGuide,
   } = useHelpDialog<TGuideId>(demoUpdatedOffsetMs)
 
-  const [activeTabIndex, setActiveTabIndex] = useState(0)
+  const [activeTabKey, setActiveTabKey] = useState<string>(PRIMARY_TAB_KEY)
 
   // 다이얼로그가 닫히면 첫 번째 탭으로 초기화
   useEffect(() => {
-    if (!isOpen) setActiveTabIndex(0)
+    if (!isOpen) setActiveTabKey(PRIMARY_TAB_KEY)
   }, [isOpen])
 
   const hasTabs =
@@ -75,7 +78,9 @@ export function HelpDialogFrame<TGuideId extends string>({
 
   // hasTabs가 참일 때만 extraTabs 접근 — 타입 내로잉 보조
   const activeExtraTabContent =
-    hasTabs && activeTabIndex > 0 ? extraTabs[activeTabIndex - 1].content : null
+    hasTabs && activeTabKey !== PRIMARY_TAB_KEY
+      ? extraTabs.find((tab) => tab.id === activeTabKey)?.content ?? null
+      : null
 
   return (
     <>
@@ -104,38 +109,15 @@ export function HelpDialogFrame<TGuideId extends string>({
             />
 
             {hasTabs ? (
-              <div className="flex gap-4 border-b border-border px-5 sm:px-6" role="tablist">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeTabIndex === 0}
-                  onClick={() => setActiveTabIndex(0)}
-                  className={cn(
-                    '-mb-px border-b-2 py-3 text-sm font-medium transition-colors',
-                    activeTabIndex === 0
-                      ? 'border-interactive-action text-foreground'
-                      : 'border-transparent text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  {primaryTabLabel}
-                </button>
-                {extraTabs.map((tab, i) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTabIndex === i + 1}
-                    onClick={() => setActiveTabIndex(i + 1)}
-                    className={cn(
-                      '-mb-px border-b-2 py-3 text-sm font-medium transition-colors',
-                      activeTabIndex === i + 1
-                        ? 'border-interactive-action text-foreground'
-                        : 'border-transparent text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+              <div className="px-5 sm:px-6">
+                <TabBar
+                  tabs={[
+                    { key: PRIMARY_TAB_KEY, label: primaryTabLabel },
+                    ...extraTabs.map((tab) => ({ key: tab.id, label: tab.label })),
+                  ]}
+                  active={activeTabKey}
+                  onChangeAction={setActiveTabKey}
+                />
               </div>
             ) : null}
 

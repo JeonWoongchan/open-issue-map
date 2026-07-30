@@ -4,7 +4,7 @@ import { useState } from 'react'
 import dynamic from 'next/dynamic'
 import { FileText, Info } from 'lucide-react'
 import { DetailPanel } from './DetailPanel'
-import { TabBar } from './TabBar'
+import { TabBar } from '@/components/shared/TabBar'
 import { cn } from '@/lib/utils'
 import type { IssueOverview } from '@/lib/ai'
 
@@ -46,7 +46,7 @@ export function IssueOverviewPanel({ overview, rawBody }: IssueOverviewPanelProp
         </div>
 
         <div className="rounded-xl border border-border p-3.5">
-          <TabBar tabs={BODY_TABS} active={bodyTab} onChange={setBodyTab} variant="pill" />
+          <TabBar tabs={BODY_TABS} active={bodyTab} onChangeAction={setBodyTab} variant="pill" />
 
           {bodyTab === 'summary' ? (
             <div className="mt-2.5 flex flex-col gap-3">

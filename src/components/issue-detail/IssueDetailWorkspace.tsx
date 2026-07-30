@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { TabBar } from './TabBar'
+import { TabBar } from '@/components/shared/TabBar'
 
 type TabKey = 'overview' | 'aiGuide' | 'related'
 
@@ -27,7 +27,7 @@ export function IssueDetailWorkspace({ overview, aiGuide, related }: IssueDetail
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <TabBar tabs={TABS} active={active} onChange={setActive} />
+      <TabBar tabs={TABS} active={active} onChangeAction={setActive} />
 
       {TABS.map((tab) => (
         <div key={tab.key} hidden={active !== tab.key} className="flex flex-col gap-4">
