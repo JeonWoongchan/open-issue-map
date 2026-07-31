@@ -24,8 +24,8 @@ function extractClientIp(req: NextRequest): string {
 }
 
 export async function POST(req: NextRequest) {
-    // GEMINI_API_KEY 미설정 시 기능 비활성화 — 게스트 카운트 소모 전에 차단
-    if (!process.env.GEMINI_API_KEY) {
+    // OPENAI_API_KEY 미설정 시 기능 비활성화 — 게스트 카운트 소모 전에 차단
+    if (!process.env.OPENAI_API_KEY) {
         return err('AI 분석 기능을 사용할 수 없습니다.', 503, ErrorCode.INTERNAL_ERROR)
     }
 

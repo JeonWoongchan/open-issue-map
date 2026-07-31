@@ -243,11 +243,11 @@ Route Handler는 `getGitHubErrorResponse()`를 사용해 API 응답으로 변환
 
 ### `POST /api/ai/issue-analysis`
 
-이슈 상세 페이지의 "개요"·"AI 가이드" 탭이 함께 쓰는 엔드포인트다. 이슈 하나당 Gemini를 한 번만 호출해서
+이슈 상세 페이지의 "개요"·"AI 가이드" 탭이 함께 쓰는 엔드포인트다. 이슈 하나당 OpenAI를 한 번만 호출해서
 4가지 결과(기여자 맞춤 가이드, 이슈 개요, 이슈 본문 요약, 기여 규칙 서술)를 하나의 JSON으로 묶어 반환한다 —
 탭이 여러 개라도 클라이언트가 여러 번 요청하지 않는다.
 
-- 역할: README·CONTRIBUTING.md 조회, DB 캐시 확인, Gemini 분석 요청까지 이 안에서 전부 처리하고 결과를 캐싱한다.
+- 역할: README·CONTRIBUTING.md 조회, DB 캐시 확인, OpenAI 분석 요청까지 이 안에서 전부 처리하고 결과를 캐싱한다.
 - 인증: 다른 엔드포인트의 `auth()`/`requireGithubToken()` 패턴과 다르다 — 세션이 없으면 서버 환경변수
   `GITHUB_TOKEN`으로 게스트를 허용하고(비로그인 접근 자체가 정상 흐름), 세션이 있으면 GitHub 연동 토큰
   (JWT의 `accessToken`)이 아직 유효한지만 게이트로 확인한다(README 조회 자체는 항상 서버 토큰을 쓰므로
@@ -269,7 +269,7 @@ Route Handler는 `getGitHubErrorResponse()`를 사용해 API 응답으로 변환
   - 응답 스키마가 바뀌어 예전 형태로 저장된 캐시 행이 있으면 zod 검증에서 걸러지고 캐시 미스로 처리돼
     자동으로 새 스키마로 재생성된다(수동 마이그레이션 불필요).
 - 게스트 한도: 비로그인 사용자는 IP 기준 하루 `AI_GUEST_DAILY_LIMIT`(3회)까지만 실제 생성이 허용된다.
-  **캐시 히트는 이 한도를 소모하지 않는다** — 실제로 Gemini를 호출할 때만 차감된다.
+  **캐시 히트는 이 한도를 소모하지 않는다** — 실제로 OpenAI를 호출할 때만 차감된다.
 - 성공 data (`IssueAnalysis`):
   - `concepts: string[]` — 이슈 해결에 필요한 핵심 개념 2~4개
   - `scope: string` — 예상 작업 범위와 의심되는 코드 영역
@@ -291,10 +291,10 @@ Route Handler는 `getGitHubErrorResponse()`를 사용해 API 응답으로 변환
   - `401 NO_ACCESS_TOKEN`: 로그인 세션은 있으나 GitHub 연동 토큰이 없거나 만료됨
   - `400 INVALID_REQUEST`: 요청 바디 스키마 검증 실패
   - `429 RATE_LIMITED`: 게스트 일일 한도(3회) 초과 — GitHub API 429와 코드는 같지만 원인은 게스트 한도 소진
-  - `503 INTERNAL_ERROR`: `GEMINI_API_KEY` 미설정(AI 기능 자체가 비활성화된 상태)
-  - `500 INTERNAL_ERROR`: Gemini 호출 실패 등 분석 생성 중 예외
+  - `503 INTERNAL_ERROR`: `OPENAI_API_KEY` 미설정(AI 기능 자체가 비활성화된 상태)
+  - `500 INTERNAL_ERROR`: OpenAI 호출 실패 등 분석 생성 중 예외
 - 비고: 캐시 미스 시 내부적으로 `getRepoReadme()`(README 원문, 24시간 캐시)와 `getContributionRules()`
-  (CONTRIBUTING·PR 템플릿 경로/원문, 7일 캐시)를 병렬 조회해 Gemini 프롬프트 근거로 넣는다. 이 두 캐시는
+  (CONTRIBUTING·PR 템플릿 경로/원문, 7일 캐시)를 병렬 조회해 OpenAI 프롬프트 근거로 넣는다. 이 두 캐시는
   GitHub Contents API 호출이라 위의 `issue_ai_guides` DB 캐시와는 별개 계층이다.
 
 ## API 변경 체크리스트

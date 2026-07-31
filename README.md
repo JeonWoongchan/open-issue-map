@@ -15,7 +15,7 @@ GitHub 계정으로 로그인한 뒤 간단한 온보딩 정보를 입력하면,
 | 기능 | 설명 |
 | --- | --- |
 | **맞춤 이슈 추천** | 언어·난이도·기여유형·경쟁도·시간·목적·저장소 인지도 7개 차원으로 추천 점수 산정 |
-| **AI 작업 가이드** | 이슈·사용자 프로필·저장소 README를 종합해 Gemini가 개인화된 기여 가이드를 제공 |
+| **AI 작업 가이드** | 이슈·사용자 프로필·저장소 README를 종합해 OpenAI가 개인화된 기여 가이드를 제공 |
 | **북마크** | 관심 이슈 저장. GitHub API 장애 시에도 DB 저장 정보로 목록 유지 |
 | **PR 히스토리** | 외부 저장소에 제출한 PR 기록과 통계 확인 |
 | **사용자 온보딩** | 경험·언어·기여방식·기여목적을 수집해 추천 기준으로 활용 |
@@ -32,7 +32,7 @@ GitHub 계정으로 로그인한 뒤 간단한 온보딩 정보를 입력하면,
 | Auth | NextAuth v5, GitHub OAuth            | GitHub 로그인 흐름과 세션·토큰 관리를 통합 처리 |
 | Database | Neon PostgreSQL                      | 사용자·프로필·북마크처럼 관계가 명확한 데이터를 클라우드 PostgreSQL로 관리 |
 | Server State | TanStack Query v5                    | 페이지네이션·캐시·데이터 변경을 화면 컴포넌트에서 분리해 관리 |
-| AI | Google Gemini API                    | 이슈 분석에 필요한 자연어 이해와 구조화된 JSON 응답을 저비용으로 처리 |
+| AI | OpenAI API                           | 이슈 분석에 필요한 자연어 이해와 Structured Outputs 기반 구조화된 JSON 응답을 저비용으로 처리 |
 | Validation | Zod v4                               | API 입력값과 외부 응답을 비즈니스 로직 진입 전에 명시적으로 검증 |
 | Test | Vitest                               | 추천 점수·필터·API·인증 로직 단위 테스트 |
 | Infra | Vercel, Cloudflare | Vercel (호스팅·CDN·서버리스), Cloudflare (DNS) |
@@ -68,7 +68,7 @@ GitHub 계정으로 로그인한 뒤 간단한 온보딩 정보를 입력하면,
   ↕
 
 [ External ]
-  GitHub API · Gemini API · Neon PostgreSQL
+  GitHub API · OpenAI API · Neon PostgreSQL
 ```
 ---
 
@@ -130,7 +130,7 @@ AI 분석 버튼을 누르면 아래 파이프라인이 실행됩니다.
 
 ### 응답 검증
 
-Gemini에 JSON 형식 응답을 강제하고, 반환값을 즉시 규격대로 받았는지 검증합니다.
+OpenAI Structured Outputs로 응답 형태(키·타입)를 API 레벨에서 강제하고, 반환값을 zod 스키마로 한 번 더 검증합니다.
 
 ```text
 검증 항목
@@ -215,7 +215,7 @@ GitHub 접근 토큰은 클라이언트에 노출하지 않습니다.
 
 ![AI분석화면](docs/screenshots/ai-analysis.png)
 
-이슈 카드의 AI 분석 버튼을 누르면 이슈 내용·사용자 온보딩 프로필·저장소 README를 종합해 Gemini가 분석합니다. 필요한 개념, 예상 작업 범위, 기능 역할 중심의 진입점, 주의사항을 난이도와 함께 제공합니다. 비로그인 사용자는 하루 5회 무료로 사용할 수 있습니다.
+이슈 카드의 AI 분석 버튼을 누르면 이슈 내용·사용자 온보딩 프로필·저장소 README를 종합해 OpenAI가 분석합니다. 필요한 개념, 예상 작업 범위, 기능 역할 중심의 진입점, 주의사항을 난이도와 함께 제공합니다. 비로그인 사용자는 하루 5회 무료로 사용할 수 있습니다.
 
 ### 북마크
 

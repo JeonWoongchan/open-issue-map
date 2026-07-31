@@ -134,7 +134,7 @@ function authGuest() {
 }
 
 function apiKeyOk() {
-    vi.stubEnv('GEMINI_API_KEY', 'test-api-key')
+    vi.stubEnv('OPENAI_API_KEY', 'test-api-key')
 }
 
 function guestAllowed(remaining = 4) {
@@ -309,8 +309,8 @@ describe('POST /api/ai/issue-analysis', () => {
     })
 
     describe('환경 변수', () => {
-        it('GEMINI_API_KEY 미설정 시 503을 반환한다', async () => {
-            vi.stubEnv('GEMINI_API_KEY', '')
+        it('OPENAI_API_KEY 미설정 시 503을 반환한다', async () => {
+            vi.stubEnv('OPENAI_API_KEY', '')
 
             const res = await POST(makeReq(validBody))
             const json = await res.json()
@@ -416,7 +416,7 @@ describe('POST /api/ai/issue-analysis', () => {
             const consoleError = silenceConsoleError()
             authOk()
             apiKeyOk()
-            makeProvider(vi.fn().mockRejectedValue(new Error('Gemini API error')))
+            makeProvider(vi.fn().mockRejectedValue(new Error('OpenAI API error')))
 
             const res = await POST(makeReq(validBody))
             const json = await res.json()

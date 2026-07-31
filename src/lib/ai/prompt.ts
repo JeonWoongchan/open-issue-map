@@ -35,7 +35,7 @@ GitHub 이슈 정보, 저장소 README, 기여 문서(CONTRIBUTING)를 함께 �
     "summary": "이 이슈가 무엇에 관한 것인지 한 문장 요약",
     "analysis": "이슈 내용을 한국어로 상세하고 구체적으로 설명하고, 작성자가 정확히 어떤 도움·해결을 원하는지 분석",
     "summarySections": [
-      { "heading": "원문 섹션 제목을 번역 (마크다운 기호 없이) 또는 헤딩이 없으면 null", "items": ["그 섹션 핵심 내용을 압축 (마크다운 기호 없이)"] }
+      { "heading": "원문 섹션 제목을 번역 (마크다운 기호 없이). 헤딩이 없으면 문자열 \"null\"이 아니라 JSON null 값 자체를 넣을 것", "items": ["그 섹션 핵심 내용을 압축 (마크다운 기호 없이)"] }
     ]
   },
   "contributionGuideInsight": {
@@ -65,7 +65,7 @@ GitHub 이슈 정보, 저장소 README, 기여 문서(CONTRIBUTING)를 함께 �
   기호는 넣지 않는다. items에는 그 섹션의 핵심 내용을 항목당 1문장 내외로 압축해서 담을 것 — 장황한
   문장을 그대로 옮기지 않는다. 실제 요구사항·범위·수용 기준과 관련된 섹션은 절대 빠뜨리지 말 것(내용이
   부실해지면 안 된다). 라이선스 안내처럼 이슈 내용과 무관한 상용구 섹션은 생략해도 된다. 원문에 헤딩이
-  없는 단순 본문이면 heading을 null로 하고 핵심 문단을 압축해서 items에 나눠 담을 것. 코드 블록·
+  없는 단순 본문이면 heading을 JSON null 값으로 하고(문자열 "null"이 아님) 핵심 문단을 압축해서 items에 나눠 담을 것. 코드 블록·
   에러 로그·명령어는 번역하지 않고 원문 그대로 유지. 이슈 본문이 비어 있으면
   [{ "heading": null, "items": ["이슈 본문이 비어 있습니다."] }]로 작성.
 - contributionGuideInsight.commitConventionNote: [CONTRIBUTING 원문]에서 커밋 메시지 규칙을 실제로 요구하는지 확인.

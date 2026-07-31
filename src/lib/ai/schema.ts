@@ -2,11 +2,13 @@ import { z } from 'zod'
 
 const issueBodySectionSchema = z.object({
     // 원문에 실제 헤딩이 없는 단순 본문이면 null — 매직 스트링(예: "본문")으로 흉내내지 않는다.
-    heading: z.string().min(1).nullable(),
+    // OpenAI 모델이 프롬프트 지시에도 불구하고 실제 null 대신 문자열 "null"을 반환하는 경우가
+    // 실측으로 확인돼(같은 프롬프트로도 확률적으로 재현됨), 검증 전에 정규화한다.
+    heading: z.string().min(1).nullable().transform((val) => (val === 'null' ? null : val)),
     items: z.array(z.string().min(1)).min(1),
 })
 
-// Gemini 응답을 AiGuideOutput으로 좁히는 스키마 — 외부 데이터이므로 런타임 검증 필수
+// AI 응답을 AiGuideOutput으로 좁히는 스키마 — 외부 데이터이므로 런타임 검증 필수
 export const aiGuideOutputSchema = z.object({
     concepts: z.array(z.string()).min(1).max(4),
     scope: z.string().min(1),
