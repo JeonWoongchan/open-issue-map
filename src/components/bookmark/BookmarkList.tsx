@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { SearchBarRow } from '@/components/shared/SearchBarRow'
 import { SearchDataListState } from '@/components/shared/SearchDataListState'
 import { InfiniteScrollTrigger } from '@/components/shared/InfiniteScrollTrigger'
-import { BookmarkHelpDialog } from '@/components/bookmark/bookmark-help/BookmarkHelpDialog'
 import { useBookmarkList } from '@/hooks/useBookmarkList'
 import { useIssueBookmarks } from '@/hooks/useIssueBookmarks'
 import { useSearchFilter } from '@/hooks/useSearchFilter'
@@ -51,7 +50,6 @@ export function BookmarkList() {
                 onChangeAction={setQuery}
                 resultCount={query ? filteredItems.length : undefined}
                 totalCount={query ? optimisticIssues.length : undefined}
-                helpSlot={<BookmarkHelpDialog />}
             />
             <p className="text-center text-xs text-muted-foreground">
               북마크 이슈의 추천 점수는 현재 온보딩 답변 기준으로 계산됩니다.<br className="lg:hidden" />{' '}

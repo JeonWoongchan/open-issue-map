@@ -4,16 +4,11 @@ import { useEffect, useState } from 'react'
 
 export type ColumnBreakpoint = { minWidth: number; columns: number }
 
-// IssueListContent/BookmarkListContent/CardListSkeleton의 그리드와 반드시 일치해야 한다:
+// IssueListContent/BookmarkListContent/PRHistoryContent/CardListSkeleton의 그리드와 반드시 일치해야 한다:
 // grid-cols-1 sm:grid-cols-2(640px) lg:grid-cols-3(1024px) xl:grid-cols-4(1280px)
 export const CARD_GRID_BREAKPOINTS: readonly ColumnBreakpoint[] = [
   { minWidth: 1280, columns: 4 },
   { minWidth: 1024, columns: 3 },
-  { minWidth: 640, columns: 2 },
-]
-
-// PRHistoryContent의 그리드와 반드시 일치해야 한다: grid sm:grid-cols-2(640px) — 2열까지만
-export const PR_HISTORY_GRID_BREAKPOINTS: readonly ColumnBreakpoint[] = [
   { minWidth: 640, columns: 2 },
 ]
 

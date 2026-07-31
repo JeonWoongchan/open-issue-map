@@ -11,7 +11,7 @@ type PRCardProps = {
 
 export function PRCard({ pr }: PRCardProps) {
   return (
-    <CardShell>
+    <CardShell className="group transition-all" variant="interactive">
       <PRCardHeader pr={pr} />
       <PRCardFooter pr={pr} />
     </CardShell>

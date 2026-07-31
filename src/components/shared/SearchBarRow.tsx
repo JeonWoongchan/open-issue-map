@@ -13,12 +13,10 @@ type SearchBarRowProps = {
 
 export function SearchBarRow({ filterSlot, helpSlot, ...searchBarProps }: SearchBarRowProps) {
     return (
-        <div className="flex items-center gap-2">
-            <SearchBar {...searchBarProps} className="w-full max-w-xs" />
-            <div className="ml-auto flex shrink-0 items-center gap-2">
-                {filterSlot}
-                {helpSlot}
-            </div>
+        <div className="flex flex-wrap items-center gap-2">
+            <SearchBar {...searchBarProps} className="min-w-0 flex-1" />
+            {filterSlot}
+            {helpSlot}
         </div>
     )
 }
