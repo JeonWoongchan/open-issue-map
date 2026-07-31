@@ -54,7 +54,20 @@ const validPostBody = {
   repoFullName: 'owner/repo',
   issueTitle: 'Fix login bug',
   issueUrl: 'https://github.com/owner/repo/issues/42',
+  repoUrl: 'https://github.com/owner/repo',
+  language: 'TypeScript',
+  stargazerCount: 100,
+  labels: ['bug'],
+  commentCount: 3,
+  issueBody: 'Login fails when the session token expires mid-request.',
+  issueCreatedAt: '2026-01-01T00:00:00.000Z',
+  issueUpdatedAt: '2026-01-02T00:00:00.000Z',
+  score: 82,
+  difficultyLevel: 'junior',
   contributionType: 'bug',
+  competitionLevel: 'OPEN',
+  hasPR: false,
+  repoActivityLevel: 'active',
 }
 
 const session = {

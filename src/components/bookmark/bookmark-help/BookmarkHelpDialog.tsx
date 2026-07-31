@@ -34,7 +34,7 @@ export function BookmarkHelpDialog() {
       onClearGuideAction={clearActiveGuide}
       guideItems={BOOKMARK_HELP_GUIDE_ITEMS}
       eyebrow="도움말"
-      title="Q. 북마크 이슈 카드의 데이터가 왜 비어 있나요?"
+      title="Q. 북마크 카드의 정보는 언제 기준인가요?"
       titleId="bookmark-help-title"
       descriptionId="bookmark-help-description"
       footer={<HelpReportFooter />}

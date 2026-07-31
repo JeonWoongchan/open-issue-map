@@ -18,12 +18,12 @@ export function BookmarkDemoCard({
     <HelpDemoCardFrame>
       <BookmarkDemoCardHeader
         activeGuideId={activeGuideId}
+        demoUpdatedAt={demoUpdatedAt}
         onActivateGuide={onActivateGuide}
         onClearGuide={onClearGuide}
       />
       <BookmarkDemoCardFooter
         activeGuideId={activeGuideId}
-        demoUpdatedAt={demoUpdatedAt}
         onActivateGuide={onActivateGuide}
         onClearGuide={onClearGuide}
       />

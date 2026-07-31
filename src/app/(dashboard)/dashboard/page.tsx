@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
+import { DashboardHelpDialogWrapper } from '@/components/dashboard/dashboard-help/DashboardHelpDialogWrapper'
 import { DashboardReportCard } from '@/components/dashboard/DashboardReportCard'
+import { GuestInsightBanner } from '@/components/dashboard/GuestInsightBanner'
 import { RecommendationRail } from '@/components/dashboard/recommendation/RecommendationRail'
 import { RecommendationRailSkeleton } from '@/components/dashboard/recommendation/RecommendationRailSkeleton'
 import { MainSectionShell } from '@/components/layout/MainSectionShell'
@@ -35,7 +37,9 @@ export default async function DashboardPage() {
         >
             {profile && adviceItems ? (
                 <DashboardReportCard profile={profile} adviceItems={adviceItems} />
-            ) : null}
+            ) : session ? null : (
+                <GuestInsightBanner />
+            )}
             <div className="flex flex-col gap-8">
                 {RECOMMENDATION_CONDITIONS.map((condition) => (
                     <Suspense key={condition} fallback={<RecommendationRailSkeleton />}>
@@ -48,6 +52,7 @@ export default async function DashboardPage() {
                     </Suspense>
                 ))}
             </div>
+            <DashboardHelpDialogWrapper />
         </MainSectionShell>
     )
 }

@@ -72,9 +72,9 @@ function BlockingPanel({ icon, label, state, action }: BlockingPanelProps) {
           <Lock className="mt-0.5 size-7 shrink-0 text-muted-foreground" />
           <div className="flex flex-col gap-3">
             <div>
-              <p className="text-sm font-semibold">오늘의 무료 AI 가이드를 모두 사용했어요</p>
+              <p className="text-sm font-semibold">비로그인 AI 기능을 모두 사용했어요</p>
               <p className="mt-1 max-w-[46ch] text-xs text-muted-foreground">
-                비로그인 상태에서는 하루 3개 이슈까지 볼 수 있어요. 로그인하면 계속 이용할 수 있어요.
+                비로그인 상태에서는 하루 3개 이슈까지 볼 수 있어요.
               </p>
             </div>
             <Button type="button" variant="outline" size="sm" className="w-fit" onClick={redirectToLogin}>

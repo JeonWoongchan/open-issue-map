@@ -22,7 +22,6 @@ export async function GET(req: NextRequest) {
     // 북마크 목록 조회 서비스 호출 단계.
     const bookmarkList = await getBookmarkList({
       userId: authResult.userId,
-      accessToken: authResult.accessToken,
       limit,
       offset,
     })
@@ -48,13 +47,26 @@ export async function POST(req: Request) {
   }
 
   try {
-    // 북마크 저장 단계.
+    // 북마크 저장 단계 — 저장 시점 이슈 카드 데이터 전체를 스냅샷으로 함께 저장한다.
     await createBookmark(session.user.id, {
       issueNumber: parsed.data.issueNumber,
       repoFullName: parsed.data.repoFullName,
       issueTitle: parsed.data.issueTitle,
       issueUrl: parsed.data.issueUrl,
+      repoUrl: parsed.data.repoUrl,
+      language: parsed.data.language,
+      stargazerCount: parsed.data.stargazerCount,
+      labels: parsed.data.labels,
+      commentCount: parsed.data.commentCount,
+      issueBody: parsed.data.issueBody ?? null,
+      issueCreatedAt: parsed.data.issueCreatedAt,
+      issueUpdatedAt: parsed.data.issueUpdatedAt,
+      score: parsed.data.score ?? null,
+      difficultyLevel: parsed.data.difficultyLevel ?? null,
       contributionType: parsed.data.contributionType ?? null,
+      competitionLevel: parsed.data.competitionLevel ?? null,
+      hasPR: parsed.data.hasPR,
+      repoActivityLevel: parsed.data.repoActivityLevel ?? null,
     })
 
     // 저장 결과 응답 반환 단계.

@@ -3,11 +3,10 @@
 import { useState } from 'react'
 import { BookmarkButton } from '@/components/shared/issue-card/BookmarkButton'
 import { useToast } from '@/hooks/use-toast'
-import { getBookmarkFailureMessage } from '@/hooks/useIssueBookmarks'
+import { buildBookmarkToggleBody, getBookmarkFailureMessage } from '@/hooks/useIssueBookmarks'
 import { isUnauthorizedApiResponse, redirectToLogin } from '@/lib/client-auth'
 import type { ApiResponse } from '@/types/api'
 import type { IssueCardItem } from '@/types/issue'
-import type { ContributionType } from '@/types/user'
 
 type IssueDetailBookmarkButtonProps = {
   issue: IssueCardItem
@@ -34,13 +33,7 @@ export function IssueDetailBookmarkButton({ issue, isGuest }: IssueDetailBookmar
       const response = await fetch('/api/bookmarks', {
         method: wasBookmarked ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          issueNumber: target.number,
-          repoFullName: target.repoFullName,
-          issueTitle: target.title,
-          issueUrl: target.url,
-          contributionType: target.contributionType as ContributionType | null,
-        }),
+        body: JSON.stringify(buildBookmarkToggleBody(target, wasBookmarked)),
       })
       const json = (await response.json()) as ApiResponse<{ saved?: boolean; deleted?: boolean }>
 

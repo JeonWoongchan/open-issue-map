@@ -25,6 +25,37 @@ export function getBookmarkKey(issue: Pick<IssueCardItem, 'repoFullName' | 'numb
   return `${issue.repoFullName}#${issue.number}`
 }
 
+export function buildBookmarkPostBody(issue: IssueCardItem) {
+  return {
+    issueNumber: issue.number,
+    repoFullName: issue.repoFullName,
+    issueTitle: issue.title,
+    issueUrl: issue.url,
+    repoUrl: issue.repoUrl,
+    language: issue.language,
+    stargazerCount: issue.stargazerCount,
+    labels: issue.labels,
+    commentCount: issue.commentCount,
+    issueBody: issue.body ?? null,
+    issueCreatedAt: issue.createdAt,
+    issueUpdatedAt: issue.updatedAt,
+    score: issue.score,
+    difficultyLevel: issue.difficultyLevel,
+    contributionType: issue.contributionType as ContributionType | null,
+    competitionLevel: issue.competitionLevel,
+    hasPR: issue.hasPR,
+    repoActivityLevel: issue.repoActivityLevel,
+  }
+}
+
+// 북마크 토글 요청 바디 생성 — 해제(DELETE)는 식별자만, 저장(POST)은 스냅샷 전체를 보낸다.
+// RecommendationCarousel, IssueDetailBookmarkButton도 이 분기를 공유한다.
+export function buildBookmarkToggleBody(issue: IssueCardItem, wasBookmarked: boolean) {
+  return wasBookmarked
+    ? { issueNumber: issue.number, repoFullName: issue.repoFullName }
+    : buildBookmarkPostBody(issue)
+}
+
 export function useIssueBookmarks({
   sourceIssues,
   isSourceIssuesReady,
@@ -131,13 +162,7 @@ export function useIssueBookmarks({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          issueNumber: issue.number,
-          repoFullName: issue.repoFullName,
-          issueTitle: issue.title,
-          issueUrl: issue.url,
-          contributionType: issue.contributionType as ContributionType | null,
-        }),
+        body: JSON.stringify(buildBookmarkToggleBody(issue, wasBookmarked)),
       })
       const json = (await response.json()) as ApiResponse<{ saved?: boolean; deleted?: boolean }>
 

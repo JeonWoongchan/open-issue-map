@@ -94,8 +94,6 @@ GitHub OAuth 사용자의 기본 계정 정보다.
 
 ## `bookmarks`
 
-사용자가 저장한 이슈 정보다.
-
 | Column | Type | Constraint | 설명 |
 | --- | --- | --- | --- |
 | `id` | `UUID` | PK | bookmark id |
@@ -104,9 +102,22 @@ GitHub OAuth 사용자의 기본 계정 정보다.
 | `repo_full_name` | `TEXT` | NOT NULL | `owner/repo` |
 | `issue_title` | `TEXT` | NOT NULL | 저장 시점 issue title |
 | `issue_url` | `TEXT` | NOT NULL | GitHub issue URL |
+| `repo_url` | `TEXT` | nullable | 저장 시점 저장소 URL |
+| `language` | `TEXT` | nullable | 저장 시점 저장소 주 언어 |
+| `stargazer_count` | `INT` | nullable | 저장 시점 저장소 star 수 |
+| `labels` | `TEXT[]` | nullable | 저장 시점 이슈 라벨 |
+| `comment_count` | `INT` | nullable | 저장 시점 댓글 수 |
+| `issue_body` | `TEXT` | nullable | 저장 시점 이슈 본문 미리보기 |
+| `issue_created_at` | `TIMESTAMPTZ` | nullable | GitHub 이슈 생성 시각 |
+| `issue_updated_at` | `TIMESTAMPTZ` | nullable | 저장 시점 GitHub 이슈 수정 시각 |
+| `score` | `INT` | nullable | 저장 시점 추천 점수 |
+| `difficulty_level` | `TEXT` | nullable | 저장 시점 난이도 추정값 |
 | `contribution_type` | `TEXT` | nullable | 추정 기여 유형 |
-| `created_at` | `TIMESTAMPTZ` | default `NOW()` | 생성 시각 |
-| `updated_at` | `TIMESTAMPTZ` | default `NOW()` | 수정 시각 |
+| `competition_level` | `TEXT` | nullable | 저장 시점 경쟁도 추정값 |
+| `has_pr` | `BOOLEAN` | NOT NULL default `false` | 저장 시점 PR 연결 여부 |
+| `repo_activity_level` | `TEXT` | nullable | 저장 시점 저장소 활동성 추정값 |
+| `created_at` | `TIMESTAMPTZ` | default `NOW()` | 북마크 생성 시각 |
+| `updated_at` | `TIMESTAMPTZ` | default `NOW()` | 북마크 수정 시각 |
 
 제약:
 
@@ -190,6 +201,6 @@ recommendation_candidate_pools는 (언어, 조건) 조합 기준 독립 캐시 (
 ## 운영 메모
 
 - `github_id`는 앱 사용자 식별 기준이다. GitHub login은 바뀔 수 있으므로 primary key로 쓰지 않는다.
-- `bookmarks`는 저장 시점 title/url을 들고 있어 GitHub 조회 실패 시 fallback UI를 만들 수 있다.
+- `bookmarks`는 저장 시점 이슈 카드 데이터 전체를 스냅샷으로 들고 있다 — 목록 조회 시 GitHub을 다시 조회하지 않으므로, 점수·PR연결여부 등은 북마크 시점 값으로 고정된다(007 마이그레이션 이전 행은 스냅샷 컬럼이 NULL).
 - 대규모 트래픽이 생기면 bookmark 목록 조회의 정렬 조건과 count 비용을 먼저 확인한다.
 - repo health 상세 metric 컬럼은 현재 nullable로 남아 있고, 실제 score만 저장한다.

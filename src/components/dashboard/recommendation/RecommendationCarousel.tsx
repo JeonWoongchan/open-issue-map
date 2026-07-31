@@ -4,11 +4,10 @@ import { useEffect, useState } from 'react'
 import { IssueCard } from '@/components/dashboard/issue/IssueCard'
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel'
 import { useToast } from '@/hooks/use-toast'
-import { getBookmarkFailureMessage, getBookmarkKey } from '@/hooks/useIssueBookmarks'
+import { buildBookmarkToggleBody, getBookmarkFailureMessage, getBookmarkKey } from '@/hooks/useIssueBookmarks'
 import { isUnauthorizedApiResponse, redirectToLogin } from '@/lib/client-auth'
 import type { ApiResponse } from '@/types/api'
 import type { IssueCardItem } from '@/types/issue'
-import type { ContributionType } from '@/types/user'
 
 type RecommendationCarouselProps = {
   issues: IssueCardItem[]
@@ -49,13 +48,7 @@ export function RecommendationCarousel({ issues, isGuest }: RecommendationCarous
       const response = await fetch('/api/bookmarks', {
         method: wasBookmarked ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          issueNumber: issue.number,
-          repoFullName: issue.repoFullName,
-          issueTitle: issue.title,
-          issueUrl: issue.url,
-          contributionType: issue.contributionType as ContributionType | null,
-        }),
+        body: JSON.stringify(buildBookmarkToggleBody(issue, wasBookmarked)),
       })
       const json = (await response.json()) as ApiResponse<{ saved?: boolean; deleted?: boolean }>
 
