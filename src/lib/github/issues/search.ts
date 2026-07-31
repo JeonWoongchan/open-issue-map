@@ -1,5 +1,5 @@
 import { githubGraphQL, GitHubInvalidCursorError } from '@/lib/github/client'
-import { POPULAR_SORT_WINDOW_DAYS } from '@/constants/scoring-rules'
+import { GITHUB_SEARCH_TIMEOUT_MS, POPULAR_SORT_WINDOW_DAYS } from '@/constants/scoring-rules'
 import type { RawIssue } from '@/types/issue'
 
 const SEARCH_ISSUES_QUERY = `
@@ -83,7 +83,7 @@ export function dedupeIssues(issues: RawIssue[]): RawIssue[] {
 }
 
 async function searchIssues(query: string, first: number, after: string | null, accessToken: string): Promise<SearchResult> {
-    return githubGraphQL<SearchResult>(SEARCH_ISSUES_QUERY, { query, first, after }, accessToken)
+    return githubGraphQL<SearchResult>(SEARCH_ISSUES_QUERY, { query, first, after }, accessToken, GITHUB_SEARCH_TIMEOUT_MS)
 }
 
 // GitHub 검색을 실행하고 결과를 IssueSearchResult 형태로 정리한다 — 쿼리 문자열만 다르게

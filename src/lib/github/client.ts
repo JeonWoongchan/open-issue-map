@@ -33,7 +33,8 @@ export class GitHubInvalidCursorError extends Error {
 export async function githubGraphQL<T>(
   query: string,
   variables: Record<string, unknown>,
-  accessToken: string
+  accessToken: string,
+  timeoutMs: number = GITHUB_API_TIMEOUT_MS
 ): Promise<T> {
   const res = await fetch('https://api.github.com/graphql', {
     method: 'POST',
@@ -42,7 +43,7 @@ export async function githubGraphQL<T>(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ query, variables }),
-    signal: AbortSignal.timeout(GITHUB_API_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   })
 
   if (!res.ok) {

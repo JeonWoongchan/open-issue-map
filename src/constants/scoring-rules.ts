@@ -27,6 +27,11 @@ export const RECOMMENDATION_DISPLAY_LIMIT = 15
 export const GITHUB_API_CACHE_TTL_SECONDS = 1800
 // GitHub API 응답 대기 상한 — 초과 시 AbortError로 함수 조기 종료
 export const GITHUB_API_TIMEOUT_MS = 8_000
+// 이슈 검색(searchIssues) 전용 상한 — full 필드 선택(body/comments/reactions/labels/repository/
+// timelineItems)을 first:100으로 조회하는 무거운 쿼리라, Java처럼 결과가 많은 언어에서는 실측상
+// 5~6초는 기본이고 종종 8초를 넘겨 GITHUB_API_TIMEOUT_MS로 중도 취소되는 게 확인됐다(재현 완료).
+// 크론 라우트의 maxDuration(45초, 페이지 3회 순차 호출)에 맞춰 3회를 곱해도 여유가 남도록 12초로 설정.
+export const GITHUB_SEARCH_TIMEOUT_MS = 12_000
 // 이슈 목록 클라이언트 stale 시간 — 서버 캐시 TTL과 맞춰 재방문 시 즉시 표시
 export const ISSUE_LIST_STALE_TIME_MS = GITHUB_API_CACHE_TTL_SECONDS * 1000
 // 저장소 활성도 판별 기준
