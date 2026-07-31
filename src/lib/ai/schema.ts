@@ -14,7 +14,6 @@ export const aiGuideOutputSchema = z.object({
     scope: z.string().min(1),
     startingPoints: z.array(z.string()).min(1).max(3),
     cautions: z.array(z.string()).min(1).max(3),
-    difficulty: z.enum(['쉬움', '보통', '어려움']),
     expectedBenefit: z.string().min(1),
     issueOverview: z.object({
         summary: z.string().min(1),
@@ -41,6 +40,5 @@ export const issueAnalysisSchema = aiGuideOutputSchema.extend({
 export type IssueBodySection = z.infer<typeof issueBodySectionSchema>
 export type AiGuideOutput = z.infer<typeof aiGuideOutputSchema>
 export type IssueAnalysis = z.infer<typeof issueAnalysisSchema>
-export type AnalysisDifficulty = AiGuideOutput['difficulty']
 export type IssueOverview = AiGuideOutput['issueOverview']
 export type ContributionGuideInsight = AiGuideOutput['contributionGuideInsight']

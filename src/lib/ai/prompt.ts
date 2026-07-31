@@ -29,7 +29,6 @@ GitHub 이슈 정보, 저장소 README, 기여 문서(CONTRIBUTING)를 함께 �
   "scope": "예상 작업과 의심되는 코드 영역 설명 (2~3문장)",
   "startingPoints": ["먼저 봐야 할 위치 1", "먼저 봐야 할 위치 2"],
   "cautions": ["주의할 점 1", "주의할 점 2"],
-  "difficulty": "쉬움" | "보통" | "어려움",
   "expectedBenefit": "이 이슈를 해결하면 얻는 것 (1~2문장)",
   "issueOverview": {
     "summary": "이 이슈가 무엇에 관한 것인지 한 문장 요약",
@@ -51,9 +50,6 @@ GitHub 이슈 정보, 저장소 README, 기여 문서(CONTRIBUTING)를 함께 �
   "이슈 목록 무한스크롤의 페이지 계산 함수" 등). 근거가 부족하면 추측이라는 뉘앙스를 남기고, 지어내지 않는다.
 - startingPoints: 이슈 내용과 README를 바탕으로 관련 기능을 담당할 파일·모듈 위치를 추론. 정확한 경로보다 "인증 처리 모듈", "라우터 설정" 등 역할 중심으로 서술. 2~3개
 - cautions: 놓치기 쉬운 엣지 케이스, 사이드 이펙트, 선행 이해가 필요한 사항 1~3개
-- difficulty: 이슈 자체의 절대 난이도가 아닌 기여자 수준을 고려한 상대적 난이도.
-  같은 이슈라도 입문자에게 "어려움"이 고급자에게는 "쉬움"일 수 있음.
-  "쉬움" / "보통" / "어려움" 중 하나만 작성
 - expectedBenefit: 이 이슈를 해결했을 때 기여자 본인이 얻는 학습 경험(예: 익히게 되는 기술·패턴)과,
   프로젝트 또는 다른 사용자에게 주는 이득을 함께 서술. 근거 없는 과장 없이 구체적으로.
 - issueOverview.summary: 이 이슈가 버그 리포트인지 기능 요청인지 등, 무엇에 관한 것인지 한 문장으로.
@@ -78,7 +74,7 @@ GitHub 이슈 정보, 저장소 README, 기여 문서(CONTRIBUTING)를 함께 �
 
 export function buildAnalysisPrompt(params: IssueAnalysisParams): string {
     const lines = [
-        // 기여자 컨텍스트 — 난이도 상대화 및 조언 수준 조정에 사용
+        // 기여자 컨텍스트 — 조언 수준 조정에 사용
         `[기여자 정보]`,
         `경험 수준: ${EXPERIENCE_LEVEL_LABEL[params.userExperienceLevel] ?? params.userExperienceLevel}`,
         `기여 목적: ${PURPOSE_LABEL[params.userPurpose] ?? params.userPurpose}`,

@@ -78,7 +78,6 @@ const aiGuideOutputResult: AiGuideOutput = {
     scope: '로그인 버튼 클릭 핸들러 수정, 약 20줄 변경 예상',
     startingPoints: ['src/components/LoginButton.tsx', 'src/lib/auth.ts'],
     cautions: ['모바일 터치 이벤트와 클릭 이벤트 차이 확인 필요'],
-    difficulty: '쉬움',
     expectedBenefit: 'React 이벤트 처리와 OAuth 인증 흐름을 익힐 수 있고, 모바일 사용자의 로그인 실패를 줄여줍니다.',
     issueOverview: {
         summary: '모바일에서 로그인 버튼이 동작하지 않는다는 버그 리포트입니다.',

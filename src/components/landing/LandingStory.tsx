@@ -32,7 +32,6 @@ function LandingIssueCarouselDemo() {
 }
 
 const LANDING_DEMO_ANALYSIS: IssueAnalysis = {
-    difficulty: '쉬움',
     concepts: ['React Query', 'WebSocket'],
     scope: '재연결 로직이 useSocket.ts 안에서 중복 실행되는 문제예요 — 이벤트 리스너 정리 시점만 고치면 되는 국소적인 수정입니다.',
     startingPoints: ['src/hooks/useSocket.ts', 'src/lib/socket-client.ts'],

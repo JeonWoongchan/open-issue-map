@@ -23,7 +23,6 @@ const aiGuideOutputWireSchema = z.object({
     scope: z.string(),
     startingPoints: z.array(z.string()),
     cautions: z.array(z.string()),
-    difficulty: z.enum(['쉬움', '보통', '어려움']),
     expectedBenefit: z.string(),
     issueOverview: z.object({
         summary: z.string(),

@@ -7,7 +7,6 @@ function makeRaw(summarySectionHeading: unknown) {
         scope: '작업 범위 설명',
         startingPoints: ['시작 지점'],
         cautions: ['주의사항'],
-        difficulty: '쉬움',
         expectedBenefit: '기대 효과',
         issueOverview: {
             summary: '한 줄 요약',

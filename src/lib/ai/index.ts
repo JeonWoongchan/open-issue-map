@@ -6,7 +6,6 @@ export type {
     AiGuideOutput,
     IssueAnalysis,
     IssueAnalysisParams,
-    AnalysisDifficulty,
     IssueOverview,
     ContributionGuideInsight,
 } from './types'
