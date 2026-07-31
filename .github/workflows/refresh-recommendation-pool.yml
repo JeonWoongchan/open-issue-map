@@ -60,7 +60,7 @@ jobs:
     timeout-minutes: 10
     strategy:
       # 13개를 한꺼번에 병렬 호출하면 GitHub 2차(버스트) 레이트리밋에 걸릴 수 있어 페이싱한다.
-      max-parallel: 3
+      max-parallel: 1
       # 언어 하나가 일시적으로 실패해도(레이트리밋, 타임아웃 등) 나머지 언어는 계속 진행한다 —
       # 실패한 언어는 다음 스케줄 때 자연히 다시 시도된다.
       fail-fast: false
