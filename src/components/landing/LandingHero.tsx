@@ -37,7 +37,7 @@ const HERO_FEATURE_ITEMS = [
 
 export function LandingHero() {
     return (
-        <section className="relative flex min-h-[100svh] items-center overflow-hidden px-4 py-14">
+        <section className="relative flex min-h-svh items-center overflow-hidden px-4 py-14">
             <LandingConstellation />
             <div className="relative z-10 mx-auto grid w-full max-w-7xl items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
                 <div className="flex min-w-0 flex-col items-start">

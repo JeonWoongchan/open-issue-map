@@ -9,6 +9,7 @@ import {
     EXPLORE_FOREGROUND_FETCH_SIZE,
     EXPLORE_INITIAL_BATCH,
     GITHUB_API_CACHE_TTL_SECONDS,
+    MATCH_SCORE_MINIMUM,
 } from '@/constants/scoring-rules'
 import { LANGUAGE_GROUP_PRESETS } from '@/constants/explore-presets'
 import type { IssueFilters, IssueSort } from '@/types/issue'
@@ -56,6 +57,7 @@ export async function fetchIssueExplorePage({
 
     const searchQuery = buildExploreQuery({ text: query, languages, githubLabel, sort })
     const cursor = batch === EXPLORE_INITIAL_BATCH ? null : batch
+    const hasFreeTextQuery = query.trim() !== ''
 
     // 검색 쿼리 자체가 사용자와 무관한 공개 GitHub 데이터라, 캐시 키에 사용자 식별자를 넣지
     // 않는다 — README 캐시 키 버그(사용자 토큰까지 키에 섞여 같은 공개 저장소인데도 캐시가
@@ -76,17 +78,28 @@ export async function fetchIssueExplorePage({
         }
     }
 
+    // unstable_cache 없이 singleflight로만 감싼 라이브 조회 — 자유 텍스트 검색 전용.
+    function makeLiveFetch(size: number) {
+        return {
+            key: [...cacheKeyBase, 'live'].join('::'),
+            fetch: () => fetchExploreIssues(searchQuery, accessToken, cursor, size),
+        }
+    }
+
     const isWithinForegroundRange = offset < EXPLORE_FOREGROUND_FETCH_SIZE
-    const primary = isWithinForegroundRange
-        ? makeCachedFetch(EXPLORE_FOREGROUND_FETCH_SIZE, 'foreground')
-        : makeCachedFetch(EXPLORE_BACKGROUND_FETCH_SIZE, 'background')
+    const primary = hasFreeTextQuery
+        ? makeLiveFetch(isWithinForegroundRange ? EXPLORE_FOREGROUND_FETCH_SIZE : EXPLORE_BACKGROUND_FETCH_SIZE)
+        : isWithinForegroundRange
+            ? makeCachedFetch(EXPLORE_FOREGROUND_FETCH_SIZE, 'foreground')
+            : makeCachedFetch(EXPLORE_BACKGROUND_FETCH_SIZE, 'background')
 
     // 배치의 첫 요청(offset=0)에서 foreground와 background를 동시에 시작한다 — background
     // 호출을 await 뒤(또는 after() 콜백 안)로 미루면 그만큼 완료 시점이 늦어지므로, 여기서
     // 바로 호출해 foreground와 병렬로 진행되게 한다. after()는 시작을 늦추는 용도가 아니라,
     // 응답 전송 후 서버리스 함수가 종료되며 이 promise가 중간에 끊기지 않도록 끝까지
     // 붙잡아두는 용도로만 쓴다.
-    if (offset === 0) {
+
+    if (offset === 0 && !hasFreeTextQuery) {
         const background = makeCachedFetch(EXPLORE_BACKGROUND_FETCH_SIZE, 'background')
         const backgroundPromise = withSingleFlight(background.key, background.fetch).catch(() => {})
         after(() => backgroundPromise)
@@ -107,7 +120,8 @@ export async function fetchIssueExplorePage({
     }
 
     const bookmarkKeys = new Set(await bookmarkPromise)
-    const rankedIssues = rankIssues(searchResult.issues, profile).map((issue) => ({
+
+    const rankedIssues = rankIssues(searchResult.issues, profile, MATCH_SCORE_MINIMUM).map((issue) => ({
         ...issue,
         isBookmarked: bookmarkKeys.has(`${issue.repoFullName}#${issue.number}`),
     }))

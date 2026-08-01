@@ -301,6 +301,56 @@ describe('fetchIssueExplorePage — 캐시 키', () => {
   })
 })
 
+describe('fetchIssueExplorePage — 점수 하한 없이 랭킹한다', () => {
+  it('rankIssues를 MATCH_SCORE_MINIMUM(0)으로 호출해 온보딩 미매칭 이슈도 걸러내지 않는다', async () => {
+    setupDeps([makeRawIssue()], [makeScoredIssue()])
+
+    await fetchIssueExplorePage(baseArgs)
+
+    expect(mockRank).toHaveBeenCalledWith(expect.anything(), profile, 0)
+  })
+})
+
+describe('fetchIssueExplorePage — 자유 텍스트 검색은 캐싱을 건너뛴다', () => {
+  it('검색어가 없으면 unstable_cache로 감싼다', async () => {
+    setupDeps([makeRawIssue()], [makeScoredIssue()])
+    const { unstable_cache } = await import('next/cache')
+
+    await fetchIssueExplorePage(baseArgs)
+
+    expect(vi.mocked(unstable_cache)).toHaveBeenCalled()
+  })
+
+  it('검색어가 있으면 unstable_cache를 전혀 호출하지 않는다(캐시 미스만 쌓이는 것을 피함)', async () => {
+    setupDeps([makeRawIssue()], [makeScoredIssue()], { hasMoreOnGithub: true, endCursor: 'cursor-next' })
+    const { unstable_cache } = await import('next/cache')
+
+    await fetchIssueExplorePage({ ...baseArgs, query: 'memory leak' })
+
+    expect(vi.mocked(unstable_cache)).not.toHaveBeenCalled()
+  })
+
+  it('검색어가 있으면 offset=0이어도 background 선제 프리페치를 트리거하지 않는다', async () => {
+    setupDeps([makeRawIssue()], [makeScoredIssue()], { hasMoreOnGithub: true, endCursor: 'cursor-next' })
+
+    await fetchIssueExplorePage({ ...baseArgs, query: 'memory leak' })
+
+    // foreground(라이브) 1회만 호출되고, background(90) 프리페치는 없어야 한다.
+    expect(mockSearch).toHaveBeenCalledTimes(1)
+    expect(mockSearch).toHaveBeenCalledWith(expect.any(String), 'token', null, 30)
+  })
+
+  it('검색어가 있어도 결과는 정상적으로 반환한다', async () => {
+    setupDeps([makeRawIssue()], [makeScoredIssue()], { hasMoreOnGithub: false })
+
+    const result = await fetchIssueExplorePage({ ...baseArgs, query: 'memory leak' })
+
+    expect('error' in result).toBe(false)
+    if ('error' in result) return
+    expect(result.issues).toHaveLength(1)
+  })
+})
+
 describe('fetchIssueExplorePage — background 동시 프리페치', () => {
   it('offset=0이면 foreground와 별개로 background(90) fetch도 트리거한다', async () => {
     setupDeps([makeRawIssue()], [makeScoredIssue()], { hasMoreOnGithub: true, endCursor: 'cursor-next' })
