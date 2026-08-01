@@ -1,7 +1,7 @@
 "use client"
 
 import Link from 'next/link'
-import { Bookmark, LogOut, Menu, GitPullRequest, UserRound } from 'lucide-react'
+import { Bookmark, LogOut, Menu, GitPullRequest, Search, Sparkles, UserRound } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +15,7 @@ type UserMenuProps = {
 }
 
 export function UserMenu({ logoutAction }: UserMenuProps) {
+
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger className="shrink-0 cursor-pointer rounded-sm opacity-60 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
@@ -22,6 +23,19 @@ export function UserMenu({ logoutAction }: UserMenuProps) {
         <span className="sr-only">메뉴 열기</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={12}>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard">
+            <Sparkles />
+            추천 이슈
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/issues">
+            <Search />
+            이슈 탐색
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/profile">
             <UserRound />

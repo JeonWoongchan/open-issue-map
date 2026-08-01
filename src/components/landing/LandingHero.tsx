@@ -45,11 +45,11 @@ export function LandingHero() {
                         <span className="size-1.5 rounded-full bg-primary" aria-hidden="true" />
                         {SITE_TITLE}
                     </span>
-                    <h1 className="max-w-3xl text-balance text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-6xl">
-                        나에게 맞는 오픈소스<br/> 이슈를 <span className="text-primary">추천</span>받아보세요
+                    <h1 className="max-w-3xl break-keep text-balance text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-6xl">
+                        나에게 맞는 오픈소스 이슈를 <span className="text-primary">추천</span>받아보세요
                     </h1>
-                    <p className="mt-6 max-w-3xl text-pretty text-base leading-7 text-muted-foreground sm:text-lg">
-                        {SITE_TITLE}은 사용자 온보딩 정보를 바탕으로 검토해볼 만한 <br/>오픈소스 이슈를 추천하는 서비스입니다. 매일 쌓이는 수많은 이슈 속에서 <br/>나에게 맞는 이슈를 골라보세요.
+                    <p className="mt-6 max-w-3xl break-keep text-pretty text-base leading-7 text-muted-foreground sm:text-lg">
+                        {SITE_TITLE}은 사용자 온보딩 정보를 바탕으로 검토해볼 만한 오픈소스 이슈를 추천하는 서비스입니다. 매일 쌓이는 수많은 이슈 속에서 나에게 맞는 이슈를 골라보세요.
                     </p>
                     <div className="mt-10 flex flex-col gap-3 sm:flex-row">
                         <form action={signInWithGitHub}>
@@ -68,8 +68,8 @@ export function LandingHero() {
                                     <Icon className="size-4" aria-hidden="true" />
                                 </span>
                                 <div className="space-y-1">
-                                    <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-                                    <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+                                    <h2 className="break-keep text-sm font-semibold text-foreground">{title}</h2>
+                                    <p className="break-keep text-sm leading-6 text-muted-foreground">{description}</p>
                                 </div>
                             </div>
                         </article>

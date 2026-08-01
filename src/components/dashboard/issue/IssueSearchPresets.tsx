@@ -22,11 +22,12 @@ type IssueSearchPresetsProps = {
 }
 
 // 검색창 위 "자주 찾는 조건" — 박스(카드) 없이 아이콘+텍스트만 세로로 쌓고, 가로 중앙 정렬한다.
-// 좁은 화면에서는 스크롤 대신 줄바꿈(flex-wrap)으로 처리한다.
+// 550px 이하에서는 줄바꿈 대신(flex-nowrap) 아이콘/글자를 줄이고 버튼을 flex-1로 균등 분배해
+// 5개가 항상 한 줄에 들어가게 한다.
 // 호버 반응은 배경색 대신 아이콘이 살짝 우측으로 회전하는 것으로 표현한다.
 export function IssueSearchPresets({ activeKey, onSelectAction }: IssueSearchPresetsProps) {
   return (
-    <div className="flex flex-wrap items-start justify-center gap-x-1 gap-y-2">
+    <div className="flex flex-wrap items-start justify-center gap-x-1 gap-y-2 max-[550px]:flex-nowrap max-[550px]:gap-x-0.5">
       {EXPLORE_PRESETS.map((preset) => {
         const isActive = activeKey === preset.key
         return (
@@ -35,18 +36,18 @@ export function IssueSearchPresets({ activeKey, onSelectAction }: IssueSearchPre
             type="button"
             aria-pressed={isActive}
             onClick={() => onSelectAction(preset)}
-            className="group flex w-20 cursor-pointer flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-center"
+            className="group flex w-20 cursor-pointer flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 text-center max-[550px]:w-auto max-[550px]:min-w-0 max-[550px]:flex-1 max-[550px]:basis-0 max-[550px]:px-0.5"
             style={{ '--icon-color': PRESET_ICON_COLORS[preset.key] } as CSSProperties}
           >
             <span style={{ color: 'var(--icon-color)' } as CSSProperties}>
               <ExplorePresetIcon
                 icon={preset.icon}
-                className="size-7 shrink-0 transition-transform duration-200 ease-out group-hover:rotate-12"
+                className="size-7 shrink-0 transition-transform duration-200 ease-out group-hover:rotate-12 max-[550px]:size-5"
               />
             </span>
             <span
               className={
-                'text-xs font-medium leading-tight ' +
+                'text-xs font-medium leading-tight max-[550px]:text-[10px] ' +
                 (isActive ? 'text-interactive-action' : 'text-foreground')
               }
             >
