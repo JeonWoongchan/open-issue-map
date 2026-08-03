@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { IssueCard } from '@/components/dashboard/issue/IssueCard'
-import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel'
+import { Carousel, CarouselContent, CarouselItem, useCarousel } from '@/components/ui/carousel'
 import { useToast } from '@/hooks/use-toast'
 import { buildBookmarkToggleBody, getBookmarkFailureMessage, getBookmarkKey } from '@/hooks/useIssueBookmarks'
 import { isUnauthorizedApiResponse, redirectToLogin } from '@/lib/client-auth'
@@ -14,11 +14,26 @@ type RecommendationCarouselProps = {
   isGuest: boolean
 }
 
-// react-query의 useQueryClient()는 이 카드들이 Suspense로 스트리밍되는 서버 컴포넌트 아래에서
-// 렌더될 때 QueryClientProvider를 찾지 못해 "No QueryClient set" 오류를 던졌다 — 그래서
-// useIssueBookmarks(react-query 기반) 대신 이 컴포넌트 안에서 낙관적 상태를 직접 관리한다.
-// 대가: 여기서 북마크를 토글해도 /bookmarks, /profile 등 다른 페이지의 react-query 캐시는
-// 즉시 갱신되지 않는다(그 페이지들의 자체 staleTime이 지나야 반영됨).
+// 더 스크롤할 카드가 있는 쪽에만 가장자리를 은은하게 페이드아웃 — canScrollPrev/Next는
+// useCarousel()이 embla의 select 이벤트에 맞춰 이미 추적 중이라 별도 계산 없이 그대로 쓴다.
+// <Carousel> 내부(Provider 아래)에서만 렌더돼야 하므로 별도 컴포넌트로 분리한다.
+function CarouselEdgeFade() {
+  const { canScrollPrev, canScrollNext } = useCarousel()
+
+  return (
+    <>
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-background to-transparent transition-opacity duration-300 ${canScrollPrev ? 'opacity-100' : 'opacity-0'}`}
+      />
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-background to-transparent transition-opacity duration-300 ${canScrollNext ? 'opacity-100' : 'opacity-0'}`}
+      />
+    </>
+  )
+}
+
 export function RecommendationCarousel({ issues, isGuest }: RecommendationCarouselProps) {
   const { toast } = useToast()
   const [optimisticIssues, setOptimisticIssues] = useState(issues)
@@ -80,6 +95,7 @@ export function RecommendationCarousel({ issues, isGuest }: RecommendationCarous
           </CarouselItem>
         ))}
       </CarouselContent>
+      <CarouselEdgeFade />
     </Carousel>
   )
 }

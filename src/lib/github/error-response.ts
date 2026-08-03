@@ -1,11 +1,11 @@
 import type { NextResponse } from 'next/server'
 
 import { err, ErrorCode } from '@/lib/api-response'
+import { GITHUB_RATE_LIMITED_MESSAGE, GITHUB_UNAUTHORIZED_MESSAGE } from '@/constants/github-error-messages'
 import { GitHubNotFoundError, GitHubRateLimitError, GitHubUnauthorizedError } from '@/lib/github/client'
 import { GitHubProfileError } from '@/lib/github/profile'
 
-export const GITHUB_RATE_LIMITED_MESSAGE = 'GitHub API 요청 한도를 초과했습니다.'
-export const GITHUB_UNAUTHORIZED_MESSAGE = 'GitHub 인증이 만료되었습니다. 다시 로그인해 주세요.'
+export { GITHUB_RATE_LIMITED_MESSAGE, GITHUB_UNAUTHORIZED_MESSAGE }
 
 type GitHubErrorResponseOptions = {
   fallbackMessage: string

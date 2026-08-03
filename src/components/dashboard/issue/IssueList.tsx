@@ -5,6 +5,7 @@ import { signIn } from 'next-auth/react'
 import { SearchDataListState } from '@/components/shared/SearchDataListState'
 import { InfiniteScrollTrigger } from '@/components/shared/InfiniteScrollTrigger'
 import { EXPLORE_PRESETS, type ExplorePreset } from '@/constants/explore-presets'
+import { GITHUB_RATE_LIMITED_MESSAGE } from '@/constants/github-error-messages'
 import { useIssueListView } from '@/hooks/useIssueListView'
 import { useResponsiveColumnCount } from '@/hooks/useResponsiveColumnCount'
 import { useToast } from '@/hooks/use-toast'
@@ -33,6 +34,10 @@ type IssueListProps = {
 // 남기고 서로 배타적으로 동작해야 하므로, 팝오버에서 별도로 고른 나머지 타입(test/review)과
 // 구분해서 다뤄야 한다.
 const PRESET_CONTRIBUTION_TYPES: ContributionType[] = ['doc', 'bug', 'feat']
+
+// GitHub 레이트리밋은 "곧 회복되는 일시적 지연"이라, 다른 진짜 에러(danger)와 달리
+// 경고색(warning) + 재시도를 유도하는 문구로 안내한다.
+const RATE_LIMITED_DISPLAY_MESSAGE = 'GitHub API 요청이 많아 잠시 지연되고 있어요. 잠시 후 다시 시도해 주세요.'
 
 // 현재 filters 상태와 일치하는 프리셋을 찾는다 — 프리셋 아이콘은 한 번에 하나만
 // 활성화되도록 handleSelectPreset이 항상 나머지 프리셋 필드를 같이 초기화해주므로,
@@ -75,6 +80,10 @@ export function IssueList({
 
     // 프리셋 활성 상태(아이콘 행 + 클릭 시 토글 판단)가 같은 값을 공유하므로 한 번만 계산한다.
     const activePresetKey = findActivePresetKey(filters)
+
+    const isRateLimited = errorMessage === GITHUB_RATE_LIMITED_MESSAGE
+    const displayErrorMessage = isRateLimited ? RATE_LIMITED_DISPLAY_MESSAGE : errorMessage
+    const errorVariant = isRateLimited ? 'warning' : 'danger'
 
     // 게스트 북마크 클릭 시 토스트 안내 후 차단
     async function handleToggleBookmark(issue: IssueCardItem) {
@@ -159,7 +168,8 @@ export function IssueList({
                 isPending={isPending}
                 isError={isError}
                 items={items}
-                errorMessage={errorMessage}
+                errorMessage={displayErrorMessage}
+                errorVariant={errorVariant}
                 onRetry={refetch}
                 skeletonCount={12}
                 renderContent={() => (
@@ -174,7 +184,8 @@ export function IssueList({
                 hasNextPage={effectiveHasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
                 isError={isNextPageError}
-                errorMessage={errorMessage}
+                errorMessage={displayErrorMessage}
+                errorVariant={errorVariant}
                 onRetryAction={retryNextPageAction}
                 sentinelRefAction={sentinelRef}
                 columnCount={columnCount}
