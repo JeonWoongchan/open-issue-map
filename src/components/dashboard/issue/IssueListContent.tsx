@@ -1,14 +1,17 @@
+import { CardSkeletonItem } from '@/components/shared/CardListSkeleton'
 import { IssueCard } from './IssueCard'
 import type { IssueCardItem } from '@/types/issue'
 
 type IssueListContentProps = {
   issues: IssueCardItem[]
   onToggleBookmark: (issue: IssueCardItem) => Promise<void>
+  trailingSkeletonCount?: number
 }
 
 export function IssueListContent({
   issues,
   onToggleBookmark,
+  trailingSkeletonCount = 0,
 }: IssueListContentProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -19,6 +22,9 @@ export function IssueListContent({
             issue={issue}
             onToggleBookmark={onToggleBookmark}
           />
+        ))}
+        {Array.from({ length: trailingSkeletonCount }).map((_, index) => (
+          <CardSkeletonItem key={`trailing-skeleton-${index}`} />
         ))}
       </div>
     </div>

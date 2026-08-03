@@ -12,8 +12,8 @@ type InfiniteScrollTriggerProps = {
     errorVariant?: 'danger' | 'warning'
     onRetryAction?: () => void
     sentinelRefAction: (node?: Element | null) => void
-    // 로딩 스켈레톤을 몇 개 보여줄지 — 호출부의 그리드 열 수(useResponsiveColumnCount 결과)를 그대로 받는다.
-    columnCount?: number
+    // 로딩 스켈레톤을 몇 개 보여줄지 — useInfiniteScrollDisplay의 nextPageSkeletonCount를 그대로 받는다.
+    skeletonCount?: number
 }
 
 export function InfiniteScrollTrigger({
@@ -24,7 +24,7 @@ export function InfiniteScrollTrigger({
     errorVariant,
     onRetryAction,
     sentinelRefAction,
-    columnCount = 1,
+    skeletonCount = 1,
 }: InfiniteScrollTriggerProps) {
     if (!hasNextPage) {
         return null
@@ -42,7 +42,7 @@ export function InfiniteScrollTrigger({
 
     return (
         <>
-            {isFetchingNextPage ? <CardListSkeleton count={columnCount} /> : null}
+            {isFetchingNextPage ? <CardListSkeleton count={skeletonCount} /> : null}
             <div ref={sentinelRefAction} className="h-10" />
         </>
     )

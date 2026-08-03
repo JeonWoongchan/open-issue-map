@@ -34,7 +34,7 @@ export function BookmarkList() {
     const columnCount = useResponsiveColumnCount()
 
     const filteredItems = useSearchFilter(optimisticIssues, query)
-    const { displayItems, effectiveHasNextPage, sentinelRef } = useInfiniteScrollDisplay({
+    const { displayItems, effectiveHasNextPage, sentinelRef, sameRowSkeletonCount, newRowSkeletonCount } = useInfiniteScrollDisplay({
         items: filteredItems,
         hasNextPage,
         fetchNextPageAction,
@@ -74,6 +74,7 @@ export function BookmarkList() {
                     <BookmarkListContent
                         issues={displayItems}
                         onToggleBookmark={toggleBookmark}
+                        trailingSkeletonCount={isFetchingNextPage ? sameRowSkeletonCount : 0}
                     />
                 )}
             />
@@ -82,7 +83,7 @@ export function BookmarkList() {
                 hasNextPage={effectiveHasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
                 sentinelRefAction={sentinelRef}
-                columnCount={columnCount}
+                skeletonCount={newRowSkeletonCount}
             />
         </div>
     )
