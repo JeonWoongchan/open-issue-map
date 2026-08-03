@@ -57,6 +57,12 @@ export const LANGUAGE_GROUPS: string[][] = [
   ['C', 'C++'],                                  // 시스템·임베디드 (C#은 .NET으로 별도)
   ['Java', 'Kotlin', 'Scala', 'Groovy'],         // JVM 생태계
   ['Swift', 'Objective-C'],                      // Apple 플랫폼 (iOS/macOS)
+  ['Python'],                                    // 단독 — 온보딩 선택지(POPULAR_LANGUAGES)에 있으나 뚜렷한 동일 생태계 묶음이 없음
+  ['Rust'],                                      // 단독
+  ['Go'],                                        // 단독
+  ['C#'],                                        // 단독 — .NET 생태계, 위 C/C++ 그룹과 다름
+  ['Ruby'],                                      // 단독
+  ['PHP'],                                       // 단독 — Ruby와 생태계가 달라 함께 묶지 않음
 ]
 
 // 온보딩의 오픈소스 기여 경험과 이슈 난이도 추정값을 비교한다.

@@ -40,4 +40,10 @@ export const LANGUAGE_GROUP_PRESETS: LanguageGroupPreset[] = [
   { key: 'c', label: 'C / C++', languages: LANGUAGE_GROUPS[1] },
   { key: 'java', label: 'Java / Kotlin', languages: LANGUAGE_GROUPS[2] },
   { key: 'swift', label: 'Swift / Obj-C', languages: LANGUAGE_GROUPS[3] },
+  { key: 'python', label: 'Python', languages: LANGUAGE_GROUPS[4] },
+  { key: 'rust', label: 'Rust', languages: LANGUAGE_GROUPS[5] },
+  { key: 'go', label: 'Go', languages: LANGUAGE_GROUPS[6] },
+  { key: 'csharp', label: 'C#', languages: LANGUAGE_GROUPS[7] },
+  { key: 'ruby', label: 'Ruby', languages: LANGUAGE_GROUPS[8] },
+  { key: 'php', label: 'PHP', languages: LANGUAGE_GROUPS[9] },
 ]
