@@ -35,6 +35,7 @@ type SearchDataListStateProps<T> = {
     items: T[]
     errorMessage?: string
     errorVariant?: 'danger' | 'warning'
+    hasNextPage?: boolean
     onRetry?: () => void
     skeletonCount?: number
     renderContent: () => ReactNode

@@ -35,7 +35,7 @@ export function PRHistoryList() {
     const columnCount = useResponsiveColumnCount()
     // 상태 필터 결과에 텍스트 검색을 이어서 적용 (AND 조합)
     const filteredItems = useSearchFilter(items, query)
-    const { displayItems, effectiveHasNextPage, sentinelRef } = useInfiniteScrollDisplay({
+    const { displayItems, effectiveHasNextPage, sentinelRef, sameRowSkeletonCount, newRowSkeletonCount } = useInfiniteScrollDisplay({
         items: filteredItems,
         hasNextPage,
         fetchNextPageAction,
@@ -76,14 +76,19 @@ export function PRHistoryList() {
                 errorMessage={errorMessage}
                 onRetry={refetch}
                 skeletonCount={12}
-                renderContent={() => <PRHistoryContent items={displayItems} />}
+                renderContent={() => (
+                    <PRHistoryContent
+                        items={displayItems}
+                        trailingSkeletonCount={isFetchingNextPage ? sameRowSkeletonCount : 0}
+                    />
+                )}
             />
 
             <InfiniteScrollTrigger
                 hasNextPage={effectiveHasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
                 sentinelRefAction={sentinelRef}
-                columnCount={columnCount}
+                skeletonCount={newRowSkeletonCount}
             />
         </div>
     )

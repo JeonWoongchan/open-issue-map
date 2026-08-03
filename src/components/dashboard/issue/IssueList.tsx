@@ -76,6 +76,8 @@ export function IssueList({
         isNextPageError,
         retryNextPageAction,
         sentinelRef,
+        sameRowSkeletonCount,
+        newRowSkeletonCount,
     } = useIssueListView(search, filters, columnCount)
 
     // 프리셋 활성 상태(아이콘 행 + 클릭 시 토글 판단)가 같은 값을 공유하므로 한 번만 계산한다.
@@ -170,12 +172,14 @@ export function IssueList({
                 items={items}
                 errorMessage={displayErrorMessage}
                 errorVariant={errorVariant}
+                hasNextPage={effectiveHasNextPage}
                 onRetry={refetch}
                 skeletonCount={12}
                 renderContent={() => (
                     <IssueListContent
                         issues={displayItems}
                         onToggleBookmark={handleToggleBookmark}
+                        trailingSkeletonCount={isFetchingNextPage ? sameRowSkeletonCount : 0}
                     />
                 )}
             />
@@ -188,7 +192,7 @@ export function IssueList({
                 errorVariant={errorVariant}
                 onRetryAction={retryNextPageAction}
                 sentinelRefAction={sentinelRef}
-                columnCount={columnCount}
+                skeletonCount={newRowSkeletonCount}
             />
         </div>
     )
