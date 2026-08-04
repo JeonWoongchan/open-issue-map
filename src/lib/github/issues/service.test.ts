@@ -361,12 +361,37 @@ describe('fetchIssueExplorePage — background 동시 프리페치', () => {
     expect(mockSearch).toHaveBeenCalledWith(expect.any(String), 'token', null, 90)
   })
 
-  it('offset>0이면 background만 요청하고 별도 프리페치를 추가로 트리거하지 않는다', async () => {
-    setupDeps([makeRawIssue()], [makeScoredIssue()], { hasMoreOnGithub: true, endCursor: 'cursor-next' })
+  it('offset>0이고 배치가 아직 안 끝났으면 background만 요청하고 다음 배치를 프리페치하지 않는다', async () => {
+    const raw = Array.from({ length: 90 }, (_, i) => makeRawIssue({ number: i + 1 }))
+    const scored = raw.map((r) => makeScoredIssue({ number: r.number }))
+    setupDeps(raw, scored, { hasMoreOnGithub: true, endCursor: 'cursor-next' })
 
+    // offset=30: 30+30=60 < rawCount(90) → 배치 안에 아직 남아있음 → nextBatch 프리페치 없음
     await fetchIssueExplorePage({ ...baseArgs, offset: 30, batch: 'cursor-prev' })
 
     expect(mockSearch).toHaveBeenCalledTimes(1)
     expect(mockSearch).toHaveBeenCalledWith(expect.any(String), 'token', 'cursor-prev', 90)
+  })
+
+  it('배치의 마지막 청크를 응답하는 시점에 다음 배치(foreground+background)를 함께 프리페치한다', async () => {
+    setupDeps([makeRawIssue()], [makeScoredIssue()], { hasMoreOnGithub: true, endCursor: 'cursor-next' })
+
+    // 이슈 1개뿐이라 offset=30에서 곧바로 배치 소진(isBatchExhausted)으로 판정된다.
+    await fetchIssueExplorePage({ ...baseArgs, offset: 30, batch: 'cursor-prev' })
+
+    expect(mockSearch).toHaveBeenCalledTimes(3)
+    expect(mockSearch).toHaveBeenCalledWith(expect.any(String), 'token', 'cursor-prev', 90)
+    expect(mockSearch).toHaveBeenCalledWith(expect.any(String), 'token', 'cursor-next', 30)
+    expect(mockSearch).toHaveBeenCalledWith(expect.any(String), 'token', 'cursor-next', 90)
+  })
+
+  it('배치를 다 썼는데 GitHub에 더 없으면(nextBatch=null) 다음 배치를 프리페치하지 않는다', async () => {
+    const raw = Array.from({ length: 90 }, (_, i) => makeRawIssue({ number: i + 1 }))
+    const scored = raw.map((r) => makeScoredIssue({ number: r.number }))
+    setupDeps(raw, scored, { hasMoreOnGithub: false, endCursor: null })
+
+    await fetchIssueExplorePage({ ...baseArgs, offset: 60, batch: 'cursor-prev' })
+
+    expect(mockSearch).toHaveBeenCalledTimes(1)
   })
 })
