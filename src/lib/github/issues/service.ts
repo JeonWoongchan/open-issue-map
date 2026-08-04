@@ -62,16 +62,19 @@ export async function fetchIssueExplorePage({
     // 검색 쿼리 자체가 사용자와 무관한 공개 GitHub 데이터라, 캐시 키에 사용자 식별자를 넣지
     // 않는다 — README 캐시 키 버그(사용자 토큰까지 키에 섞여 같은 공개 저장소인데도 캐시가
     // 갈라지던 문제, src/lib/github/readme.ts 참고)와 같은 종류의 실수를 여기서는 피한다.
-    const cacheKeyBase = ['github-issues-explore', searchQuery, batch]
 
-    // 배치 티어(foreground/background)별 unstable_cache 래퍼 + singleflight key를 한 번에 만든다 —
-    // 키 배열을 두 번 따로 만들면 한쪽만 고쳤을 때 캐시 key와 singleflight key가 어긋날 수 있다.
-    function makeCachedFetch(size: number, tier: 'foreground' | 'background') {
-        const keyParts = [...cacheKeyBase, tier]
+    // 배치가 끝나기 전에 미리 채워야 해서(아래 nextBatch 프리페치), 클로저로 현재
+    function makeCachedFetch(
+        batchValue: string,
+        cursorValue: string | null,
+        size: number,
+        tier: 'foreground' | 'background',
+    ) {
+        const keyParts = ['github-issues-explore', searchQuery, batchValue, tier]
         return {
             key: keyParts.join('::'),
             fetch: unstable_cache(
-                () => fetchExploreIssues(searchQuery, accessToken, cursor, size),
+                () => fetchExploreIssues(searchQuery, accessToken, cursorValue, size),
                 keyParts,
                 { revalidate: GITHUB_API_CACHE_TTL_SECONDS },
             ),
@@ -81,28 +84,38 @@ export async function fetchIssueExplorePage({
     // unstable_cache 없이 singleflight로만 감싼 라이브 조회 — 자유 텍스트 검색 전용.
     function makeLiveFetch(size: number) {
         return {
-            key: [...cacheKeyBase, 'live'].join('::'),
+            key: ['github-issues-explore', searchQuery, batch, 'live'].join('::'),
             fetch: () => fetchExploreIssues(searchQuery, accessToken, cursor, size),
         }
+    }
+
+    // singleflight로 감싸 fire-and-forget으로 캐시를 채운다.
+    function prefetchTier(
+        batchValue: string,
+        cursorValue: string | null,
+        size: number,
+        tier: 'foreground' | 'background',
+    ) {
+        const { key, fetch } = makeCachedFetch(batchValue, cursorValue, size, tier)
+        const promise = withSingleFlight(key, fetch).catch(() => {})
+        after(() => promise)
     }
 
     const isWithinForegroundRange = offset < EXPLORE_FOREGROUND_FETCH_SIZE
     const primary = hasFreeTextQuery
         ? makeLiveFetch(isWithinForegroundRange ? EXPLORE_FOREGROUND_FETCH_SIZE : EXPLORE_BACKGROUND_FETCH_SIZE)
         : isWithinForegroundRange
-            ? makeCachedFetch(EXPLORE_FOREGROUND_FETCH_SIZE, 'foreground')
-            : makeCachedFetch(EXPLORE_BACKGROUND_FETCH_SIZE, 'background')
+            ? makeCachedFetch(batch, cursor, EXPLORE_FOREGROUND_FETCH_SIZE, 'foreground')
+            : makeCachedFetch(batch, cursor, EXPLORE_BACKGROUND_FETCH_SIZE, 'background')
 
     // 배치의 첫 요청(offset=0)에서 foreground와 background를 동시에 시작한다 — background
     // 호출을 await 뒤(또는 after() 콜백 안)로 미루면 그만큼 완료 시점이 늦어지므로, 여기서
     // 바로 호출해 foreground와 병렬로 진행되게 한다. after()는 시작을 늦추는 용도가 아니라,
     // 응답 전송 후 서버리스 함수가 종료되며 이 promise가 중간에 끊기지 않도록 끝까지
     // 붙잡아두는 용도로만 쓴다.
-
+    // 세션의 첫 배치(EXPLORE_INITIAL_BATCH)에만 필요
     if (offset === 0 && !hasFreeTextQuery) {
-        const background = makeCachedFetch(EXPLORE_BACKGROUND_FETCH_SIZE, 'background')
-        const backgroundPromise = withSingleFlight(background.key, background.fetch).catch(() => {})
-        after(() => backgroundPromise)
+        prefetchTier(batch, cursor, EXPLORE_BACKGROUND_FETCH_SIZE, 'background')
     }
 
     const bookmarkPromise = userId ? listUserBookmarkKeys(userId) : Promise.resolve([])
@@ -151,6 +164,12 @@ export async function fetchIssueExplorePage({
         const isBatchExhausted = offset + EXPLORE_FOREGROUND_FETCH_SIZE >= searchResult.issues.length
         hasMore = !isBatchExhausted || searchResult.hasMoreOnGithub
         nextBatch = isBatchExhausted && searchResult.hasMoreOnGithub ? searchResult.endCursor : null
+
+        // 이번 배치의 마지막 청크를 응답으로 보내는 시점에, 다음 배치를 미리 캐싱
+        if (nextBatch && !hasFreeTextQuery) {
+            prefetchTier(nextBatch, nextBatch, EXPLORE_FOREGROUND_FETCH_SIZE, 'foreground')
+            prefetchTier(nextBatch, nextBatch, EXPLORE_BACKGROUND_FETCH_SIZE, 'background')
+        }
     }
 
     return {
