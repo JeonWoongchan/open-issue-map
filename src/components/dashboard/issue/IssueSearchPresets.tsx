@@ -9,7 +9,6 @@ const PRESET_ICON_COLORS: Record<string, string> = {
   'good-first-issue': 'var(--preset-icon-success)',
   documentation: 'var(--preset-icon-doc)',
   bug: 'var(--preset-icon-danger)',
-  enhancement: 'var(--interactive-action)',
   popular: 'var(--bookmark-action)',
 }
 
@@ -23,7 +22,7 @@ type IssueSearchPresetsProps = {
 
 // 검색창 위 "자주 찾는 조건" — 박스(카드) 없이 아이콘+텍스트만 세로로 쌓고, 가로 중앙 정렬한다.
 // 550px 이하에서는 줄바꿈 대신(flex-nowrap) 아이콘/글자를 줄이고 버튼을 flex-1로 균등 분배해
-// 5개가 항상 한 줄에 들어가게 한다.
+// 4개가 항상 한 줄에 들어가게 한다.
 // 호버 반응은 배경색 대신 아이콘이 살짝 우측으로 회전하는 것으로 표현한다.
 export function IssueSearchPresets({ activeKey, onSelectAction }: IssueSearchPresetsProps) {
   return (

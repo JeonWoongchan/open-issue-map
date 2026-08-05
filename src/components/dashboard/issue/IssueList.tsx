@@ -31,9 +31,9 @@ type IssueListProps = {
 }
 
 // 프리셋 아이콘 중 contributionType을 쓰는 것들 — 프리셋을 고를 때는 이 중 하나만
-// 남기고 서로 배타적으로 동작해야 하므로, 팝오버에서 별도로 고른 나머지 타입(test/review)과
+// 남기고 서로 배타적으로 동작해야 하므로, 팝오버에서 별도로 고른 나머지 타입(feat/test/review)과
 // 구분해서 다뤄야 한다.
-const PRESET_CONTRIBUTION_TYPES: ContributionType[] = ['doc', 'bug', 'feat']
+const PRESET_CONTRIBUTION_TYPES: ContributionType[] = ['doc', 'bug']
 
 // GitHub 레이트리밋은 "곧 회복되는 일시적 지연"이라, 다른 진짜 에러(danger)와 달리
 // 경고색(warning) + 재시도를 유도하는 문구로 안내한다.

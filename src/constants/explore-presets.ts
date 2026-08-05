@@ -2,9 +2,8 @@ import { LANGUAGE_GROUPS } from './scoring-rules'
 import type { StarThreshold } from './scoring-rules'
 import type { ContributionType, ExperienceLevel } from '@/types/user'
 
-// 이슈 탐색 페이지 검색창 위에 노출하는 아이콘 프리셋 — 아이콘 키는 public/icons/filters/의
-// SVG 파일명과 1:1 대응하며, IssueSearchPresets.tsx가 그 경로를 그대로 <img>로 참조한다.
-export type ExplorePresetIcon = 'sprout' | 'doc' | 'bug' | 'feat' | 'star'
+// 이슈 탐색 페이지 검색창 위에 노출하는 아이콘 프리셋.
+export type ExplorePresetIcon = 'sprout' | 'doc' | 'bug' | 'star'
 
 // 프리셋은 항상 "검색 필터" 팝오버(IssueSearchFilter)가 추적하는 IssueFilters 필드
 // 하나를 세팅한다 — 그래야 프리셋을 눌렀을 때 팝오버 배지에도 같이 반영된다. 필드 셋 중
@@ -22,7 +21,6 @@ export const EXPLORE_PRESETS: ExplorePreset[] = [
   { key: 'good-first-issue', icon: 'sprout', label: '초보 환영', difficultyLevel: 'beginner' },
   { key: 'documentation', icon: 'doc', label: '문서 이슈', contributionType: 'doc' },
   { key: 'bug', icon: 'bug', label: '버그 수정', contributionType: 'bug' },
-  { key: 'enhancement', icon: 'feat', label: '새 기능 제안', contributionType: 'feat' },
   { key: 'popular', icon: 'star', label: '인기 저장소', minStars: 1000 },
 ]
 
