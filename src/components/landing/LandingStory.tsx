@@ -55,7 +55,6 @@ const LANDING_DEMO_ANALYSIS: IssueAnalysis = {
 function LandingAiGuideDemo() {
     return (
         <InertDemo>
-            {/* AiGuidePanel의 sm: 그리드는 뷰포트 기준이라, 컨테이너 폭을 좁게 제한하면 깨진다. */}
             <div className="w-full">
                 <AiGuidePanel analysis={LANDING_DEMO_ANALYSIS} />
             </div>

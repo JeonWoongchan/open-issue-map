@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
-import { FileText, Info } from 'lucide-react'
-import { DetailPanel } from './DetailPanel'
+import { FileText } from 'lucide-react'
+import { DetailPanel, DetailPanelNotice } from './DetailPanel'
 import { TabBar } from '@/components/shared/TabBar'
 import { cn } from '@/lib/utils'
 import type { IssueOverview } from '@/lib/ai'
@@ -37,30 +37,32 @@ export function IssueOverviewPanel({ overview, rawBody }: IssueOverviewPanelProp
 
   return (
     <DetailPanel icon={FileText} label="이슈 개요">
-      <div className="flex flex-col gap-4">
-        <div>
-          <p className="text-sm font-bold text-foreground">{overview.summary}</p>
-          <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+      <div className="flex min-w-0 flex-col gap-4">
+        <div className="min-w-0">
+          <p className="break-words break-keep text-pretty text-sm font-bold text-foreground">{overview.summary}</p>
+          <p className="mt-1.5 whitespace-pre-wrap break-words break-keep text-pretty text-sm leading-relaxed text-muted-foreground">
             {overview.analysis}
           </p>
         </div>
 
-        <div className="rounded-xl border border-border p-3.5">
+        <div className="min-w-0 rounded-xl border border-border p-3.5">
           <TabBar tabs={BODY_TABS} active={bodyTab} onChangeAction={setBodyTab} variant="pill" />
 
           {bodyTab === 'summary' ? (
-            <div className="mt-2.5 flex flex-col gap-3">
+            <div className="mt-2.5 flex min-w-0 flex-col gap-3">
               {overview.summarySections.map((section, index) => (
-                <div key={index}>
+                <div key={index} className="min-w-0">
                   {/* 원문에 실제 헤딩이 없으면 AI가 heading을 null로 준다 — 매직 스트링이 아니라 타입으로 표현 */}
                   {section.heading !== null ? (
-                    <p className="text-sm font-semibold text-foreground">{section.heading}</p>
+                    <p className="break-words break-keep text-pretty text-sm font-semibold text-foreground">
+                      {section.heading}
+                    </p>
                   ) : null}
                   <ul className={cn('flex flex-col gap-1', section.heading !== null && 'mt-1')}>
                     {section.items.map((item, itemIndex) => (
-                      <li key={itemIndex} className="flex items-start gap-2 text-sm leading-relaxed text-muted-foreground">
+                      <li key={itemIndex} className="flex min-w-0 items-start gap-2 text-sm leading-relaxed text-muted-foreground">
                         <span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground" />
-                        {item}
+                        <span className="min-w-0 break-words break-keep text-pretty">{item}</span>
                       </li>
                     ))}
                   </ul>
@@ -76,10 +78,9 @@ export function IssueOverviewPanel({ overview, rawBody }: IssueOverviewPanelProp
           )}
         </div>
 
-        <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
-          <Info className="mt-0.5 size-3.5 shrink-0" />
+        <DetailPanelNotice>
           이슈 본문 요약은 AI가 정리한 결과예요. 참고용이니 기여 전 반드시 이슈 원본을 확인해 주세요.
-        </p>
+        </DetailPanelNotice>
       </div>
     </DetailPanel>
   )
