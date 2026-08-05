@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildAnalysisPrompt } from '@/lib/ai/prompt'
+import { ANALYSIS_SYSTEM_PROMPT, buildAnalysisPrompt } from '@/lib/ai/prompt'
 import type { IssueAnalysisParams } from '@/lib/ai/types'
 
 function makeParams(overrides: Partial<IssueAnalysisParams> = {}): IssueAnalysisParams {
@@ -138,5 +138,18 @@ describe('buildAnalysisPrompt', () => {
             const result = buildAnalysisPrompt(makeParams({ readme: '# Readme' }))
             expect(result.indexOf('[이슈 정보]')).toBeLessThan(result.indexOf('[README]'))
         })
+    })
+})
+
+describe('ANALYSIS_SYSTEM_PROMPT 문체', () => {
+    it('친절한 존댓말과 해요체를 요구한다', () => {
+        expect(ANALYSIS_SYSTEM_PROMPT).toContain('쉽고 친절한 존댓말')
+        expect(ANALYSIS_SYSTEM_PROMPT).toContain('모든 서술형 문장은 해요체로 끝내세요')
+        expect(ANALYSIS_SYSTEM_PROMPT).toContain('~이에요/예요')
+    })
+
+    it('딱딱한 문어체와 반말을 금지한다', () => {
+        expect(ANALYSIS_SYSTEM_PROMPT).toContain('딱딱한 문어체 대신')
+        expect(ANALYSIS_SYSTEM_PROMPT).toContain('반말, 명령조')
     })
 })

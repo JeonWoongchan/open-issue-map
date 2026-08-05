@@ -1,6 +1,7 @@
 import sql from '@/lib/db'
 import type { IssueAnalysis } from './types'
 import { issueAnalysisSchema } from './schema'
+import { ANALYSIS_PROMPT_VERSION } from './prompt'
 
 export type IssueGuideCacheKey = {
   cacheUserId: string
@@ -25,6 +26,7 @@ export async function getCachedIssueGuide(
       AND repo_full_name = ${key.repoFullName}
       AND issue_number = ${key.issueNumber}
       AND issue_updated_at = ${issueUpdatedAt}
+      AND prompt_version = ${ANALYSIS_PROMPT_VERSION}
       AND created_at > NOW() - ${CACHE_MAX_AGE_DAYS} * INTERVAL '1 day'
   `
 
@@ -48,11 +50,28 @@ export async function saveIssueGuideCache(
   const payload = JSON.stringify(analysis).replace(/\\u0000/g, '')
 
   await sql`
-    INSERT INTO issue_ai_guides (cache_user_id, repo_full_name, issue_number, issue_updated_at, analysis, created_at)
-    VALUES (${key.cacheUserId}, ${key.repoFullName}, ${key.issueNumber}, ${issueUpdatedAt}, ${payload}, NOW())
+    INSERT INTO issue_ai_guides (
+      cache_user_id,
+      repo_full_name,
+      issue_number,
+      issue_updated_at,
+      prompt_version,
+      analysis,
+      created_at
+    )
+    VALUES (
+      ${key.cacheUserId},
+      ${key.repoFullName},
+      ${key.issueNumber},
+      ${issueUpdatedAt},
+      ${ANALYSIS_PROMPT_VERSION},
+      ${payload},
+      NOW()
+    )
     ON CONFLICT (cache_user_id, repo_full_name, issue_number)
     DO UPDATE SET
       issue_updated_at = EXCLUDED.issue_updated_at,
+      prompt_version = EXCLUDED.prompt_version,
       analysis = EXCLUDED.analysis,
       created_at = NOW()
   `
