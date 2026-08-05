@@ -4,11 +4,9 @@ type IconProps = {
   className?: string
 }
 
-// public/icons/filters/의 SVG 자산(bug/doc/feat/sprout/star)을 currentColor로 재색칠해
-// 인라인 컴포넌트로 옮겼다 — 프리셋마다 다른 색을 입혀야 해서(IssueSearchPresets 참고) 원본
-// <img>/<Image> 참조로는 재색칠이 안 돼 인라인 SVG가 필요하다.
+// 프리셋마다 다른 색을 입힐 수 있도록 SVG를 currentColor 기반 인라인 컴포넌트로 둔다.
 // sprout처럼 "메인 형태 + 저채도 보조 형태"로 레이어를 줘서 단색 실루엣보다 입체감을 더한다 —
-// doc/bug/feat/star도 같은 기법으로 디테일을 맞췄다. 보조 형태는 전부 같은 투명도를 써서
+// doc/bug/star도 같은 기법으로 디테일을 맞췄다. 보조 형태는 전부 같은 투명도를 써서
 // 아이콘마다 진하기가 제각각으로 보이지 않게 한다(문서의 본문 줄은 장식이 아니라 내용을
 // 나타내는 별도 역할이라 이 상수를 안 쓴다).
 const DETAIL_OPACITY = 0.6
@@ -55,22 +53,6 @@ function BugIcon({ className }: IconProps) {
   )
 }
 
-function FeatIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <path d="M12 4v16M4 12h16" stroke="currentColor" strokeWidth="3.6" strokeLinecap="round" />
-      {/* 네 모서리 반짝임 — "새로 생겼다"는 느낌의 보조 액센트, 메인 플러스보다 뒤에 앉는다 */}
-      <path
-        d="M6.5 6.5l1.8 1.8M17.5 6.5l-1.8 1.8M6.5 17.5l1.8-1.8M17.5 17.5l-1.8-1.8"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        opacity={DETAIL_OPACITY}
-      />
-    </svg>
-  )
-}
-
 function StarIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true" fill="currentColor">
@@ -85,7 +67,6 @@ const ICON_MAP: Record<ExplorePresetIconKey, (props: IconProps) => React.JSX.Ele
   sprout: SproutIcon,
   doc: DocIcon,
   bug: BugIcon,
-  feat: FeatIcon,
   star: StarIcon,
 }
 
