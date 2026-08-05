@@ -265,6 +265,8 @@ Route Handler는 `getGitHubErrorResponse()`를 사용해 API 응답으로 변환
     모두 `'guest'` 한 키를 공유한다(첫 게스트 방문자만 실제 생성, 이후 게스트는 캐시로 즉시 응답).
   - 캐시 히트 조건은 저장 당시의 `issueUpdatedAt`과 지금 요청의 값이 **같을 때만**이다 — 이슈 제목·본문·
     라벨 수정이나 새 댓글 등으로 GitHub의 `updatedAt`이 바뀌면 자동으로 캐시 미스 처리된다(추가 API 호출 없이).
+  - 현재 `ANALYSIS_PROMPT_VERSION`과 저장된 `prompt_version`도 같아야 한다. 프롬프트 내용이나 문체가
+    바뀌어 버전을 올리면 기존 응답은 자동으로 캐시 미스 처리되고 새 응답으로 교체된다.
   - 위 조건과 별개로 생성된 지 60일이 지난 캐시는 방치된 것으로 보고 무시한다.
   - 응답 스키마가 바뀌어 예전 형태로 저장된 캐시 행이 있으면 zod 검증에서 걸러지고 캐시 미스로 처리돼
     자동으로 새 스키마로 재생성된다(수동 마이그레이션 불필요).
@@ -275,7 +277,6 @@ Route Handler는 `getGitHubErrorResponse()`를 사용해 API 응답으로 변환
   - `scope: string` — 예상 작업 범위와 의심되는 코드 영역
   - `startingPoints: string[]` — 먼저 봐야 할 위치(정확한 경로가 아니라 역할 중심 서술)
   - `cautions: string[]` — 놓치기 쉬운 주의사항
-  - `difficulty: "쉬움" | "보통" | "어려움"` — 절대 난이도가 아니라 기여자 프로필 대비 상대적 난이도
   - `expectedBenefit: string` — 이 이슈를 해결하면 얻는 것
   - `issueOverview.summary: string` — 이슈 한 줄 요약
   - `issueOverview.analysis: string` — 이슈 상세 해석 + 작성자가 정확히 어떤 도움을 원하는지 분석

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import type { ReactNode } from 'react'
 import { SlidersHorizontal } from 'lucide-react'
 import { CONTRIBUTION_TYPES, EXPERIENCE_LEVELS } from '@/constants/contribution-levels'
@@ -9,14 +9,14 @@ import { SCORE_FILTER_THRESHOLDS, STAR_FILTER_THRESHOLDS } from '@/constants/sco
 import { EMPTY_ISSUE_FILTERS } from '@/types/issue'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import type { CompetitionLevel, IssueFilters, IssueSearchState } from '@/types/issue'
+import type { CompetitionLevel, IssueFilters } from '@/types/issue'
 import type { ContributionType } from '@/types/user'
 
 type IssueSearchFilterProps = {
     // 언어 묶음은 GitHub 쿼리로 실려가는 값이라 IssueFilters가 아니라 IssueSearchState에 있다
     // (types/issue.ts 참고) — 이 팝오버는 UI상 한 필터 목록으로 같이 보여줄 뿐이다.
-    search: IssueSearchState
-    onSearchChangeAction: (search: IssueSearchState) => void
+    languageGroup: string | null
+    onLanguageGroupChangeAction: (languageGroup: string | null) => void
     filters: IssueFilters
     onChangeAction: (filters: IssueFilters) => void
 }
@@ -44,6 +44,7 @@ function FilterPill({
     return (
         <button
             type="button"
+            aria-pressed={selected}
             onClick={onClickAction}
             className={cn(
                 'shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors',
@@ -58,9 +59,11 @@ function FilterPill({
 }
 
 function FilterRow({ label, children }: { label: string; children: ReactNode }) {
+    const labelId = useId()
+
     return (
-        <div className="flex items-start gap-2">
-            <span className="w-14 shrink-0 pt-0.5 text-xs font-medium text-muted-foreground">{label}</span>
+        <div role="group" aria-labelledby={labelId} className="flex min-w-0 items-start gap-2">
+            <span id={labelId} className="w-14 shrink-0 pt-0.5 text-xs font-medium text-muted-foreground">{label}</span>
             <div className="flex flex-wrap gap-1.5">{children}</div>
         </div>
     )
@@ -70,7 +73,12 @@ function FilterRow({ label, children }: { label: string; children: ReactNode }) 
 // 클라이언트 필터)는 없앴다. 여기서 바꾸는 값 중 언어 묶음은 검색 쿼리(language: qualifier)로,
 // 나머지(난이도/진행상태/기여방식/최소스타/추천점수)는 GitHub이 지원하지 않아 응답을 받은 뒤
 // 후처리로 거른다 — 하지만 사용자에게는 그 구분이 드러나지 않고, 무엇을 바꾸든 새로 검색된다.
-export function IssueSearchFilter({ search, onSearchChangeAction, filters, onChangeAction }: IssueSearchFilterProps) {
+export function IssueSearchFilter({
+    languageGroup,
+    onLanguageGroupChangeAction,
+    filters,
+    onChangeAction,
+}: IssueSearchFilterProps) {
     const [open, setOpen] = useState(false)
 
     const toggle = <K extends keyof Omit<IssueFilters, 'contributionTypes' | 'competitionLevels'>>(key: K, value: IssueFilters[K]) => {
@@ -78,7 +86,7 @@ export function IssueSearchFilter({ search, onSearchChangeAction, filters, onCha
     }
 
     const toggleLanguageGroup = (key: string) =>
-        onSearchChangeAction({ ...search, languageGroup: search.languageGroup === key ? null : key })
+        onLanguageGroupChangeAction(languageGroup === key ? null : key)
 
     const toggleContributionType = (value: ContributionType) =>
         onChangeAction({ ...filters, contributionTypes: toggleInArray(filters.contributionTypes, value) })
@@ -86,23 +94,13 @@ export function IssueSearchFilter({ search, onSearchChangeAction, filters, onCha
     const toggleCompetitionLevel = (value: CompetitionLevel) =>
         onChangeAction({ ...filters, competitionLevels: toggleInArray(filters.competitionLevels, value) })
 
-    // 접힌 상태에서 표시할 선택된 필터 라벨 목록
-    const activeFilterLabels: string[] = [
-        ...(search.languageGroup
-            ? [LANGUAGE_GROUP_PRESETS.find((g) => g.key === search.languageGroup)?.label ?? search.languageGroup]
-            : []),
-        ...(filters.difficultyLevel
-            ? [EXPERIENCE_LEVELS.find((l) => l.value === filters.difficultyLevel)?.label ?? filters.difficultyLevel]
-            : []),
-        ...filters.contributionTypes.map(
-            (ct) => CONTRIBUTION_TYPES.find((t) => t.value === ct)?.label ?? ct
-        ),
-        ...filters.competitionLevels.map(
-            (cl) => COMPETITION_LEVEL_OPTIONS.find((o) => o.value === cl)?.label ?? cl
-        ),
-        ...(filters.minStars !== null ? [`${filters.minStars.toLocaleString()}+`] : []),
-        ...(filters.minScore !== null ? [`${filters.minScore}+`] : []),
-    ]
+    const activeFilterCount =
+        Number(languageGroup !== null) +
+        Number(filters.difficultyLevel !== null) +
+        filters.contributionTypes.length +
+        filters.competitionLevels.length +
+        Number(filters.minStars !== null) +
+        Number(filters.minScore !== null)
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -111,30 +109,30 @@ export function IssueSearchFilter({ search, onSearchChangeAction, filters, onCha
                     type="button"
                     className={cn(
                         'inline-flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-semibold transition-colors',
-                        activeFilterLabels.length > 0
+                        activeFilterCount > 0
                             ? 'border-interactive-selected-border bg-interactive-selected text-interactive-selected-foreground'
                             : 'border-interactive-border bg-background text-interactive-action-hover hover:border-interactive-hover-border hover:bg-interactive-hover'
                     )}
                 >
-                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
                     검색 필터
-                    {activeFilterLabels.length > 0 ? (
+                    {activeFilterCount > 0 ? (
                         <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-interactive-action px-1 text-xs font-bold text-interactive-action-foreground">
-                            {activeFilterLabels.length}
+                            {activeFilterCount}
                         </span>
                     ) : null}
                 </button>
             </PopoverTrigger>
 
-            <PopoverContent align="end" className="max-h-[70vh] w-80 overflow-y-auto">
+            <PopoverContent align="end" className="max-h-[70vh] w-[calc(100vw-2rem)] max-w-80 overflow-y-auto">
                 <div className="mb-3 flex items-center justify-between">
                     <span className="text-xs font-bold text-interactive-action">검색 필터</span>
-                    {activeFilterLabels.length > 0 && (
+                    {activeFilterCount > 0 && (
                         <button
                             type="button"
                             onClick={() => {
                                 onChangeAction(EMPTY_ISSUE_FILTERS)
-                                onSearchChangeAction({ ...search, languageGroup: null })
+                                onLanguageGroupChangeAction(null)
                             }}
                             className="cursor-pointer text-xs text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
                         >
@@ -148,7 +146,7 @@ export function IssueSearchFilter({ search, onSearchChangeAction, filters, onCha
                             <FilterPill
                                 key={group.key}
                                 label={group.label}
-                                selected={search.languageGroup === group.key}
+                                selected={languageGroup === group.key}
                                 onClickAction={() => toggleLanguageGroup(group.key)}
                             />
                         ))}

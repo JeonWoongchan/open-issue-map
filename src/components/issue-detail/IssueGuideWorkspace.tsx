@@ -68,12 +68,12 @@ function BlockingPanel({ icon, label, state, action }: BlockingPanelProps) {
           finalPhrase={AI_GUIDE_SEARCHING_FINAL_PHRASE}
         />
       ) : state.status === 'locked' ? (
-        <div className="flex items-start gap-4">
+        <div className="flex min-w-0 items-start gap-4">
           <Lock className="mt-0.5 size-7 shrink-0 text-muted-foreground" />
-          <div className="flex flex-col gap-3">
+          <div className="flex min-w-0 flex-col gap-3">
             <div>
               <p className="text-sm font-semibold">비로그인 AI 기능을 모두 사용했어요</p>
-              <p className="mt-1 max-w-[46ch] text-xs text-muted-foreground">
+              <p className="mt-1 max-w-[46ch] break-words break-keep text-pretty text-xs text-muted-foreground">
                 비로그인 상태에서는 하루 3개 이슈까지 볼 수 있어요.
               </p>
             </div>
@@ -83,7 +83,7 @@ function BlockingPanel({ icon, label, state, action }: BlockingPanelProps) {
           </div>
         </div>
       ) : (
-        <p className="text-xs text-status-danger-foreground">{state.message}</p>
+        <p className="break-words break-keep text-pretty text-xs text-status-danger-foreground">{state.message}</p>
       )}
     </DetailPanel>
   )

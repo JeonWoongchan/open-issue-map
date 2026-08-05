@@ -16,13 +16,10 @@ import { IssueSearchFilter } from './IssueSearchFilter'
 import { IssueSearchForm } from './IssueSearchForm'
 import { IssueSearchPresets } from './IssueSearchPresets'
 import { IssueSortToggle } from './IssueSortToggle'
-import { type ReactNode } from 'react'
 
 type IssueListProps = {
     // 서버 컴포넌트에서 auth()로 확인한 게스트 여부 — useSession() 클라이언트 캐시 의존을 피함
     isGuest: boolean
-    // 정적 탭 content를 클라이언트 번들에서 제외하기 위해 Server Component에서 주입
-    helpSlot: ReactNode
     // 검색창·프리셋·정렬과 필터 팝오버가 같은 상태를 공유하기 위해 부모(IssueExploreWorkspace)가 소유·전달한다
     search: IssueSearchState
     onSearchChangeAction: (search: IssueSearchState) => void
@@ -54,7 +51,6 @@ function findActivePresetKey(filters: IssueFilters): string | null {
 
 export function IssueList({
     isGuest,
-    helpSlot,
     search,
     onSearchChangeAction,
     filters,
@@ -140,20 +136,23 @@ export function IssueList({
 
             <IssueSearchPresets activeKey={activePresetKey} onSelectAction={handleSelectPreset} />
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <IssueSearchForm
                     value={search.query}
                     onSubmitAction={(query) => onSearchChangeAction({ ...search, query })}
-                    className="min-w-0 flex-1"
+                    className="w-full sm:min-w-0 sm:flex-1"
                 />
-                <IssueSortToggle value={search.sort} onChangeAction={(sort) => onSearchChangeAction({ ...search, sort })} />
-                <IssueSearchFilter
-                    search={search}
-                    onSearchChangeAction={onSearchChangeAction}
-                    filters={filters}
-                    onChangeAction={onFiltersChangeAction}
-                />
-                {helpSlot}
+                <div className="flex flex-wrap items-center gap-2">
+                    <IssueSortToggle value={search.sort} onChangeAction={(sort) => onSearchChangeAction({ ...search, sort })} />
+                    <IssueSearchFilter
+                        languageGroup={search.languageGroup}
+                        onLanguageGroupChangeAction={(languageGroup) =>
+                            onSearchChangeAction({ ...search, languageGroup })
+                        }
+                        filters={filters}
+                        onChangeAction={onFiltersChangeAction}
+                    />
+                </div>
             </div>
 
             <SearchDataListState

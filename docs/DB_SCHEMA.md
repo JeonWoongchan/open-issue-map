@@ -2,11 +2,14 @@
 
 현재 DB schema는 마이그레이션 파일 기준이다. DB는 Neon PostgreSQL을 사용한다.
 
-- `001_initial.sql`: users, user_profiles, bookmarks, repo_health_cache
+- `001_initial.sql`: users, user_profiles, bookmarks
 - `002_ai_guest_usage.sql`: ai_guest_usage
 - `003_onboarding_insight.sql`: onboarding_insights (`005`에서 제거됨)
 - `004_recommendation_candidate_pools.sql`: recommendation_candidate_pools
 - `005_onboarding_advice.sql`: onboarding_insights 제거, onboarding_advice 추가
+- `006_issue_ai_guides.sql`: issue_ai_guides
+- `007_bookmark_issue_snapshot.sql`: bookmarks에 이슈 카드 스냅샷 컬럼 추가
+- `008_issue_ai_guide_prompt_version.sql`: issue_ai_guides에 prompt_version 추가
 
 ## `users`
 
@@ -134,31 +137,33 @@ GitHub OAuth 사용자의 기본 계정 정보다.
 - `src/app/api/bookmarks/route.ts`
 - `src/lib/user/my-page.ts`의 activity count
 
-## `repo_health_cache`
+## `issue_ai_guides`
 
-GitHub 저장소의 health score 캐시다.
+사용자·이슈별 AI 가이드 응답 캐시다. 로그인 사용자는 GitHub ID를, 비로그인 사용자는 공용 `guest` 값을 `cache_user_id`로 사용한다.
 
 | Column | Type | Constraint | 설명 |
 | --- | --- | --- | --- |
-| `id` | `UUID` | PK | cache id |
-| `repo_full_name` | `TEXT` | NOT NULL, UNIQUE | `owner/repo` |
-| `health_score` | `INT` | NOT NULL | 0~100 점수 |
-| `avg_pr_response_days` | `FLOAT` | nullable | 현재 계산 결과에는 저장하지 않음 |
-| `merge_rate` | `FLOAT` | nullable | 현재 계산 결과에는 저장하지 않음 |
-| `last_commit_at` | `TIMESTAMPTZ` | nullable | 현재 계산 결과에는 저장하지 않음 |
-| `cached_at` | `TIMESTAMPTZ` | default `NOW()` | 캐시 생성/갱신 시각 |
+| `cache_user_id` | `TEXT` | PK(복합) | 로그인 사용자 GitHub ID 또는 `guest` |
+| `repo_full_name` | `TEXT` | PK(복합) | `owner/repo` |
+| `issue_number` | `INT` | PK(복합) | GitHub issue number |
+| `issue_updated_at` | `TIMESTAMPTZ` | NOT NULL | 분석 당시 GitHub 이슈 수정 시각 |
+| `prompt_version` | `TEXT` | NOT NULL, default `legacy` | 분석에 사용한 프롬프트 버전 |
+| `analysis` | `JSONB` | NOT NULL | Zod 스키마로 검증된 AI 가이드 응답 |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL, default `NOW()` | 마지막 생성 시각 |
 
-인덱스:
+캐시 히트 조건:
 
-- `idx_repo_health_cache_cached_at` on `repo_health_cache(cached_at)`
+- 복합 키 `(cache_user_id, repo_full_name, issue_number)`가 일치한다.
+- `issue_updated_at`이 현재 GitHub 이슈의 `updatedAt`과 같다.
+- `prompt_version`이 현재 코드의 `ANALYSIS_PROMPT_VERSION`과 같다.
+- 생성 후 60일이 지나지 않았고 저장된 JSON이 현재 응답 스키마 검증을 통과한다.
+
+`008` 적용 전 기존 행은 `prompt_version = 'legacy'`로 표시된다. 따라서 새 프롬프트 버전 조회에서는 캐시 미스로 처리되고 다음 생성 시 현재 버전으로 갱신된다.
 
 사용 위치:
 
-- `src/lib/github/repo-health/calculate.ts`
-  - `getRepoHealth()`: 단건 조회 시 캐시 체크 → miss이면 GitHub API 호출 후 저장
-  - `fetchAndCacheRepoHealth()`: 배치 조회 시 캐시 체크 없이 GitHub API 호출 후 저장 (배치 SELECT에서 이미 miss 확인)
-- `src/lib/github/issues/health.ts`: `getRepoHealthMap()`이 배치 SELECT 후 미캐시 레포에 `fetchAndCacheRepoHealth()` 호출
-- TTL: `REPO_HEALTH_CACHE_TTL_HOURS = 1`
+- `src/lib/ai/issue-guide-cache.ts`
+- `src/app/api/ai/issue-analysis/route.ts`
 
 ## `ai_guest_usage`
 
@@ -166,7 +171,7 @@ GitHub 저장소의 health score 캐시다.
 
 | Column | Type | Constraint | 설명 |
 | --- | --- | --- | --- |
-| `ip` | `TEXT` | PK | 클라이언트 IP (`x-forwarded-for` 첫 번째 값) |
+| `ip` | `TEXT` | PK | 클라이언트 IP (`x-real-ip` 우선, 없으면 `x-forwarded-for` 첫 번째 값) |
 | `count` | `INT` | NOT NULL, default `1` | 오늘 사용 횟수 |
 | `expires_at` | `TIMESTAMPTZ` | NOT NULL, default `NOW() + 24h` | 레코드 만료 시각 |
 
@@ -174,12 +179,8 @@ GitHub 저장소의 health score 캐시다.
 
 - `expires_at < NOW()`인 레코드는 유효하지 않은 것으로 간주한다.
 - 실제 삭제는 별도 스케줄러 없이 **피기백 방식**으로 처리한다. AI 분석 요청마다 `DELETE WHERE expires_at < NOW()`를 실행해 만료 행을 자동 정리한다.
-- 한도(`AI_GUEST_DAILY_LIMIT = 5`) 초과 시 `429 RATE_LIMITED`를 반환한다.
-- IP 식별 불가(`x-forwarded-for`, `x-real-ip` 모두 없음) 시 한도 체크를 생략하고 요청을 허용한다.
-
-인덱스:
-
-- `idx_ai_guest_usage_expires_at` on `ai_guest_usage(expires_at)` — 만료 행 일괄 삭제 성능용
+- 한도(`AI_GUEST_DAILY_LIMIT = 3`) 초과 시 `429 RATE_LIMITED`를 반환한다.
+- IP 식별 헤더가 없으면 `unknown` 공유 버킷으로 집계해 헤더 부재를 통한 우회를 막는다.
 
 사용 위치:
 
@@ -192,10 +193,10 @@ GitHub 저장소의 health score 캐시다.
 ```text
 users 1 ── 0..1 user_profiles
 users 1 ── 0..N bookmarks
-repo_health_cache는 GitHub repo_full_name 기준 독립 캐시
 ai_guest_usage는 비로그인 IP 기준 독립 임시 테이블 (users와 무관)
 onboarding_advice는 (기여방식, 목적) 조합 기준 독립 정적 콘텐츠 (users와 무관)
 recommendation_candidate_pools는 (언어, 조건) 조합 기준 독립 캐시 (users와 무관)
+issue_ai_guides는 사용자 식별값과 GitHub 이슈 조합 기준 독립 캐시
 ```
 
 ## 운영 메모
@@ -203,4 +204,4 @@ recommendation_candidate_pools는 (언어, 조건) 조합 기준 독립 캐시 (
 - `github_id`는 앱 사용자 식별 기준이다. GitHub login은 바뀔 수 있으므로 primary key로 쓰지 않는다.
 - `bookmarks`는 저장 시점 이슈 카드 데이터 전체를 스냅샷으로 들고 있다 — 목록 조회 시 GitHub을 다시 조회하지 않으므로, 점수·PR연결여부 등은 북마크 시점 값으로 고정된다(007 마이그레이션 이전 행은 스냅샷 컬럼이 NULL).
 - 대규모 트래픽이 생기면 bookmark 목록 조회의 정렬 조건과 count 비용을 먼저 확인한다.
-- repo health 상세 metric 컬럼은 현재 nullable로 남아 있고, 실제 score만 저장한다.
+- AI 프롬프트의 응답 내용이나 문체를 바꾸면 `ANALYSIS_PROMPT_VERSION`도 함께 올린다.

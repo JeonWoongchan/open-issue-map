@@ -19,16 +19,16 @@ type PathRowProps = {
 // 경로를 찾았으면 "확인했어요" 대신 실제 경로를 보여준다 — 어디서 찾았는지 바로 알 수 있게.
 function PathRow({ label, path }: PathRowProps) {
   return (
-    <div className="flex items-start gap-2.5 text-sm">
+    <div className="flex min-w-0 items-start gap-2.5 text-sm">
       {path ? (
         <Check className="mt-0.5 size-4 shrink-0 text-status-success-foreground" />
       ) : (
         <CircleAlert className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
       )}
-      <div>
+      <div className="min-w-0">
         <p className="font-medium text-foreground">{label}</p>
         {path ? (
-          <code className="break-all text-xs text-muted-foreground">{path}</code>
+          <code className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{path}</code>
         ) : (
           <p className="text-xs text-muted-foreground">저장소에서 찾지 못했어요.</p>
         )}
@@ -41,11 +41,11 @@ function PathRow({ label, path }: PathRowProps) {
 // PathRow(체크/경고 아이콘 + 경로)와 달리 중립 아이콘 + 문장으로 보여준다.
 function NoteRow({ label, note }: { label: string; note: string }) {
   return (
-    <div className="flex items-start gap-2.5 text-sm">
+    <div className="flex min-w-0 items-start gap-2.5 text-sm">
       <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-      <div>
+      <div className="min-w-0">
         <p className="font-medium text-foreground">{label}</p>
-        <p className="text-xs text-muted-foreground">{note}</p>
+        <p className="break-words break-keep text-pretty text-xs text-muted-foreground">{note}</p>
       </div>
     </div>
   )
@@ -56,7 +56,7 @@ function NoteRow({ label, note }: { label: string; note: string }) {
 export function ContributionRulesPanel({ rules, insight }: ContributionRulesPanelProps) {
   return (
     <DetailPanel icon={ShieldCheck} label="기여 규칙">
-      <div className="flex flex-col gap-3">
+      <div className="flex min-w-0 flex-col gap-3">
         <PathRow label="CONTRIBUTING.md" path={rules.contributingGuidePath} />
         <PathRow label="PR 템플릿" path={rules.pullRequestTemplatePath} />
         <NoteRow label="커밋 컨벤션" note={insight.commitConventionNote} />

@@ -6,26 +6,40 @@
 
 | 항목 | 값 | 설명 |
 | --- | --- | --- |
-| `PAGE_SIZE` | `10` | API page 크기 |
+| `PAGE_SIZE` | `10` | PR 목록 API 페이지 크기 |
 | `MATCH_SCORE_MINIMUM` | `0` | 최종 점수 하한 — 패널티 합산으로 음수가 되어도 0으로 바닥 처리 |
-| `GITHUB_API_CACHE_TTL_SECONDS` | `60` | GitHub API server cache TTL |
-| `GITHUB_API_TIMEOUT_MS` | `8000` | GitHub API timeout |
-| `MIN_CANDIDATE_REPO_STARS` | `50` | 응답 단 post-filter 최소 star 수 |
-| `RANK_SCORE_THRESHOLD` | `50` | ranking에서 낮은 점수 이슈 제거 기준 |
+| `RANK_SCORE_THRESHOLD` | `50` | 일반 랭킹의 기본 최소 점수 |
+| `RECOMMENDATION_SCORE_THRESHOLD` | `70` | 추천 캐러셀의 최소 점수 |
+| `RECOMMENDATION_PAGE_SIZE` | `100` | 후보 풀 수집 시 GitHub 페이지 크기 |
+| `RECOMMENDATION_PAGE_COUNT` | `3` | 언어·조건별 후보 풀 수집 최대 페이지 수 |
+| `RECOMMENDATION_MAX_PER_REPO` | `3` | 추천 레일의 저장소별 최대 노출 수 |
+| `RECOMMENDATION_DISPLAY_LIMIT` | `15` | 추천 레일별 최대 노출 수 |
+| `GITHUB_API_CACHE_TTL_SECONDS` | `1800` | 공개 GitHub 검색 결과 서버 캐시 TTL(30분) |
+| `GITHUB_API_TIMEOUT_MS` | `8000` | 일반 GitHub API timeout |
+| `GITHUB_SEARCH_TIMEOUT_MS` | `12000` | 이슈 검색 API timeout |
+| `EXPLORE_FOREGROUND_FETCH_SIZE` | `30` | 탐색 배치에서 먼저 응답할 결과 수 |
+| `EXPLORE_BACKGROUND_FETCH_SIZE` | `90` | 탐색 배치에서 백그라운드로 채울 결과 수 |
 | `SCORE_FILTER_THRESHOLDS` | `50, 60, 70, 80, 90` | UI 최소 점수 필터 |
 | `STAR_FILTER_THRESHOLDS` | `100, 300, 1000, 3000` | UI 최소 스타 수 필터 |
 
-## 추천 데이터 흐름
+## 추천 페이지 데이터 흐름
 
-1. 온보딩 프로필을 로드한다.
-2. GitHub issue search로 언어별 후보 이슈를 가져온다 (`sort:updated-desc` 정렬 포함).
-3. 중복 이슈를 URL 기준으로 제거한다.
-4. `stargazerCount < MIN_CANDIDATE_REPO_STARS`인 이슈를 응답 단에서 제거한다 (GitHub 검색 인덱스 시차 보정).
-5. `scoreIssue()`로 각 이슈를 점수화한다.
-6. `RANK_SCORE_THRESHOLD` 미만 이슈를 제거한다.
-7. score 우선, 동점이면 deterministic hash 기준으로 정렬한다.
-8. `applyFilters()`가 사용자 선택 API query filter(언어, 난이도, 기여 유형, 최소 점수, 최소 스타 수)를 적용하고 page를 잘라 반환한다.
-9. 활성 필터가 있고 반환 결과가 PAGE_SIZE에 미달하면 `canLoadMoreCandidates: true`를 설정해 자동 batch 교체를 중단한다.
+1. GitHub Actions가 13개 언어의 `popular` 후보를 12시간마다, `latest` 후보를 3시간마다 수집한다.
+2. Cron Route가 `(language, condition)`별 원본 후보 풀을 `recommendation_candidate_pools`에 교체 저장한다.
+3. 대시보드 요청은 GitHub를 직접 호출하지 않고 사용자 선호 언어의 후보 풀을 DB에서 읽는다.
+4. 중복 이슈를 제거하고 `scoreIssue()`로 점수화한 뒤 `RECOMMENDATION_SCORE_THRESHOLD` 미만을 제외한다.
+5. 저장소당 최대 3개로 제한하고, 남은 후보에서 무작위로 최대 15개를 선택한다.
+
+`popular` 후보는 GitHub의 `reactions-desc`와 최근 90일 범위를 사용하며 저장소 star가 30 미만인 이슈를 저장 전에 제외한다. `latest` 후보는 `created-desc`를 사용한다.
+
+## 이슈 탐색 데이터 흐름
+
+1. 자유 검색어·언어 묶음·정렬을 GitHub 검색 쿼리로 전달한다.
+2. 자유 검색어가 없으면 공개 검색 결과를 사용자와 무관한 키로 30분간 캐시한다. 자유 검색은 서버 결과 캐시 없이 조회한다.
+3. 첫 요청에서 30개 결과를 응답하고 같은 커서의 90개 결과를 백그라운드에서 미리 채운다.
+4. `scoreIssue()`로 모든 결과를 점수화한다. 일반 탐색에서는 `MATCH_SCORE_MINIMUM`만 적용하므로 점수 때문에 결과를 미리 제거하지 않는다.
+5. 난이도·진행 상태·기여 방식·최소 점수·최소 star 조건을 응답 후 적용한다.
+6. 현재 배치가 소진되기 전에 다음 GitHub 커서 배치를 프리페치해 무한스크롤을 이어간다.
 
 ## 스타 수 필터
 
@@ -33,7 +47,7 @@
 
 허용 값: `100 | 300 | 1000 | 3000`
 
-`hasActiveFilters()` (`src/lib/github/issues/filters.ts`)가 language, difficultyLevel, contributionTypes, minScore, minStars 중 하나라도 활성화되어 있는지 판단한다. 이 함수는 서비스 레이어에서 `canLoadMoreCandidates` 계산에도 사용한다.
+star 수는 GitHub 이슈 검색 쿼리에서 저장소 조건으로 직접 필터링하지 않고, 응답에 포함된 `stargazerCount`를 기준으로 후처리한다. 필터 때문에 현재 페이지 결과가 비어도 원본 GitHub 결과에 다음 페이지가 있으면 무한스크롤은 계속 조회한다.
 
 ## 언어 점수
 
@@ -52,6 +66,12 @@
 - `C`, `C++`
 - `Java`, `Kotlin`, `Scala`, `Groovy`
 - `Swift`, `Objective-C`
+- `Python`
+- `Rust`
+- `Go`
+- `C#`
+- `Ruby`
+- `PHP`
 
 ## 난이도 점수
 
@@ -251,11 +271,11 @@ MODERATE_PUSH_DAYS: 180
 COMMUNITY_BOOST_SIGNAL: 5
 ```
 
-GitHub 조회 실패로 fallback 처리된 북마크 카드는 태그를 표시하지 않는다.
+북마크 목록은 저장 시점의 활성도 값을 스냅샷으로 사용한다. `007_bookmark_issue_snapshot.sql` 이전에 저장된 행처럼 값이 없으면 태그를 표시하지 않는다.
 
-## 정렬 안정성
+## 정렬과 샘플링
 
-동점 이슈는 `userId:batchParam:issue.url` 기반 hash로 정렬한다. 같은 사용자와 batch에서는 page 이동 시 순서가 안정적으로 유지된다.
+`rankIssues()`는 GitHub가 반환한 순서를 유지한 채 점수 임계값만 적용한다. 이슈 탐색의 인기순·최신순은 GitHub 검색 정렬을 그대로 따르고, 추천 페이지는 점수 기준을 통과한 후보에 저장소별 제한을 적용한 뒤 무작위로 최대 15개를 선택한다.
 
 ## 변경 시 체크리스트
 
@@ -264,11 +284,12 @@ GitHub 조회 실패로 fallback 처리된 북마크 카드는 태그를 표시�
 1. `src/constants/scoring-rules.ts`
 2. `src/lib/github/issues/scorer.ts`
 3. `src/lib/github/issues/ranking.ts`
-4. `src/lib/github/issues/filters.ts` (필터 허용값·`hasActiveFilters` 포함)
+4. `src/lib/github/issues/filters.ts` (필터 허용값·후처리 조건)
 5. `src/components/dashboard/dashboard-help/DashboardScoringGuide.tsx` (사용자 노출 설명)
 6. 관련 테스트:
    - `scorer.test.ts`
    - `ranking.test.ts`
+   - `recommendations.test.ts`
    - `service.test.ts`
    - `filters.test.ts`
 7. 이 문서

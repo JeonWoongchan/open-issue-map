@@ -29,10 +29,14 @@ export function IssueSearchForm({ value, onSubmitAction, className }: IssueSearc
         onSubmitAction(draft.trim())
       }}
     >
-      <div className="relative flex-1">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="relative min-w-0 flex-1">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
         <input
           type="text"
+          aria-label="GitHub 전체 이슈 검색"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder="GitHub 전체 이슈에서 검색"
@@ -48,7 +52,7 @@ export function IssueSearchForm({ value, onSubmitAction, className }: IssueSearc
             aria-label="검색어 지우고 기본 목록 보기"
             className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" aria-hidden="true" />
           </button>
         ) : null}
       </div>
