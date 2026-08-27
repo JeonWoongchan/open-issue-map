@@ -2,6 +2,14 @@ import { NextRequest } from 'next/server'
 import { POPULAR_LANGUAGES } from '@/constants/contribution-levels'
 import { RECOMMENDATION_CONDITIONS, type RecommendationCondition } from '@/constants/recommendation'
 import { refreshCandidatePool } from '@/lib/github/issues/recommendations'
+import {
+  getGitHubErrorLogFields,
+  GitHubApiError,
+  GitHubRateLimitError,
+  GitHubResourceLimitError,
+  GitHubTimeoutError,
+  GitHubUnauthorizedError,
+} from '@/lib/github/client'
 import { ErrorCode, err, ok } from '@/lib/api-response'
 
 // 언어 하나만 처리해도 페이지 3개를 순차로 넘겨야 해서 기본 10초 제한에 걸린다.
@@ -42,7 +50,30 @@ export async function POST(req: NextRequest) {
     await refreshCandidatePool(language, condition, accessToken)
     return ok({ condition, language })
   } catch (error) {
-    console.error(`[cron/refresh-recommendation-pool] ${condition}/${language} 실패:`, error)
-    return err('refresh failed', 502, ErrorCode.GITHUB_ERROR)
+    console.error(JSON.stringify({
+      event: 'recommendation_pool_refresh',
+      status: 'failed',
+      phase: error instanceof GitHubApiError ? 'fetch' : 'refresh',
+      condition,
+      language,
+      ...getGitHubErrorLogFields(error),
+    }))
+
+    if (error instanceof GitHubResourceLimitError) {
+      return err('GitHub query resource limit exceeded', 503, ErrorCode.GITHUB_RESOURCE_LIMIT)
+    }
+    if (error instanceof GitHubRateLimitError) {
+      return err('GitHub rate limit exceeded', 429, ErrorCode.RATE_LIMITED)
+    }
+    if (error instanceof GitHubTimeoutError) {
+      return err('GitHub request timed out', 504, ErrorCode.GITHUB_TIMEOUT)
+    }
+    if (error instanceof GitHubUnauthorizedError) {
+      return err('GitHub server token authentication failed', 502, ErrorCode.GITHUB_AUTH_ERROR)
+    }
+    if (error instanceof GitHubApiError) {
+      return err('GitHub request failed', 502, ErrorCode.GITHUB_ERROR)
+    }
+    return err('refresh failed', 500, ErrorCode.INTERNAL_ERROR)
   }
 }

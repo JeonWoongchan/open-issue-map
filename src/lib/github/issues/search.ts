@@ -29,15 +29,8 @@ const SEARCH_ISSUES_QUERY = `
             stargazerCount
             pushedAt
           }
-          timelineItems(first: 5, itemTypes: [CROSS_REFERENCED_EVENT]) {
-            nodes {
-              __typename
-              ... on CrossReferencedEvent {
-                source {
-                  __typename
-                }
-              }
-            }
+          timelineItems(first: 1, itemTypes: [CROSS_REFERENCED_EVENT]) {
+            nodes { __typename }
           }
         }
       }

@@ -5,6 +5,9 @@ import {
   GitHubRateLimitError,
   GitHubNotFoundError,
   GitHubInvalidCursorError,
+  GitHubResourceLimitError,
+  GitHubTimeoutError,
+  getGitHubErrorLogFields,
 } from '@/lib/github/client'
 
 function stubFetch(status: number, body: object, headers: Record<string, string> = {}) {
@@ -58,5 +61,65 @@ describe('githubGraphQL', () => {
   it('HTTP 403인데 rate limit 관련 헤더가 전혀 없으면 일반 에러를 던진다', async () => {
     stubFetch(403, {})
     await expect(githubGraphQL('query {}', {}, 'token')).rejects.toThrow('GitHub GraphQL error: 403')
+  })
+
+  it('첫 에러가 아니어도 resource limit 메시지가 있으면 전용 에러를 던진다', async () => {
+    stubFetch(200, {
+      data: { search: { nodes: [] } },
+      errors: [
+        { type: 'OTHER', message: 'other error', path: ['search', 'nodes', 1] },
+        {
+          message: 'Resource limits for this query exceeded',
+          path: ['search', 'nodes', 37, 'timelineItems'],
+        },
+      ],
+    }, {
+      'x-github-request-id': 'request-123',
+      'x-ratelimit-remaining': '4990',
+    })
+
+    const promise = githubGraphQL('query {}', {}, 'token')
+    await expect(promise).rejects.toBeInstanceOf(GitHubResourceLimitError)
+    await expect(promise).rejects.toMatchObject({
+      kind: 'resource_limit',
+      details: {
+        upstreamStatus: 200,
+        githubRequestId: 'request-123',
+        partialData: true,
+        rateLimit: { remaining: '4990' },
+        graphqlErrors: [
+          { type: 'OTHER', path: ['search', 'nodes', 1] },
+          { path: ['search', 'nodes', 37, 'timelineItems'] },
+        ],
+      },
+    })
+  })
+
+  it('AbortSignal timeout은 GitHubTimeoutError로 정규화한다', async () => {
+    const timeoutError = new Error('request contained sensitive variables')
+    timeoutError.name = 'TimeoutError'
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(timeoutError))
+
+    await expect(githubGraphQL('query {}', {}, 'token')).rejects.toBeInstanceOf(GitHubTimeoutError)
+  })
+
+  it('로그 필드는 raw 메시지 대신 허용된 메타데이터만 반환한다', () => {
+    const error = new GitHubResourceLimitError({
+      githubRequestId: 'request-123',
+      graphqlErrors: [{ type: 'RESOURCE_LIMITS_EXCEEDED', path: ['search'] }],
+    })
+
+    const fields = getGitHubErrorLogFields(error)
+    const serialized = JSON.stringify(fields)
+
+    expect(fields).toMatchObject({
+      errorKind: 'resource_limit',
+      githubRequestId: 'request-123',
+      githubErrorTypes: ['RESOURCE_LIMITS_EXCEEDED'],
+      githubErrorPaths: [['search']],
+    })
+    expect(serialized).not.toContain('Authorization')
+    expect(serialized).not.toContain('query')
+    expect(serialized).not.toContain('cursor')
   })
 })
