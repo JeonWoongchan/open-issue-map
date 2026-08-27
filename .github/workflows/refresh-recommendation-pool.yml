@@ -22,8 +22,9 @@ name: Refresh recommendation pool
 
 on:
   schedule:
-    - cron: '0 */3 * * *' # latest — 3시간마다
-    - cron: '0 */12 * * *' # popular — 12시간마다
+    # 정각 혼잡을 피하고, popular 실행이 latest와 겹치지 않도록 최소 90분 간격을 둔다.
+    - cron: '17 */3 * * *' # latest — 3시간마다
+    - cron: '47 1,13 * * *' # popular — 12시간마다
   workflow_dispatch:
     inputs:
       condition:
@@ -48,7 +49,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "condition=${{ inputs.condition }}" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event.schedule }}" = "0 */3 * * *" ]; then
+          elif [ "${{ github.event.schedule }}" = "17 */3 * * *" ]; then
             echo "condition=latest" >> "$GITHUB_OUTPUT"
           else
             echo "condition=popular" >> "$GITHUB_OUTPUT"
@@ -82,8 +83,9 @@ jobs:
     steps:
       - name: 후보 풀 갱신 요청
         run: |
-          curl --fail --silent --show-error \
+          curl --fail-with-body --silent --show-error \
             --retry 2 --retry-delay 5 --max-time 60 \
+            --write-out '\nhttp=%{http_code} total=%{time_total}s\n' \
             -G -X POST \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             --data-urlencode "condition=${{ needs.determine-condition.outputs.condition }}" \

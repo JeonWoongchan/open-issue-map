@@ -57,6 +57,18 @@ describe('fetchCandidateIssues', () => {
     expect(variables.query).toBe('is:open is:issue label:"help wanted" language:TypeScript sort:reactions-desc')
   })
 
+  it('PR 존재 확인용 timelineItems는 1개와 typename만 요청한다', async () => {
+    mockGraphQL.mockResolvedValueOnce(makeSearchPage([]))
+
+    await fetchCandidateIssues(['TypeScript'], 'token', null, 50)
+
+    const [query] = mockGraphQL.mock.calls[0] as unknown as [string]
+    expect(query).toContain('timelineItems(first: 1, itemTypes: [CROSS_REFERENCED_EVENT])')
+    expect(query).toContain('nodes { __typename }')
+    expect(query).not.toContain('source {')
+    expect(query).not.toContain('timelineItems(first: 5')
+  })
+
   it('sort 인자를 생략하면 기존과 동일하게 updated-desc를 쓴다', async () => {
     mockGraphQL.mockResolvedValueOnce(makeSearchPage([]))
 

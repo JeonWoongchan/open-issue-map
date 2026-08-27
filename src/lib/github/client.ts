@@ -1,32 +1,189 @@
 import { GITHUB_API_TIMEOUT_MS } from '@/constants/scoring-rules'
 
-export class GitHubRateLimitError extends Error {
-  constructor() {
-    super('RATE_LIMITED')
+export type GitHubErrorKind =
+  | 'rate_limit'
+  | 'unauthorized'
+  | 'not_found'
+  | 'invalid_cursor'
+  | 'resource_limit'
+  | 'timeout'
+  | 'network'
+  | 'http'
+  | 'graphql'
+
+export type GitHubGraphQLErrorInfo = {
+  type?: string
+  path?: Array<string | number>
+}
+
+export type GitHubErrorDetails = {
+  upstreamStatus?: number
+  githubRequestId?: string
+  retryAfter?: string
+  rateLimit?: {
+    limit?: string
+    remaining?: string
+    used?: string
+    reset?: string
+  }
+  graphqlErrors?: GitHubGraphQLErrorInfo[]
+  partialData?: boolean
+}
+
+export class GitHubApiError extends Error {
+  constructor(
+    message: string,
+    public readonly kind: GitHubErrorKind,
+    public readonly details: GitHubErrorDetails = {},
+  ) {
+    super(message)
+    this.name = 'GitHubApiError'
+  }
+}
+
+export class GitHubRateLimitError extends GitHubApiError {
+  constructor(details: GitHubErrorDetails = {}) {
+    super('RATE_LIMITED', 'rate_limit', details)
     this.name = 'GitHubRateLimitError'
   }
 }
 
-export class GitHubUnauthorizedError extends Error {
-  constructor() {
-    super('UNAUTHORIZED')
+export class GitHubUnauthorizedError extends GitHubApiError {
+  constructor(details: GitHubErrorDetails = {}) {
+    super('UNAUTHORIZED', 'unauthorized', details)
     this.name = 'GitHubUnauthorizedError'
   }
 }
 
-export class GitHubNotFoundError extends Error {
-  constructor() {
-    super('NOT_FOUND')
+export class GitHubNotFoundError extends GitHubApiError {
+  constructor(details: GitHubErrorDetails = {}) {
+    super('NOT_FOUND', 'not_found', details)
     this.name = 'GitHubNotFoundError'
   }
 }
 
 // search 커넥션의 after 커서가 만료/무효화된 경우 — sort:updated-desc 등 실시간으로 바뀌는
 // 결과셋에서 GitHub이 예전 커서를 거부할 때 발생. 재시도 시 첫 페이지부터 다시 조회해야 한다.
-export class GitHubInvalidCursorError extends Error {
-  constructor(message: string) {
-    super(message)
+export class GitHubInvalidCursorError extends GitHubApiError {
+  constructor(message: string, details: GitHubErrorDetails = {}) {
+    super(message, 'invalid_cursor', details)
     this.name = 'GitHubInvalidCursorError'
+  }
+}
+
+export class GitHubResourceLimitError extends GitHubApiError {
+  constructor(details: GitHubErrorDetails = {}) {
+    super('RESOURCE_LIMIT_EXCEEDED', 'resource_limit', details)
+    this.name = 'GitHubResourceLimitError'
+  }
+}
+
+export class GitHubTimeoutError extends GitHubApiError {
+  constructor(details: GitHubErrorDetails = {}) {
+    super('TIMEOUT', 'timeout', details)
+    this.name = 'GitHubTimeoutError'
+  }
+}
+
+export class GitHubNetworkError extends GitHubApiError {
+  constructor(details: GitHubErrorDetails = {}) {
+    super('NETWORK_ERROR', 'network', details)
+    this.name = 'GitHubNetworkError'
+  }
+}
+
+export class GitHubHttpError extends GitHubApiError {
+  constructor(status: number, details: GitHubErrorDetails = {}) {
+    super(`GitHub GraphQL error: ${status}`, 'http', details)
+    this.name = 'GitHubHttpError'
+  }
+}
+
+export class GitHubGraphQLError extends GitHubApiError {
+  constructor(details: GitHubErrorDetails = {}) {
+    super('GraphQL error', 'graphql', details)
+    this.name = 'GitHubGraphQLError'
+  }
+}
+
+type GraphQLErrorPayload = {
+  type?: unknown
+  message?: unknown
+  path?: unknown
+}
+
+function readHeader(res: Response, name: string): string | undefined {
+  return res.headers.get(name) ?? undefined
+}
+
+function buildErrorDetails(
+  res: Response,
+  graphqlErrors?: GitHubGraphQLErrorInfo[],
+  partialData?: boolean,
+): GitHubErrorDetails {
+  const rateLimit = {
+    limit: readHeader(res, 'x-ratelimit-limit'),
+    remaining: readHeader(res, 'x-ratelimit-remaining'),
+    used: readHeader(res, 'x-ratelimit-used'),
+    reset: readHeader(res, 'x-ratelimit-reset'),
+  }
+  const hasRateLimitHeader = Object.values(rateLimit).some((value) => value !== undefined)
+
+  return {
+    upstreamStatus: res.status,
+    githubRequestId: readHeader(res, 'x-github-request-id'),
+    retryAfter: readHeader(res, 'retry-after'),
+    rateLimit: hasRateLimitHeader ? rateLimit : undefined,
+    graphqlErrors,
+    partialData,
+  }
+}
+
+function normalizeGraphQLErrors(errors: GraphQLErrorPayload[]): GitHubGraphQLErrorInfo[] {
+  return errors.map((error) => ({
+    type: typeof error.type === 'string' ? error.type : undefined,
+    path: Array.isArray(error.path)
+      ? error.path.filter((part): part is string | number => typeof part === 'string' || typeof part === 'number')
+      : undefined,
+  }))
+}
+
+function errorType(error: GraphQLErrorPayload): string | undefined {
+  return typeof error.type === 'string' ? error.type : undefined
+}
+
+function errorMessage(error: GraphQLErrorPayload): string | undefined {
+  return typeof error.message === 'string' ? error.message : undefined
+}
+
+function isResourceLimitError(error: GraphQLErrorPayload): boolean {
+  const type = errorType(error)
+  const message = errorMessage(error)
+  return type === 'RESOURCE_LIMITS_EXCEEDED'
+    || type === 'RESOURCE_LIMIT_EXCEEDED'
+    || message?.includes('Resource limits for this query exceeded') === true
+}
+
+function isTimeoutError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  return error.name === 'TimeoutError' || error.name === 'AbortError'
+}
+
+// 로그 호출부가 raw Error를 그대로 출력하지 않고, GitHub가 허용한 진단 필드만 남기게 한다.
+export function getGitHubErrorLogFields(error: unknown): Record<string, unknown> {
+  if (!(error instanceof GitHubApiError)) {
+    return { errorKind: 'internal' }
+  }
+
+  return {
+    errorKind: error.kind,
+    upstreamStatus: error.details.upstreamStatus,
+    githubRequestId: error.details.githubRequestId,
+    retryAfter: error.details.retryAfter,
+    rateLimit: error.details.rateLimit,
+    githubErrorTypes: error.details.graphqlErrors?.map((item) => item.type).filter(Boolean),
+    githubErrorPaths: error.details.graphqlErrors?.map((item) => item.path).filter(Boolean),
+    partialData: error.details.partialData,
   }
 }
 
@@ -36,41 +193,67 @@ export async function githubGraphQL<T>(
   accessToken: string,
   timeoutMs: number = GITHUB_API_TIMEOUT_MS
 ): Promise<T> {
-  const res = await fetch('https://api.github.com/graphql', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ query, variables }),
-    signal: AbortSignal.timeout(timeoutMs),
-  })
+  let res: Response
+  try {
+    res = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, variables }),
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      throw new GitHubTimeoutError()
+    }
+    throw new GitHubNetworkError()
+  }
+
+  const responseDetails = buildErrorDetails(res)
 
   if (!res.ok) {
     if (res.status === 401) {
-      throw new GitHubUnauthorizedError()
+      throw new GitHubUnauthorizedError(responseDetails)
     }
-    // primary rate limit(x-ratelimit-remaining=0)과 secondary rate limit(짧은 시간 내 동시/반복 요청 시
-    // 403 + retry-after, x-ratelimit-remaining 헤더 자체가 없음) 둘 다 동일하게 처리한다.
-    if (res.status === 403 && (res.headers.get('x-ratelimit-remaining') === '0' || res.headers.get('retry-after'))) {
-      throw new GitHubRateLimitError()
+    // primary rate limit(x-ratelimit-remaining=0)과 secondary rate limit(retry-after) 및
+    // GitHub가 명시적으로 반환하는 429를 같은 종류로 정규화한다.
+    if (res.status === 429 || (res.status === 403
+      && (res.headers.get('x-ratelimit-remaining') === '0' || res.headers.get('retry-after')))) {
+      throw new GitHubRateLimitError(responseDetails)
     }
-    throw new Error(`GitHub GraphQL error: ${res.status}`)
+    throw new GitHubHttpError(res.status, responseDetails)
   }
 
-  const json = await res.json()
+  const json = await res.json() as {
+    data?: T
+    errors?: GraphQLErrorPayload[]
+  }
 
-  // GraphQL 에러 타입별 구분 — 새 타입 추가 시 case만 추가
-  if (json.errors?.length > 0) {
-    const firstError = json.errors[0]
+  if (Array.isArray(json.errors) && json.errors.length > 0) {
+    const errors = json.errors
+    const details = buildErrorDetails(res, normalizeGraphQLErrors(errors), json.data !== undefined)
 
-    switch (firstError.type) {
-    case 'RATE_LIMITED':            throw new GitHubRateLimitError()
-    case 'NOT_FOUND':               throw new GitHubNotFoundError()
-    case 'UNAUTHORIZED':            throw new GitHubUnauthorizedError()
-    case 'INVALID_CURSOR_ARGUMENTS': throw new GitHubInvalidCursorError(firstError.message ?? 'Invalid cursor')
-    default:                        throw new Error(firstError.message ?? 'GraphQL error')
+    if (errors.some(isResourceLimitError)) {
+      throw new GitHubResourceLimitError(details)
     }
+    if (errors.some((error) => errorType(error) === 'RATE_LIMITED')) {
+      throw new GitHubRateLimitError(details)
+    }
+    if (errors.some((error) => errorType(error) === 'NOT_FOUND')) {
+      throw new GitHubNotFoundError(details)
+    }
+    if (errors.some((error) => errorType(error) === 'UNAUTHORIZED')) {
+      throw new GitHubUnauthorizedError(details)
+    }
+
+    const invalidCursorError = errors.find((error) => errorType(error) === 'INVALID_CURSOR_ARGUMENTS')
+    if (invalidCursorError) {
+      throw new GitHubInvalidCursorError(errorMessage(invalidCursorError) ?? 'Invalid cursor', details)
+    }
+
+    throw new GitHubGraphQLError(details)
   }
 
   return json.data as T

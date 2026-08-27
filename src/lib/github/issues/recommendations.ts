@@ -8,6 +8,7 @@ import {
   RECOMMENDATION_SCORE_THRESHOLD,
 } from '@/constants/scoring-rules'
 import { listUserBookmarkKeys } from '@/lib/bookmarks'
+import { getGitHubErrorLogFields } from '@/lib/github/client'
 import type { OnboardingProfile } from '@/lib/user/profile'
 import type { IssueCardItem, RawIssue, ScoredIssue } from '@/types/issue'
 import { getCandidatePools, upsertCandidatePool } from './candidate-pool-store'
@@ -71,23 +72,73 @@ function filterByMinStars(issues: RawIssue[], minStars: number): RawIssue[] {
 // 조건 1개당 GitHub 검색 결과를 최대 RECOMMENDATION_PAGE_COUNT페이지까지 순차로 이어 붙인다.
 // 커서 페이지네이션이라 병렬화가 안 되고, GitHub이 더 줄 게 없으면(hasMoreOnGithub=false) 그 전에 멈춘다.
 async function fetchCandidatePool(
-  languages: string[],
+  language: string,
+  condition: RecommendationCondition,
   accessToken: string,
   sort: string,
   extraQualifiers: string,
-): Promise<RawIssue[]> {
+): Promise<{ issues: RawIssue[]; rawFetchedCount: number; requestCount: number }> {
   const pool: RawIssue[] = []
   let cursor: string | null = null
+  let requestCount = 0
 
   for (let page = 0; page < RECOMMENDATION_PAGE_COUNT; page++) {
-    const result = await fetchCandidateIssues(languages, accessToken, cursor, RECOMMENDATION_PAGE_SIZE, sort, extraQualifiers)
+    const startedAt = Date.now()
+    requestCount++
+    let result
+    try {
+      result = await fetchCandidateIssues(
+        [language],
+        accessToken,
+        cursor,
+        RECOMMENDATION_PAGE_SIZE,
+        sort,
+        extraQualifiers,
+      )
+    } catch (error) {
+      console.error(JSON.stringify({
+        event: 'recommendation_pool_page',
+        status: 'failed',
+        phase: 'fetch',
+        condition,
+        language,
+        sort,
+        page: page + 1,
+        first: RECOMMENDATION_PAGE_SIZE,
+        cursorPresent: cursor !== null,
+        accumulatedRawCount: pool.length,
+        durationMs: Date.now() - startedAt,
+        ...getGitHubErrorLogFields(error),
+      }))
+      throw error
+    }
+
     pool.push(...result.issues)
+    console.info(JSON.stringify({
+      event: 'recommendation_pool_page',
+      status: 'succeeded',
+      phase: 'fetch',
+      condition,
+      language,
+      sort,
+      page: page + 1,
+      first: RECOMMENDATION_PAGE_SIZE,
+      cursorPresent: cursor !== null,
+      returnedCount: result.issues.length,
+      accumulatedRawCount: pool.length,
+      hasNextPage: result.hasMoreOnGithub,
+      durationMs: Date.now() - startedAt,
+    }))
 
     if (!result.hasMoreOnGithub || !result.endCursor) break
     cursor = result.endCursor
   }
 
-  return dedupeIssues(pool)
+  return {
+    issues: dedupeIssues(pool),
+    rawFetchedCount: pool.length,
+    requestCount,
+  }
 }
 
 // 스케줄러 전용 — 언어 하나 + 조건 하나의 후보 풀을 GitHub에서 새로 가져와 DB에 통째로 교체 저장한다.
@@ -98,14 +149,49 @@ export async function refreshCandidatePool(
   condition: RecommendationCondition,
   accessToken: string,
 ): Promise<void> {
+  const startedAt = Date.now()
   const { sort } = RECOMMENDATION_CONDITION_META[condition]
   const windowDays = RECENT_WINDOW_DAYS[condition]
   const extraQualifiers = windowDays ? buildRecentWindowQualifier(windowDays) : ''
 
-  const pool = await fetchCandidatePool([language], accessToken, sort, extraQualifiers)
-  const issues = condition === 'popular' ? filterByMinStars(pool, POPULAR_MIN_STARS) : pool
+  const result = await fetchCandidatePool(language, condition, accessToken, sort, extraQualifiers)
+  const issues = condition === 'popular'
+    ? filterByMinStars(result.issues, POPULAR_MIN_STARS)
+    : result.issues
 
-  await upsertCandidatePool(language, condition, issues)
+  try {
+    await upsertCandidatePool(language, condition, issues)
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: 'recommendation_pool_refresh',
+      status: 'failed',
+      phase: 'persist',
+      condition,
+      language,
+      sort,
+      rawFetchedCount: result.rawFetchedCount,
+      dedupedCount: result.issues.length,
+      storedCount: issues.length,
+      requestCount: result.requestCount,
+      durationMs: Date.now() - startedAt,
+      errorKind: 'internal',
+    }))
+    throw error
+  }
+
+  console.info(JSON.stringify({
+    event: 'recommendation_pool_refresh',
+    status: 'succeeded',
+    condition,
+    language,
+    sort,
+    windowDays,
+    rawFetchedCount: result.rawFetchedCount,
+    dedupedCount: result.issues.length,
+    storedCount: issues.length,
+    requestCount: result.requestCount,
+    durationMs: Date.now() - startedAt,
+  }))
 }
 
 // 추천 이슈 페이지 전용 조회 — GitHub를 직접 부르지 않는다. 스케줄러(refreshCandidatePool)가
