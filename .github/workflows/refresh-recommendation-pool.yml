@@ -84,7 +84,7 @@ jobs:
       - name: 후보 풀 갱신 요청
         run: |
           curl --fail-with-body --silent --show-error \
-            --retry 2 --retry-delay 5 --max-time 60 \
+            --connect-timeout 10 --max-time 60 \
             --write-out '\nhttp=%{http_code} total=%{time_total}s\n' \
             -G -X POST \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \

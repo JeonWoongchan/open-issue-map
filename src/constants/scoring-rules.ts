@@ -14,10 +14,15 @@ export const RANK_SCORE_THRESHOLD = 50
 export const RECOMMENDATION_SCORE_THRESHOLD = 70
 // 추천 이슈 페이지가 조회 조건 1개당 GitHub에 요청하는 페이지 크기(GraphQL first)
 export const RECOMMENDATION_PAGE_SIZE = 100
-// 조건 1개당 순차로 가져올 페이지 수 — 커서 페이지네이션이라 병렬화가 안 돼 조건 수만큼 그대로 곱해진다.
-// 10으로 뒀을 때 조건 2개(latest+popular) 기준 최대 20회 순차 GraphQL 호출이 발생해
-// GitHub 2차(버스트) 레이트리밋에 걸리고 페이지 로드도 20~30초 이상 걸렸다 — 3으로 낮춰 최대 6회로 제한한다
-export const RECOMMENDATION_PAGE_COUNT = 3
+// resource limit이면 실패한 커서만 50개로 재시도하되, 최종 후보 목표는 300개로 유지한다.
+export const RECOMMENDATION_FALLBACK_PAGE_SIZE = 50
+export const RECOMMENDATION_TARGET_POOL_SIZE = 300
+// 오류나 시간 예산 소진 시 이만큼 확보했으면 부분 결과를 저장하고, 미만이면 기존 DB 풀을 보존한다.
+export const RECOMMENDATION_MIN_POOL_SIZE = 150
+// 100개 요청 실패 1회 + 50개 요청 6회를 수용하는 안전장치다.
+export const RECOMMENDATION_MAX_FETCH_REQUESTS = 7
+// 함수 제한 45초 중 DB 저장과 응답에 7초를 남긴다.
+export const RECOMMENDATION_FETCH_BUDGET_MS = 38_000
 // 캐러셀 한 레일에서 같은 저장소가 노출되는 최대 개수 — 활발한 저장소 하나가 레일을 독점하는 것을 막는다.
 // 저장소당 후보가 이 값보다 많으면 그중 무작위로 골라, "새로 추천받기"를 눌렀을 때 같은 조합만 반복되지 않게 한다
 export const RECOMMENDATION_MAX_PER_REPO = 3
