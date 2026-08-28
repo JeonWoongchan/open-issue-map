@@ -75,8 +75,14 @@ export function dedupeIssues(issues: RawIssue[]): RawIssue[] {
     })
 }
 
-async function searchIssues(query: string, first: number, after: string | null, accessToken: string): Promise<SearchResult> {
-    return githubGraphQL<SearchResult>(SEARCH_ISSUES_QUERY, { query, first, after }, accessToken, GITHUB_SEARCH_TIMEOUT_MS)
+async function searchIssues(
+    query: string,
+    first: number,
+    after: string | null,
+    accessToken: string,
+    timeoutMs: number = GITHUB_SEARCH_TIMEOUT_MS,
+): Promise<SearchResult> {
+    return githubGraphQL<SearchResult>(SEARCH_ISSUES_QUERY, { query, first, after }, accessToken, timeoutMs)
 }
 
 // GitHub 검색을 실행하고 결과를 IssueSearchResult 형태로 정리한다 — 쿼리 문자열만 다르게
@@ -87,15 +93,18 @@ export async function fetchExploreIssues(
     accessToken: string,
     after: string | null,
     first: number,
+    timeoutMs: number = GITHUB_SEARCH_TIMEOUT_MS,
 ): Promise<IssueSearchResult> {
+    const startedAt = Date.now()
     let result: SearchResult
     try {
-        result = await searchIssues(query, first, after, accessToken)
+        result = await searchIssues(query, first, after, accessToken, timeoutMs)
     } catch (error) {
         // 정렬 기준이 실시간으로 바뀌는 결과셋(예: updated-desc)이면 예전에 발급된 커서가
         // 나중엔 무효화될 수 있다 — 이 경우 첫 페이지부터 다시 조회해 캐싱 목적을 유지한다.
         if (error instanceof GitHubInvalidCursorError && after !== null) {
-            result = await searchIssues(query, first, null, accessToken)
+            const retryTimeoutMs = Math.max(1, timeoutMs - (Date.now() - startedAt))
+            result = await searchIssues(query, first, null, accessToken, retryTimeoutMs)
         } else {
             throw error
         }
@@ -117,7 +126,8 @@ export async function fetchCandidateIssues(
     after: string | null,
     first: number,
     sort = 'updated-desc',
-    extraQualifiers = ''
+    extraQualifiers = '',
+    timeoutMs: number = GITHUB_SEARCH_TIMEOUT_MS,
 ): Promise<IssueSearchResult> {
     if (languages.length === 0) {
         return { issues: [], endCursor: null, hasMoreOnGithub: false }
@@ -126,7 +136,7 @@ export async function fetchCandidateIssues(
     const query = buildIssueQuery(languages, sort, extraQualifiers)
     // star 기준 제외는 서버가 강제하지 않고 사용자가 UI에서 선택하는 minStars 필터(IssueFilters)에 맡긴다 —
     // 여기서 미리 걸러내면 캐시 풀에서 살아남는 후보가 크게 줄어 배치가 너무 빨리 소진된다.
-    return fetchExploreIssues(query, accessToken, after, first)
+    return fetchExploreIssues(query, accessToken, after, first, timeoutMs)
 }
 
 const EXPLORE_DEFAULT_LABEL = 'help wanted'

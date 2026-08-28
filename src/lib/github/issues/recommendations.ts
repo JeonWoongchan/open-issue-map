@@ -1,14 +1,23 @@
 import { RECOMMENDATION_CONDITION_META, type RecommendationCondition } from '@/constants/recommendation'
 import {
+  GITHUB_SEARCH_TIMEOUT_MS,
   POPULAR_SORT_WINDOW_DAYS,
   RECOMMENDATION_DISPLAY_LIMIT,
+  RECOMMENDATION_FALLBACK_PAGE_SIZE,
+  RECOMMENDATION_FETCH_BUDGET_MS,
+  RECOMMENDATION_MAX_FETCH_REQUESTS,
   RECOMMENDATION_MAX_PER_REPO,
-  RECOMMENDATION_PAGE_COUNT,
+  RECOMMENDATION_MIN_POOL_SIZE,
   RECOMMENDATION_PAGE_SIZE,
   RECOMMENDATION_SCORE_THRESHOLD,
+  RECOMMENDATION_TARGET_POOL_SIZE,
 } from '@/constants/scoring-rules'
 import { listUserBookmarkKeys } from '@/lib/bookmarks'
-import { getGitHubErrorLogFields } from '@/lib/github/client'
+import {
+  getGitHubErrorLogFields,
+  GitHubResourceLimitError,
+  GitHubTimeoutError,
+} from '@/lib/github/client'
 import type { OnboardingProfile } from '@/lib/user/profile'
 import type { IssueCardItem, RawIssue, ScoredIssue } from '@/types/issue'
 import { getCandidatePools, upsertCandidatePool } from './candidate-pool-store'
@@ -69,21 +78,66 @@ function filterByMinStars(issues: RawIssue[], minStars: number): RawIssue[] {
   return issues.filter((issue) => issue.repository.stargazerCount >= minStars)
 }
 
-// 조건 1개당 GitHub 검색 결과를 최대 RECOMMENDATION_PAGE_COUNT페이지까지 순차로 이어 붙인다.
-// 커서 페이지네이션이라 병렬화가 안 되고, GitHub이 더 줄 게 없으면(hasMoreOnGithub=false) 그 전에 멈춘다.
+type CandidatePoolStopReason =
+  | 'target_reached'
+  | 'github_exhausted'
+  | 'resource_limit'
+  | 'timeout'
+  | 'request_limit'
+
+// 목표 300개까지 커서를 순차로 이어 붙인다. resource limit이 난 페이지에서만 100→50으로 낮추고,
+// 이미 성공한 페이지는 버리지 않는다. 실패/시간 소진 시 150개 이상이면 부분 결과를 사용한다.
 async function fetchCandidatePool(
   language: string,
   condition: RecommendationCondition,
   accessToken: string,
   sort: string,
   extraQualifiers: string,
-): Promise<{ issues: RawIssue[]; rawFetchedCount: number; requestCount: number }> {
+): Promise<{
+  issues: RawIssue[]
+  rawFetchedCount: number
+  requestCount: number
+  pageSize: number
+  degraded: boolean
+  stopReason: CandidatePoolStopReason
+}> {
   const pool: RawIssue[] = []
+  let dedupedPool: RawIssue[] = []
   let cursor: string | null = null
   let requestCount = 0
+  let successfulPageCount = 0
+  let pageSize = RECOMMENDATION_PAGE_SIZE
+  const deadlineAt = Date.now() + RECOMMENDATION_FETCH_BUDGET_MS
 
-  for (let page = 0; page < RECOMMENDATION_PAGE_COUNT; page++) {
+  const hasMinimumPool = () => dedupedPool.length >= RECOMMENDATION_MIN_POOL_SIZE
+
+  const buildResult = (stopReason: CandidatePoolStopReason) => ({
+    issues: dedupedPool,
+    rawFetchedCount: pool.length,
+    requestCount,
+    pageSize,
+    degraded: stopReason === 'resource_limit' || stopReason === 'timeout' || stopReason === 'request_limit',
+    stopReason,
+  })
+
+  while (dedupedPool.length < RECOMMENDATION_TARGET_POOL_SIZE) {
+    const remainingMs = deadlineAt - Date.now()
+    if (remainingMs <= 0) {
+      if (hasMinimumPool()) {
+        return buildResult('timeout')
+      }
+      throw new GitHubTimeoutError()
+    }
+
+    if (requestCount >= RECOMMENDATION_MAX_FETCH_REQUESTS) {
+      if (hasMinimumPool()) {
+        return buildResult('request_limit')
+      }
+      throw new Error('Recommendation candidate pool did not reach its minimum size')
+    }
+
     const startedAt = Date.now()
+    const requestedSize = Math.min(pageSize, RECOMMENDATION_TARGET_POOL_SIZE - dedupedPool.length)
     requestCount++
     let result
     try {
@@ -91,11 +145,15 @@ async function fetchCandidatePool(
         [language],
         accessToken,
         cursor,
-        RECOMMENDATION_PAGE_SIZE,
+        requestedSize,
         sort,
         extraQualifiers,
+        Math.min(GITHUB_SEARCH_TIMEOUT_MS, remainingMs),
       )
     } catch (error) {
+      const shouldFallback = error instanceof GitHubResourceLimitError
+        && pageSize > RECOMMENDATION_FALLBACK_PAGE_SIZE
+
       console.error(JSON.stringify({
         event: 'recommendation_pool_page',
         status: 'failed',
@@ -103,17 +161,35 @@ async function fetchCandidatePool(
         condition,
         language,
         sort,
-        page: page + 1,
-        first: RECOMMENDATION_PAGE_SIZE,
+        page: successfulPageCount + 1,
+        attempt: requestCount,
+        first: requestedSize,
         cursorPresent: cursor !== null,
         accumulatedRawCount: pool.length,
+        willRetry: shouldFallback,
+        nextFirst: shouldFallback ? RECOMMENDATION_FALLBACK_PAGE_SIZE : undefined,
         durationMs: Date.now() - startedAt,
         ...getGitHubErrorLogFields(error),
       }))
+
+      if (shouldFallback) {
+        pageSize = RECOMMENDATION_FALLBACK_PAGE_SIZE
+        continue
+      }
+
+      if (
+        (error instanceof GitHubResourceLimitError || error instanceof GitHubTimeoutError)
+        && hasMinimumPool()
+      ) {
+        return buildResult(error instanceof GitHubResourceLimitError ? 'resource_limit' : 'timeout')
+      }
+
       throw error
     }
 
     pool.push(...result.issues)
+    dedupedPool = dedupeIssues(pool)
+    successfulPageCount++
     console.info(JSON.stringify({
       event: 'recommendation_pool_page',
       status: 'succeeded',
@@ -121,24 +197,24 @@ async function fetchCandidatePool(
       condition,
       language,
       sort,
-      page: page + 1,
-      first: RECOMMENDATION_PAGE_SIZE,
+      page: successfulPageCount,
+      attempt: requestCount,
+      first: requestedSize,
       cursorPresent: cursor !== null,
       returnedCount: result.issues.length,
       accumulatedRawCount: pool.length,
+      accumulatedDedupedCount: dedupedPool.length,
       hasNextPage: result.hasMoreOnGithub,
       durationMs: Date.now() - startedAt,
     }))
 
-    if (!result.hasMoreOnGithub || !result.endCursor) break
+    if (!result.hasMoreOnGithub || !result.endCursor) {
+      return buildResult('github_exhausted')
+    }
     cursor = result.endCursor
   }
 
-  return {
-    issues: dedupeIssues(pool),
-    rawFetchedCount: pool.length,
-    requestCount,
-  }
+  return buildResult('target_reached')
 }
 
 // 스케줄러 전용 — 언어 하나 + 조건 하나의 후보 풀을 GitHub에서 새로 가져와 DB에 통째로 교체 저장한다.
@@ -173,6 +249,9 @@ export async function refreshCandidatePool(
       dedupedCount: result.issues.length,
       storedCount: issues.length,
       requestCount: result.requestCount,
+      pageSize: result.pageSize,
+      degraded: result.degraded,
+      stopReason: result.stopReason,
       durationMs: Date.now() - startedAt,
       errorKind: 'internal',
     }))
@@ -190,6 +269,9 @@ export async function refreshCandidatePool(
     dedupedCount: result.issues.length,
     storedCount: issues.length,
     requestCount: result.requestCount,
+    pageSize: result.pageSize,
+    degraded: result.degraded,
+    stopReason: result.stopReason,
     durationMs: Date.now() - startedAt,
   }))
 }
