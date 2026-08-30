@@ -8,6 +8,8 @@ import {
   GitHubResourceLimitError,
   GitHubTimeoutError,
   getGitHubErrorLogFields,
+  getGitHubRateLimitScope,
+  getGitHubRetryAfterSeconds,
 } from '@/lib/github/client'
 
 function stubFetch(status: number, body: object, headers: Record<string, string> = {}) {
@@ -121,5 +123,23 @@ describe('githubGraphQL', () => {
     expect(serialized).not.toContain('Authorization')
     expect(serialized).not.toContain('query')
     expect(serialized).not.toContain('cursor')
+  })
+
+  it('primary rate limit은 reset 시각까지의 대기 시간을 계산한다', () => {
+    const error = new GitHubRateLimitError({
+      rateLimit: { remaining: '0', reset: '1700000120' },
+    })
+
+    expect(getGitHubRateLimitScope(error)).toBe('primary')
+    expect(getGitHubRetryAfterSeconds(error, 1_700_000_000_000)).toBe(120)
+  })
+
+  it('secondary rate limit은 Retry-After를 우선하고 비정상 값은 기본 60초를 사용한다', () => {
+    const explicit = new GitHubRateLimitError({ retryAfter: '75' })
+    const malformed = new GitHubRateLimitError({ retryAfter: '-1' })
+
+    expect(getGitHubRateLimitScope(explicit)).toBe('secondary')
+    expect(getGitHubRetryAfterSeconds(explicit)).toBe(75)
+    expect(getGitHubRetryAfterSeconds(malformed)).toBe(60)
   })
 })

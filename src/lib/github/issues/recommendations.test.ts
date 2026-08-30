@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { capIssuesPerRepo, fetchRecommendedIssues, refreshCandidatePool } from '@/lib/github/issues/recommendations'
 import {
     RECOMMENDATION_DISPLAY_LIMIT,
@@ -25,20 +25,32 @@ vi.mock('@/lib/github/issues/search', async (importOriginal) => {
 vi.mock('@/lib/github/issues/ranking', () => ({ rankIssues: vi.fn() }))
 vi.mock('./candidate-pool-store', () => ({
     getCandidatePools: vi.fn(),
+    getCandidatePoolCount: vi.fn(),
     upsertCandidatePool: vi.fn(),
 }))
 vi.mock('@/lib/bookmarks', () => ({ listUserBookmarkKeys: vi.fn(() => Promise.resolve([])) }))
 
 import { fetchCandidateIssues } from '@/lib/github/issues/search'
 import { rankIssues } from '@/lib/github/issues/ranking'
-import { getCandidatePools, upsertCandidatePool } from './candidate-pool-store'
+import { getCandidatePoolCount, getCandidatePools, upsertCandidatePool } from './candidate-pool-store'
 
 const mockFetch = vi.mocked(fetchCandidateIssues)
 const mockRank = vi.mocked(rankIssues)
 const mockGetPools = vi.mocked(getCandidatePools)
+const mockGetPoolCount = vi.mocked(getCandidatePoolCount)
 const mockUpsertPool = vi.mocked(upsertCandidatePool)
 
-afterEach(() => vi.clearAllMocks())
+beforeEach(() => {
+    mockGetPoolCount.mockResolvedValue(null)
+    vi.spyOn(console, 'info').mockImplementation(() => undefined)
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+})
+
+afterEach(() => {
+    vi.restoreAllMocks()
+    vi.clearAllMocks()
+})
 
 const profile: OnboardingProfile = {
     topLanguages: ['TypeScript'],
@@ -136,9 +148,9 @@ describe('refreshCandidatePool', () => {
         expect(mockFetch).toHaveBeenCalledTimes(2)
     })
 
-    it('100개 요청이 resource limit이면 같은 cursor에서 50개로 낮춰 6페이지를 누적한다', async () => {
+    it('100개 요청이 resource limit이면 같은 cursor에서 50개로 낮춰 최대 3페이지를 누적한다', async () => {
         mockFetch.mockRejectedValueOnce(new GitHubResourceLimitError())
-        const fallbackPages = Array.from({ length: 6 }, (_, page) => (
+        const fallbackPages = Array.from({ length: 3 }, (_, page) => (
             makeRawIssues(RECOMMENDATION_FALLBACK_PAGE_SIZE, page * RECOMMENDATION_FALLBACK_PAGE_SIZE)
         ))
         fallbackPages.forEach((issues, page) => {
@@ -147,10 +159,10 @@ describe('refreshCandidatePool', () => {
 
         await refreshCandidatePool('TypeScript', 'latest', 'token')
 
-        expect(mockFetch).toHaveBeenCalledTimes(7)
+        expect(mockFetch).toHaveBeenCalledTimes(4)
         expect(mockFetch.mock.calls.map((call) => call[3])).toEqual([
             RECOMMENDATION_PAGE_SIZE,
-            ...Array(6).fill(RECOMMENDATION_FALLBACK_PAGE_SIZE),
+            ...Array(3).fill(RECOMMENDATION_FALLBACK_PAGE_SIZE),
         ])
         expect(mockFetch.mock.calls[0][2]).toBeNull()
         expect(mockFetch.mock.calls[1][2]).toBeNull()
@@ -161,31 +173,25 @@ describe('refreshCandidatePool', () => {
         const firstPage = makeRawIssues(100)
         const fallbackPage1 = makeRawIssues(50, 100)
         const fallbackPage2 = makeRawIssues(50, 150)
-        const fallbackPage3 = makeRawIssues(50, 200)
-        const fallbackPage4 = makeRawIssues(50, 250)
         mockFetch
             .mockResolvedValueOnce(makePage(firstPage, true, 'cursor-100'))
             .mockRejectedValueOnce(new GitHubResourceLimitError())
             .mockResolvedValueOnce(makePage(fallbackPage1, true, 'cursor-150'))
             .mockResolvedValueOnce(makePage(fallbackPage2, true, 'cursor-200'))
-            .mockResolvedValueOnce(makePage(fallbackPage3, true, 'cursor-250'))
-            .mockResolvedValueOnce(makePage(fallbackPage4, true, 'cursor-300'))
 
         await refreshCandidatePool('TypeScript', 'latest', 'token')
 
-        expect(mockFetch.mock.calls.map((call) => call[3])).toEqual([100, 100, 50, 50, 50, 50])
+        expect(mockFetch.mock.calls.map((call) => call[3])).toEqual([100, 100, 50, 50])
         expect(mockFetch.mock.calls.map((call) => call[2])).toEqual([
             null,
             'cursor-100',
             'cursor-100',
             'cursor-150',
-            'cursor-200',
-            'cursor-250',
         ])
         expect(mockUpsertPool).toHaveBeenCalledWith(
             'TypeScript',
             'latest',
-            [...firstPage, fallbackPage1, fallbackPage2, fallbackPage3, fallbackPage4].flat(),
+            [...firstPage, fallbackPage1, fallbackPage2].flat(),
         )
     })
 
@@ -198,11 +204,9 @@ describe('refreshCandidatePool', () => {
                 `cursor-${page}`,
             ))
         }
-        mockFetch.mockRejectedValueOnce(new GitHubResourceLimitError())
-
         await refreshCandidatePool('TypeScript', 'latest', 'token')
 
-        expect(mockFetch).toHaveBeenCalledTimes(5)
+        expect(mockFetch).toHaveBeenCalledTimes(4)
         expect(mockUpsertPool).toHaveBeenCalledWith(
             'TypeScript',
             'latest',
@@ -233,6 +237,42 @@ describe('refreshCandidatePool', () => {
         await refreshCandidatePool('TypeScript', 'latest', 'token')
 
         expect(mockUpsertPool).toHaveBeenCalledWith('TypeScript', 'latest', [...firstPage, ...secondPage])
+    })
+
+    it('빈 결과는 기존 후보 풀을 덮어쓰지 않는다', async () => {
+        mockGetPoolCount.mockResolvedValueOnce(220)
+        mockFetch.mockResolvedValueOnce(makePage([], false, null))
+
+        const result = await refreshCandidatePool('TypeScript', 'latest', 'token')
+
+        expect(result).toMatchObject({
+            refreshStatus: 'preserved',
+            preservationReason: 'empty_result',
+            storedCount: 220,
+        })
+        expect(mockUpsertPool).not.toHaveBeenCalled()
+    })
+
+    it('popular degraded 결과가 후처리 기준 50개 미만이면 기존 후보 풀을 보존한다', async () => {
+        mockGetPoolCount.mockResolvedValueOnce(180)
+        mockFetch.mockRejectedValueOnce(new GitHubResourceLimitError())
+        for (let page = 0; page < 3; page++) {
+            const issues = makeRawIssues(50, page * 50).map((issue, index) => ({
+                ...issue,
+                repository: { stargazerCount: index < 10 ? 30 : 1 },
+            })) as RawIssue[]
+            mockFetch.mockResolvedValueOnce(makePage(issues, true, `cursor-${page}`))
+        }
+
+        const result = await refreshCandidatePool('TypeScript', 'popular', 'token')
+
+        expect(result).toMatchObject({
+            refreshStatus: 'preserved',
+            preservationReason: 'below_condition_minimum',
+            candidateCount: 30,
+            storedCount: 180,
+        })
+        expect(mockUpsertPool).not.toHaveBeenCalled()
     })
 })
 

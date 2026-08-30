@@ -20,7 +20,7 @@ import {
 } from '@/lib/github/client'
 import type { OnboardingProfile } from '@/lib/user/profile'
 import type { IssueCardItem, RawIssue, ScoredIssue } from '@/types/issue'
-import { getCandidatePools, upsertCandidatePool } from './candidate-pool-store'
+import { getCandidatePoolCount, getCandidatePools, upsertCandidatePool } from './candidate-pool-store'
 import { rankIssues } from './ranking'
 import { buildRecentWindowQualifier, dedupeIssues, fetchCandidateIssues } from './search'
 
@@ -73,6 +73,11 @@ const RECENT_WINDOW_DAYS: Partial<Record<RecommendationCondition, number>> = {
 // 코드/저장소 검색과 달리 이슈 검색 인덱스는 부모 저장소의 스타 수를 필터링 가능한 필드로 지원하지 않는 것으로 보인다.
 // 그래서 쿼리로 거르는 대신, 이미 응답에 포함된 repository.stargazerCount 값으로 후처리 필터링한다.
 const POPULAR_MIN_STARS = 30
+const DEGRADED_MIN_STORED_COUNT: Record<RecommendationCondition, number> = {
+  latest: RECOMMENDATION_MIN_POOL_SIZE,
+  popular: 50,
+}
+const DEGRADED_MIN_PREVIOUS_RATIO = 0.25
 
 function filterByMinStars(issues: RawIssue[], minStars: number): RawIssue[] {
   return issues.filter((issue) => issue.repository.stargazerCount >= minStars)
@@ -205,6 +210,7 @@ async function fetchCandidatePool(
       accumulatedRawCount: pool.length,
       accumulatedDedupedCount: dedupedPool.length,
       hasNextPage: result.hasMoreOnGithub,
+      rateLimit: result.rateLimit,
       durationMs: Date.now() - startedAt,
     }))
 
@@ -217,6 +223,18 @@ async function fetchCandidatePool(
   return buildResult('target_reached')
 }
 
+export type CandidatePoolRefreshResult = {
+  refreshStatus: 'stored' | 'preserved'
+  fetchedCount: number
+  candidateCount: number
+  storedCount: number
+  previousCount: number | null
+  requestCount: number
+  degraded: boolean
+  stopReason: CandidatePoolStopReason
+  preservationReason?: 'empty_result' | 'below_condition_minimum' | 'large_drop'
+}
+
 // 스케줄러 전용 — 언어 하나 + 조건 하나의 후보 풀을 GitHub에서 새로 가져와 DB에 통째로 교체 저장한다.
 // 요청 경로(대시보드 렌더링)는 이 함수를 절대 호출하지 않는다 — GitHub 호출은 이 함수를 통해서만,
 // 크론이 정한 주기에만 일어난다.
@@ -224,7 +242,7 @@ export async function refreshCandidatePool(
   language: string,
   condition: RecommendationCondition,
   accessToken: string,
-): Promise<void> {
+): Promise<CandidatePoolRefreshResult> {
   const startedAt = Date.now()
   const { sort } = RECOMMENDATION_CONDITION_META[condition]
   const windowDays = RECENT_WINDOW_DAYS[condition]
@@ -234,6 +252,54 @@ export async function refreshCandidatePool(
   const issues = condition === 'popular'
     ? filterByMinStars(result.issues, POPULAR_MIN_STARS)
     : result.issues
+  const previousCount = await getCandidatePoolCount(language, condition)
+
+  let preservationReason: CandidatePoolRefreshResult['preservationReason']
+  if (issues.length === 0) {
+    preservationReason = 'empty_result'
+  } else if (result.degraded && issues.length < DEGRADED_MIN_STORED_COUNT[condition]) {
+    preservationReason = 'below_condition_minimum'
+  } else if (
+    result.degraded
+    && previousCount !== null
+    && previousCount > 0
+    && issues.length < Math.ceil(previousCount * DEGRADED_MIN_PREVIOUS_RATIO)
+  ) {
+    preservationReason = 'large_drop'
+  }
+
+  if (preservationReason) {
+    console.warn(JSON.stringify({
+      event: 'recommendation_pool_refresh',
+      status: 'preserved',
+      condition,
+      language,
+      sort,
+      windowDays,
+      rawFetchedCount: result.rawFetchedCount,
+      dedupedCount: result.issues.length,
+      candidateCount: issues.length,
+      previousCount,
+      requestCount: result.requestCount,
+      pageSize: result.pageSize,
+      degraded: result.degraded,
+      stopReason: result.stopReason,
+      preservationReason,
+      durationMs: Date.now() - startedAt,
+    }))
+
+    return {
+      refreshStatus: 'preserved',
+      fetchedCount: result.rawFetchedCount,
+      candidateCount: issues.length,
+      storedCount: previousCount ?? 0,
+      previousCount,
+      requestCount: result.requestCount,
+      degraded: result.degraded,
+      stopReason: result.stopReason,
+      preservationReason,
+    }
+  }
 
   try {
     await upsertCandidatePool(language, condition, issues)
@@ -248,6 +314,7 @@ export async function refreshCandidatePool(
       rawFetchedCount: result.rawFetchedCount,
       dedupedCount: result.issues.length,
       storedCount: issues.length,
+      previousCount,
       requestCount: result.requestCount,
       pageSize: result.pageSize,
       degraded: result.degraded,
@@ -274,6 +341,17 @@ export async function refreshCandidatePool(
     stopReason: result.stopReason,
     durationMs: Date.now() - startedAt,
   }))
+
+  return {
+    refreshStatus: 'stored',
+    fetchedCount: result.rawFetchedCount,
+    candidateCount: issues.length,
+    storedCount: issues.length,
+    previousCount,
+    requestCount: result.requestCount,
+    degraded: result.degraded,
+    stopReason: result.stopReason,
+  }
 }
 
 // 추천 이슈 페이지 전용 조회 — GitHub를 직접 부르지 않는다. 스케줄러(refreshCandidatePool)가

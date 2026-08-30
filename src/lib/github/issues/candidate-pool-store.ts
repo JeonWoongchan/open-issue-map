@@ -21,6 +21,20 @@ export async function getCandidatePools(
   return rows.map((row) => row.payload as RawIssue[])
 }
 
+export async function getCandidatePoolCount(
+  language: string,
+  condition: RecommendationCondition,
+): Promise<number | null> {
+  const rows = await sql`
+    SELECT jsonb_array_length(payload) AS count
+    FROM recommendation_candidate_pools
+    WHERE language = ${language} AND condition = ${condition}
+  `
+
+  if (rows.length === 0) return null
+  return Number(rows[0].count)
+}
+
 // JS 문자열 리터럴/정규식에 널 문자를 직접 박아넣으면 소스 파일에 실제 제어 문자가 섞여
 // 편집 도구·에디터마다 다르게 다뤄질 위험이 있어, 코드 포인트로 만들어 쓴다.
 const NULL_CHAR = String.fromCharCode(0)

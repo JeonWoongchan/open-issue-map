@@ -19,8 +19,10 @@ export const RECOMMENDATION_FALLBACK_PAGE_SIZE = 50
 export const RECOMMENDATION_TARGET_POOL_SIZE = 300
 // 오류나 시간 예산 소진 시 이만큼 확보했으면 부분 결과를 저장하고, 미만이면 기존 DB 풀을 보존한다.
 export const RECOMMENDATION_MIN_POOL_SIZE = 150
-// 100개 요청 실패 1회 + 50개 요청 6회를 수용하는 안전장치다.
-export const RECOMMENDATION_MAX_FETCH_REQUESTS = 7
+// 정상 경로(100개 × 3회)는 그대로 허용하되, resource-limit fallback은
+// 100개 실패 1회 + 50개 3회까지만 허용한다. 한 언어가 GitHub 계산 자원을
+// 오래 독점하지 않게 하면서 최소 후보 풀 150개는 확보할 수 있는 상한이다.
+export const RECOMMENDATION_MAX_FETCH_REQUESTS = 4
 // 함수 제한 45초 중 DB 저장과 응답에 7초를 남긴다.
 export const RECOMMENDATION_FETCH_BUDGET_MS = 38_000
 // 캐러셀 한 레일에서 같은 저장소가 노출되는 최대 개수 — 활발한 저장소 하나가 레일을 독점하는 것을 막는다.

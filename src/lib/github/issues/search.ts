@@ -4,6 +4,12 @@ import type { RawIssue } from '@/types/issue'
 
 const SEARCH_ISSUES_QUERY = `
   query SearchIssues($query: String!, $first: Int!, $after: String) {
+    rateLimit {
+      cost
+      used
+      remaining
+      resetAt
+    }
     search(query: $query, type: ISSUE, first: $first, after: $after) {
       pageInfo {
         hasNextPage
@@ -44,16 +50,25 @@ interface PageInfo {
 }
 
 interface SearchResult {
+    rateLimit?: GitHubRateLimitSnapshot
     search: {
         pageInfo: PageInfo
         nodes: RawIssue[]
     }
 }
 
+export type GitHubRateLimitSnapshot = {
+    cost: number
+    used: number
+    remaining: number
+    resetAt: string
+}
+
 export type IssueSearchResult = {
     issues: RawIssue[]
     endCursor: string | null
     hasMoreOnGithub: boolean
+    rateLimit?: GitHubRateLimitSnapshot
 }
 
 // 여러 언어를 하나의 쿼리에 담는다 — GitHub search는 OR 키워드를 지원하지 않지만
@@ -114,6 +129,7 @@ export async function fetchExploreIssues(
         issues: dedupeIssues(result.search.nodes ?? []),
         endCursor: result.search.pageInfo.endCursor,
         hasMoreOnGithub: result.search.pageInfo.hasNextPage,
+        rateLimit: result.rateLimit,
     }
 }
 
