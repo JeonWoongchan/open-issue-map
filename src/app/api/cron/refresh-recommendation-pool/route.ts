@@ -9,6 +9,7 @@ import {
   GitHubResourceLimitError,
   GitHubTimeoutError,
   GitHubUnauthorizedError,
+  getGitHubRetryAfterSeconds,
 } from '@/lib/github/client'
 import { ErrorCode, err, ok } from '@/lib/api-response'
 
@@ -47,8 +48,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await refreshCandidatePool(language, condition, accessToken)
-    return ok({ condition, language })
+    const result = await refreshCandidatePool(language, condition, accessToken)
+    return ok({ condition, language, ...result })
   } catch (error) {
     console.error(JSON.stringify({
       event: 'recommendation_pool_refresh',
@@ -63,7 +64,9 @@ export async function POST(req: NextRequest) {
       return err('GitHub query resource limit exceeded', 503, ErrorCode.GITHUB_RESOURCE_LIMIT)
     }
     if (error instanceof GitHubRateLimitError) {
-      return err('GitHub rate limit exceeded', 429, ErrorCode.RATE_LIMITED)
+      const response = err('GitHub rate limit exceeded', 429, ErrorCode.RATE_LIMITED)
+      response.headers.set('Retry-After', String(getGitHubRetryAfterSeconds(error)))
+      return response
     }
     if (error instanceof GitHubTimeoutError) {
       return err('GitHub request timed out', 504, ErrorCode.GITHUB_TIMEOUT)

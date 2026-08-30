@@ -30,6 +30,11 @@ export type GitHubErrorDetails = {
   partialData?: boolean
 }
 
+export type GitHubRateLimitScope = 'primary' | 'secondary' | 'unknown'
+
+const DEFAULT_SECONDARY_RETRY_AFTER_SECONDS = 60
+const MAX_RETRY_AFTER_SECONDS = 60 * 60
+
 export class GitHubApiError extends Error {
   constructor(
     message: string,
@@ -106,6 +111,38 @@ export class GitHubGraphQLError extends GitHubApiError {
   }
 }
 
+export function getGitHubRateLimitScope(error: GitHubRateLimitError): GitHubRateLimitScope {
+  if (error.details.rateLimit?.remaining === '0') return 'primary'
+  if (error.details.retryAfter) return 'secondary'
+  if (error.details.rateLimit?.remaining !== undefined) return 'secondary'
+  return 'unknown'
+}
+
+function clampRetryAfter(seconds: number): number {
+  return Math.max(1, Math.min(MAX_RETRY_AFTER_SECONDS, Math.ceil(seconds)))
+}
+
+// GitHub 권고 순서대로 Retry-After, primary reset, secondary 기본 60초를 사용한다.
+// 외부 응답 헤더로 전달되는 값이므로 비정상/과도한 값은 1시간 범위로 제한한다.
+export function getGitHubRetryAfterSeconds(
+  error: GitHubRateLimitError,
+  nowMs: number = Date.now(),
+): number {
+  const retryAfter = Number(error.details.retryAfter)
+  if (Number.isFinite(retryAfter) && retryAfter > 0) {
+    return clampRetryAfter(retryAfter)
+  }
+
+  if (error.details.rateLimit?.remaining === '0') {
+    const resetAtSeconds = Number(error.details.rateLimit.reset)
+    if (Number.isFinite(resetAtSeconds) && resetAtSeconds > 0) {
+      return clampRetryAfter(resetAtSeconds - nowMs / 1000)
+    }
+  }
+
+  return DEFAULT_SECONDARY_RETRY_AFTER_SECONDS
+}
+
 type GraphQLErrorPayload = {
   type?: unknown
   message?: unknown
@@ -177,6 +214,9 @@ export function getGitHubErrorLogFields(error: unknown): Record<string, unknown>
 
   return {
     errorKind: error.kind,
+    rateLimitScope: error instanceof GitHubRateLimitError
+      ? getGitHubRateLimitScope(error)
+      : undefined,
     upstreamStatus: error.details.upstreamStatus,
     githubRequestId: error.details.githubRequestId,
     retryAfter: error.details.retryAfter,

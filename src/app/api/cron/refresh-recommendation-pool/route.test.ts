@@ -43,14 +43,28 @@ afterEach(() => {
 
 describe('POST /api/cron/refresh-recommendation-pool', () => {
   it('갱신에 성공하면 조건과 언어를 반환한다', async () => {
-    mockRefresh.mockResolvedValueOnce()
+    mockRefresh.mockResolvedValueOnce({
+      refreshStatus: 'stored',
+      fetchedCount: 300,
+      candidateCount: 300,
+      storedCount: 300,
+      previousCount: 250,
+      requestCount: 3,
+      degraded: false,
+      stopReason: 'target_reached',
+    })
 
     const res = await POST(req())
 
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toMatchObject({
       ok: true,
-      data: { condition: 'popular', language: 'Python' },
+      data: {
+        condition: 'popular',
+        language: 'Python',
+        refreshStatus: 'stored',
+        requestCount: 3,
+      },
     })
   })
 
@@ -77,5 +91,14 @@ describe('POST /api/cron/refresh-recommendation-pool', () => {
 
     expect(res.status).toBe(500)
     expect(json).toMatchObject({ ok: false, error: { code: ErrorCode.INTERNAL_ERROR } })
+  })
+
+  it('GitHub 429의 Retry-After를 호출자에게 전달한다', async () => {
+    mockRefresh.mockRejectedValueOnce(new GitHubRateLimitError({ retryAfter: '75' }))
+
+    const res = await POST(req())
+
+    expect(res.status).toBe(429)
+    expect(res.headers.get('retry-after')).toBe('75')
   })
 })
